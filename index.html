@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge Logic</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar left-panel">
+        <div class="panel brand-panel">
+          <p class="eyebrow">Logic Sandbox</p>
+          <h1>Forge Logic</h1>
+          <p class="panel-copy">Bouw poorten, maak chips, gebruik ze opnieuw.</p>
+        </div>
+
+        <section class="panel">
+          <div class="panel-title-row">
+            <h2>Sheets</h2>
+            <button id="new-workspace-button" class="ghost-button" type="button">
+              New
+            </button>
+          </div>
+          <div id="workspace-list" class="workspace-list"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Parts</h2>
+          <div id="builtin-palette" class="palette-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title-row">
+            <h2>Chips</h2>
+            <button id="save-chip-button" class="ghost-button" type="button">
+              Snapshot
+            </button>
+          </div>
+          <div id="chip-library" class="chip-library"></div>
+        </section>
+      </aside>
+
+      <main class="main-panel">
+        <header class="toolbar panel">
+          <div class="toolbar-group">
+            <button id="duplicate-workspace-button" type="button">
+              Duplicate Workspace
+            </button>
+            <button id="toggle-clocks-button" type="button">
+              Toggle Clocks
+            </button>
+            <button id="step-registers-button" type="button">
+              Step Registers
+            </button>
+            <button id="reset-state-button" type="button">Reset State</button>
+          </div>
+          <div class="toolbar-group">
+            <button id="export-button" class="ghost-button" type="button">
+              Export
+            </button>
+            <button id="import-button" class="ghost-button" type="button">
+              Import
+            </button>
+          </div>
+        </header>
+
+        <section class="workspace-frame panel">
+          <div class="workspace-header">
+            <div>
+              <p class="eyebrow">Current Sheet</p>
+              <h2 id="workspace-title">Main Workspace</h2>
+            </div>
+            <p id="connection-status" class="connection-status">
+              Klik output, klik input.
+            </p>
+          </div>
+          <div id="workspace-canvas" class="workspace-canvas">
+            <svg id="wire-layer" class="wire-layer"></svg>
+            <div id="node-layer" class="node-layer"></div>
+            <div id="empty-state" class="empty-state">
+              Voeg links parts toe. Gebruik `Input` en `Output` om van deze
+              sheet een chip te maken.
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="sidebar right-panel">
+        <section class="panel">
+          <h2>Inspector</h2>
+          <div id="inspector" class="inspector empty">
+            Selecteer een node om de eigenschappen te bewerken.
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Checks</h2>
+          <div id="error-list" class="error-list">
+            Geen fouten in de actieve workspace.
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Status</h2>
+          <p id="status-line" class="status-line">
+            Lokale opslag is actief. Projectwijzigingen worden automatisch
+            bewaard in deze browser.
+          </p>
+        </section>
+      </aside>
+    </div>
+
+    <input id="import-input" type="file" accept="application/json" hidden />
+    <script src="./script.js"></script>
+  </body>
+</html>
