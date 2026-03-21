@@ -26,11 +26,6 @@
         </section>
 
         <section class="panel">
-          <h2>Parts</h2>
-          <div id="builtin-palette" class="palette-grid"></div>
-        </section>
-
-        <section class="panel">
           <div class="panel-title-row">
             <h2>Chips</h2>
             <button id="save-chip-button" class="ghost-button" type="button">
@@ -71,15 +66,37 @@
               <p class="eyebrow">Current Sheet</p>
               <h2 id="workspace-title">Main Workspace</h2>
             </div>
-            <p id="connection-status" class="connection-status">
-              Klik output, klik input.
-            </p>
+            <div class="workspace-header-right">
+              <details class="parts-dropdown">
+                <summary class="ghost-button">Parts</summary>
+                <div class="parts-menu panel">
+                  <div class="parts-menu-head">
+                    <span class="eyebrow">Quick Add</span>
+                    <h3>Parts</h3>
+                  </div>
+                  <div id="builtin-palette" class="palette-grid palette-grid-dropdown"></div>
+                </div>
+              </details>
+              <div class="workspace-zoom-controls">
+                <button id="zoom-out-button" class="ghost-button" type="button">-</button>
+                <button id="zoom-reset-button" class="ghost-button" type="button">100%</button>
+                <button id="zoom-in-button" class="ghost-button" type="button">+</button>
+                <span id="zoom-value" class="zoom-value">100%</span>
+              </div>
+              <p id="connection-status" class="connection-status">
+                Klik output, klik input.
+              </p>
+            </div>
           </div>
           <div id="workspace-canvas" class="workspace-canvas">
-            <svg id="wire-layer" class="wire-layer"></svg>
-            <div id="node-layer" class="node-layer"></div>
+            <div id="workspace-stage-viewport" class="workspace-stage-viewport">
+              <div id="workspace-stage" class="workspace-stage">
+                <svg id="wire-layer" class="wire-layer"></svg>
+                <div id="node-layer" class="node-layer"></div>
+              </div>
+            </div>
             <div id="empty-state" class="empty-state">
-              Voeg links parts toe. Gebruik `Input` en `Output` om van deze
+              Open `Parts` en voeg componenten toe. Gebruik `Input` en `Output` om van deze
               sheet een chip te maken.
             </div>
           </div>
@@ -87,6 +104,19 @@
       </main>
 
       <aside class="sidebar right-panel">
+        <section class="panel">
+          <div class="panel-title-row">
+            <h2>Nand2Tetris Challenges</h2>
+            <div class="panel-title-actions">
+              <button id="challenge-start-button" type="button">Start Selected</button>
+              <button id="challenge-submit-button" class="ghost-button" type="button">Submit Current</button>
+            </div>
+          </div>
+          <div id="challenge-list" class="challenge-list">
+            Nog geen opdrachten geladen.
+          </div>
+        </section>
+
         <section class="panel">
           <h2>Inspector</h2>
           <div id="inspector" class="inspector empty">

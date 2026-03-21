@@ -1,5 +1,12 @@
 (function () {
   const STORAGE_KEY = "forge-logic-project-v1";
+  const WORKSPACE_BASE_WIDTH = 1800;
+  const WORKSPACE_BASE_HEIGHT = 1200;
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 2;
+  const ZOOM_STEP = 0.25;
+  const LONG_PRESS_DELAY = 450;
+  const LONG_PRESS_MOVE_THRESHOLD = 8;
   const BUILTIN_PARTS = [
     { type: "switch", label: "Switch", copy: "Handmatige input" },
     { type: "lamp", label: "Lamp", copy: "Zichtbare output" },
@@ -9,20 +16,235 @@
     { type: "gate-xor", label: "XOR", copy: "Bitwise XOR" },
     { type: "gate-nand", label: "NAND", copy: "Inverse AND" },
     { type: "gate-nor", label: "NOR", copy: "Inverse OR" },
+    { type: "splitter", label: "Bus Split", copy: "High/low bus split" },
+    { type: "joiner", label: "Bus Join", copy: "Bus merge" },
     { type: "input-pin", label: "Input", copy: "Publieke chipinput" },
     { type: "output-pin", label: "Output", copy: "Publieke chipoutput" },
     { type: "clock", label: "Clock", copy: "1-bit klokbron" },
     { type: "register", label: "Register", copy: "Latched opslag" },
+  ];
+  const CHALLENGES = [
+    {
+      id: "nand",
+      phase: "Project 1",
+      title: "Build NAND",
+      names: ["NAND"],
+      inputs: 2,
+      outputs: 1,
+      description: "Maak je eigen NAND-chip zonder de starterversie te gebruiken.",
+      verification: "combinational",
+      template: { inputs: ["A", "B"], outputs: ["OUT"] },
+      hints: [
+        "Gebruik twee Input nodes met namen A en B.",
+        "Maak precies één Output node met naam OUT.",
+        "Bouw met bestaande poorten en sla daarna je chip op als NAND.",
+      ],
+      tests: [
+        { inputs: { A: "0", B: "0" }, outputs: { OUT: "1" } },
+        { inputs: { A: "0", B: "1" }, outputs: { OUT: "1" } },
+        { inputs: { A: "1", B: "0" }, outputs: { OUT: "1" } },
+        { inputs: { A: "1", B: "1" }, outputs: { OUT: "0" } },
+      ],
+    },
+    {
+      id: "not",
+      phase: "Project 1",
+      title: "Build NOT",
+      names: ["NOT"],
+      inputs: 1,
+      outputs: 1,
+      description: "Bouw een inverterchip met 1 input en 1 output.",
+      verification: "combinational",
+      template: { inputs: ["IN"], outputs: ["OUT"] },
+      hints: [
+        "Gebruik één Input en één Output.",
+        "Laat OUT altijd het inverse zijn van IN.",
+      ],
+      tests: [
+        { inputs: { IN: "0" }, outputs: { OUT: "1" } },
+        { inputs: { IN: "1" }, outputs: { OUT: "0" } },
+      ],
+    },
+    {
+      id: "and",
+      phase: "Project 1",
+      title: "Build AND",
+      names: ["AND"],
+      inputs: 2,
+      outputs: 1,
+      description: "Bouw AND uit je bestaande bouwblokken.",
+      verification: "combinational",
+      template: { inputs: ["A", "B"], outputs: ["OUT"] },
+      hints: [
+        "Gebruik A en B als inputs en OUT als output.",
+        "Alleen wanneer A en B beide 1 zijn mag OUT ook 1 zijn.",
+      ],
+      tests: [
+        { inputs: { A: "0", B: "0" }, outputs: { OUT: "0" } },
+        { inputs: { A: "0", B: "1" }, outputs: { OUT: "0" } },
+        { inputs: { A: "1", B: "0" }, outputs: { OUT: "0" } },
+        { inputs: { A: "1", B: "1" }, outputs: { OUT: "1" } },
+      ],
+    },
+    {
+      id: "or",
+      phase: "Project 1",
+      title: "Build OR",
+      names: ["OR"],
+      inputs: 2,
+      outputs: 1,
+      description: "Maak een OR-chip in dezelfde stijl als NAND2Tetris.",
+      verification: "combinational",
+      template: { inputs: ["A", "B"], outputs: ["OUT"] },
+      hints: [
+        "Gebruik twee data-inputs A en B.",
+        "OUT is 1 zodra minstens één input 1 is.",
+      ],
+      tests: [
+        { inputs: { A: "0", B: "0" }, outputs: { OUT: "0" } },
+        { inputs: { A: "0", B: "1" }, outputs: { OUT: "1" } },
+        { inputs: { A: "1", B: "0" }, outputs: { OUT: "1" } },
+        { inputs: { A: "1", B: "1" }, outputs: { OUT: "1" } },
+      ],
+    },
+    {
+      id: "xor",
+      phase: "Project 1",
+      title: "Build XOR",
+      names: ["XOR"],
+      inputs: 2,
+      outputs: 1,
+      description: "Bouw XOR als composietchip.",
+      verification: "combinational",
+      template: { inputs: ["A", "B"], outputs: ["OUT"] },
+      hints: [
+        "Gebruik XOR-logica: precies één input hoog geeft een hoge output.",
+        "Controleer alle vier combinaties voordat je opslaat.",
+      ],
+      tests: [
+        { inputs: { A: "0", B: "0" }, outputs: { OUT: "0" } },
+        { inputs: { A: "0", B: "1" }, outputs: { OUT: "1" } },
+        { inputs: { A: "1", B: "0" }, outputs: { OUT: "1" } },
+        { inputs: { A: "1", B: "1" }, outputs: { OUT: "0" } },
+      ],
+    },
+    {
+      id: "mux",
+      phase: "Project 1",
+      title: "Build MUX",
+      names: ["MUX", "Mux"],
+      inputs: 3,
+      outputs: 1,
+      description: "Maak een multiplexer met twee datalijnen en één select.",
+      verification: "combinational",
+      template: { inputs: ["A", "B", "SEL"], outputs: ["OUT"] },
+      hints: [
+        "Gebruik A, B en SEL als inputs.",
+        "Als SEL=0 moet OUT=A zijn; als SEL=1 moet OUT=B zijn.",
+      ],
+      tests: [
+        { inputs: { A: "0", B: "1", SEL: "0" }, outputs: { OUT: "0" } },
+        { inputs: { A: "0", B: "1", SEL: "1" }, outputs: { OUT: "1" } },
+        { inputs: { A: "1", B: "0", SEL: "0" }, outputs: { OUT: "1" } },
+        { inputs: { A: "1", B: "0", SEL: "1" }, outputs: { OUT: "0" } },
+      ],
+    },
+    {
+      id: "dmux",
+      phase: "Project 1",
+      title: "Build DMUX",
+      names: ["DMUX", "DMux"],
+      inputs: 2,
+      outputs: 2,
+      description: "Splits één input naar twee outputs op basis van een select-lijn.",
+      verification: "combinational",
+      template: { inputs: ["IN", "SEL"], outputs: ["A", "B"] },
+      hints: [
+        "Gebruik IN en SEL als inputs.",
+        "Als SEL=0 gaat IN naar A en blijft B laag.",
+        "Als SEL=1 gaat IN naar B en blijft A laag.",
+      ],
+      tests: [
+        { inputs: { IN: "0", SEL: "0" }, outputs: { A: "0", B: "0" } },
+        { inputs: { IN: "1", SEL: "0" }, outputs: { A: "1", B: "0" } },
+        { inputs: { IN: "0", SEL: "1" }, outputs: { A: "0", B: "0" } },
+        { inputs: { IN: "1", SEL: "1" }, outputs: { A: "0", B: "1" } },
+      ],
+    },
+    {
+      id: "half-adder",
+      phase: "Project 2",
+      title: "Build Half Adder",
+      names: ["Half Adder", "HalfAdder"],
+      inputs: 2,
+      outputs: 2,
+      description: "Bouw SUM en CARRY als aparte outputs.",
+      verification: "combinational",
+      template: { inputs: ["A", "B"], outputs: ["SUM", "CARRY"] },
+      hints: [
+        "SUM werkt als XOR van A en B.",
+        "CARRY werkt als AND van A en B.",
+      ],
+      tests: [
+        { inputs: { A: "0", B: "0" }, outputs: { SUM: "0", CARRY: "0" } },
+        { inputs: { A: "0", B: "1" }, outputs: { SUM: "1", CARRY: "0" } },
+        { inputs: { A: "1", B: "0" }, outputs: { SUM: "1", CARRY: "0" } },
+        { inputs: { A: "1", B: "1" }, outputs: { SUM: "0", CARRY: "1" } },
+      ],
+    },
+    {
+      id: "full-adder",
+      phase: "Project 2",
+      title: "Build Full Adder",
+      names: ["Full Adder", "FullAdder"],
+      inputs: 3,
+      outputs: 2,
+      description: "Combineer adders tot een volledige 1-bit adder met carry-in en carry-out.",
+      verification: "combinational",
+      template: { inputs: ["A", "B", "CIN"], outputs: ["SUM", "COUT"] },
+      hints: [
+        "Gebruik twee half adders of een eigen equivalent.",
+        "COUT is hoog zodra minstens twee inputs hoog zijn.",
+      ],
+      tests: [
+        { inputs: { A: "0", B: "0", CIN: "0" }, outputs: { SUM: "0", COUT: "0" } },
+        { inputs: { A: "0", B: "1", CIN: "0" }, outputs: { SUM: "1", COUT: "0" } },
+        { inputs: { A: "1", B: "0", CIN: "1" }, outputs: { SUM: "0", COUT: "1" } },
+        { inputs: { A: "1", B: "1", CIN: "0" }, outputs: { SUM: "0", COUT: "1" } },
+        { inputs: { A: "1", B: "1", CIN: "1" }, outputs: { SUM: "1", COUT: "1" } },
+      ],
+    },
+    {
+      id: "register-chip",
+      phase: "Project 3",
+      title: "Build Register",
+      names: ["Bit", "Register"],
+      inputs: 3,
+      outputs: 1,
+      description: "Maak een eigen registerachtige chip als opstap naar geheugen.",
+      verification: "sequential-register",
+      template: { inputs: ["D", "CLK", "RST"], outputs: ["Q"] },
+      hints: [
+        "Gebruik D, CLK en RST als inputs en Q als output.",
+        "Na een step met CLK=1 moet Q de waarde van D overnemen.",
+        "Bij RST=1 moet Q terug naar 0.",
+      ],
+    },
   ];
 
   const dom = {
     builtinPalette: document.getElementById("builtin-palette"),
     workspaceList: document.getElementById("workspace-list"),
     chipLibrary: document.getElementById("chip-library"),
+    challengeList: document.getElementById("challenge-list"),
+    challengeStartButton: document.getElementById("challenge-start-button"),
+    challengeSubmitButton: document.getElementById("challenge-submit-button"),
     workspaceTitle: document.getElementById("workspace-title"),
     connectionStatus: document.getElementById("connection-status"),
     nodeLayer: document.getElementById("node-layer"),
     wireLayer: document.getElementById("wire-layer"),
+    workspaceStage: document.getElementById("workspace-stage"),
+    workspaceStageViewport: document.getElementById("workspace-stage-viewport"),
     emptyState: document.getElementById("empty-state"),
     inspector: document.getElementById("inspector"),
     errorList: document.getElementById("error-list"),
@@ -37,15 +259,23 @@
     resetStateButton: document.getElementById("reset-state-button"),
     exportButton: document.getElementById("export-button"),
     importButton: document.getElementById("import-button"),
+    zoomOutButton: document.getElementById("zoom-out-button"),
+    zoomResetButton: document.getElementById("zoom-reset-button"),
+    zoomInButton: document.getElementById("zoom-in-button"),
+    zoomValue: document.getElementById("zoom-value"),
   };
 
   const state = {
     project: loadProject(),
     selectedNodeId: null,
+    quickDeleteNodeId: null,
+    selectedChallengeId: null,
     pendingConnection: null,
     dragging: null,
+    longPress: null,
     panningCanvas: null,
     lastEvaluation: null,
+    zoom: 1,
   };
 
   initializeApp();
@@ -58,8 +288,10 @@
       console.error("Forge Logic bootstrap failed, resetting project.", error);
       state.project = createProject();
       state.selectedNodeId = null;
+      state.quickDeleteNodeId = null;
       state.pendingConnection = null;
       state.dragging = null;
+      state.longPress = null;
       state.panningCanvas = null;
       state.lastEvaluation = null;
       render();
@@ -78,10 +310,16 @@
     dom.exportButton.addEventListener("click", exportProject);
     dom.importButton.addEventListener("click", () => dom.importInput.click());
     dom.importInput.addEventListener("change", importProjectFromFile);
+    dom.zoomOutButton.addEventListener("click", () => changeZoom(-ZOOM_STEP));
+    dom.zoomResetButton.addEventListener("click", () => setZoom(1));
+    dom.zoomInButton.addEventListener("click", () => changeZoom(ZOOM_STEP));
+    dom.challengeStartButton.addEventListener("click", startSelectedChallenge);
+    dom.challengeSubmitButton.addEventListener("click", submitCurrentChallenge);
 
     dom.builtinPalette.addEventListener("click", handleBuiltinPaletteClick);
     dom.workspaceList.addEventListener("click", handleWorkspaceListClick);
     dom.chipLibrary.addEventListener("click", handleChipLibraryClick);
+    dom.challengeList.addEventListener("click", handleChallengeListClick);
     dom.nodeLayer.addEventListener("click", handleNodeLayerClick);
     dom.nodeLayer.addEventListener("pointerdown", handleNodeLayerPointerDown);
     dom.canvas.addEventListener("pointerdown", handleCanvasPointerDown);
@@ -188,6 +426,7 @@
       sourceChipSeriesId: meta && meta.sourceChipSeriesId ? meta.sourceChipSeriesId : null,
       sourceChipVersion: meta && Number(meta.sourceChipVersion) ? Number(meta.sourceChipVersion) : null,
       draftMode: meta && meta.draftMode ? String(meta.draftMode) : null,
+      challengeId: meta && meta.challengeId ? String(meta.challengeId) : null,
       isStarter: Boolean(meta && meta.isStarter),
     };
   }
@@ -271,6 +510,12 @@
       case "register":
         node.config = { label: "Register", width: 1, resetValue: "0" };
         break;
+      case "splitter":
+        node.config = { label: "Split", width: 4, highWidth: 2 };
+        break;
+      case "joiner":
+        node.config = { label: "Join", width: 4, highWidth: 2 };
+        break;
       default:
         if (type.startsWith("gate-")) {
           node.type = "gate";
@@ -343,6 +588,10 @@
         normalized.config.resetValue,
         normalized.config.width
       );
+    } else if (normalized.type === "splitter" || normalized.type === "joiner") {
+      normalized.config.label = normalized.config.label || (normalized.type === "splitter" ? "Split" : "Join");
+      normalized.config.width = Math.max(2, clampWidth(normalized.config.width));
+      normalized.config.highWidth = clampSplitWidth(normalized.config.highWidth, normalized.config.width);
     } else if (normalized.type === "chip-instance") {
       normalized.config.label = normalized.config.label || "Chip";
       normalized.config.definitionId = normalized.config.definitionId || "";
@@ -354,6 +603,11 @@
   function clampWidth(width) {
     const numeric = Number(width) || 1;
     return Math.max(1, Math.min(16, Math.round(numeric)));
+  }
+
+  function clampSplitWidth(highWidth, totalWidth) {
+    const numeric = Number(highWidth) || 1;
+    return Math.max(1, Math.min(totalWidth - 1, Math.round(numeric)));
   }
 
   function normalizeBitString(value, width) {
@@ -486,6 +740,30 @@
         outputs: [{ key: "Q", name: "Q", width: node.config.width }],
       };
     }
+    if (node.type === "splitter") {
+      const lowWidth = node.config.width - node.config.highWidth;
+      return {
+        title: node.config.label,
+        subtitle: `Bus Split • ${node.config.width}-bit`,
+        inputs: [{ key: "IN", name: "IN", width: node.config.width }],
+        outputs: [
+          { key: "HI", name: `HI(${node.config.highWidth})`, width: node.config.highWidth },
+          { key: "LO", name: `LO(${lowWidth})`, width: lowWidth },
+        ],
+      };
+    }
+    if (node.type === "joiner") {
+      const lowWidth = node.config.width - node.config.highWidth;
+      return {
+        title: node.config.label,
+        subtitle: `Bus Join • ${node.config.width}-bit`,
+        inputs: [
+          { key: "HI", name: `HI(${node.config.highWidth})`, width: node.config.highWidth },
+          { key: "LO", name: `LO(${lowWidth})`, width: lowWidth },
+        ],
+        outputs: [{ key: "OUT", name: "OUT", width: node.config.width }],
+      };
+    }
     if (node.type === "chip-instance") {
       const definition = getChipDefinition(node.config.definitionId);
       if (!definition) {
@@ -518,6 +796,7 @@
     renderBuiltinPalette();
     renderWorkspaceList();
     renderChipLibrary();
+    renderChallenges();
 
     try {
       state.lastEvaluation = evaluateWorkspace(getCurrentWorkspace());
@@ -621,10 +900,244 @@
       .join("");
   }
 
+  function renderChallenges() {
+    if (!state.selectedChallengeId && CHALLENGES.length) {
+      state.selectedChallengeId = CHALLENGES[0].id;
+    }
+    const userDefinitions = state.project.chipDefinitions.filter((definition) => !isStarterDefinition(definition));
+    const challengeStates = CHALLENGES.map((challenge) => ({
+      challenge,
+      result: evaluateChallengeResult(challenge, userDefinitions),
+    }));
+    const completedCount = challengeStates.filter((item) => item.result.done).length;
+    dom.challengeList.innerHTML = [
+      `<div class="challenge-card">
+        <div class="challenge-head">
+          <div>
+            <h3>Progress</h3>
+            <div class="challenge-kicker">${completedCount}/${CHALLENGES.length} klaar</div>
+          </div>
+          <span class="challenge-status">${Math.round((completedCount / CHALLENGES.length) * 100)}%</span>
+        </div>
+      </div>`,
+      ...challengeStates.map(({ challenge, result }) => renderChallengeCard(challenge, result)),
+    ].join("");
+    updateChallengeStartButton();
+    updateChallengeSubmitButton();
+  }
+
+  function renderChallengeCard(challenge, result) {
+    const expanded = state.selectedChallengeId === challenge.id;
+    return `<article class="challenge-card ${result.done ? "done" : ""} ${
+      expanded ? "selected" : ""
+    }" data-select-challenge="${challenge.id}">
+      <div class="challenge-head">
+        <div>
+          <h3>${escapeHtml(challenge.title)}</h3>
+          <div class="challenge-kicker">${escapeHtml(
+            `${challenge.phase} • ${challenge.inputs} in / ${challenge.outputs} out`
+          )}</div>
+        </div>
+        <span class="challenge-status">${escapeHtml(result.label)}</span>
+      </div>
+      <p class="challenge-copy">${escapeHtml(challenge.description)}</p>
+      <p class="challenge-copy">${escapeHtml(result.summary)}</p>
+      <div class="challenge-actions">
+        <button class="ghost-button" type="button" data-open-challenge="${challenge.id}">Start</button>
+        <button class="ghost-button" type="button" data-submit-challenge="${challenge.id}">Submit</button>
+        <button class="ghost-button" type="button" data-toggle-challenge="${challenge.id}">${
+          expanded ? "Hide Details" : "Show Details"
+        }</button>
+      </div>
+      ${
+        expanded
+          ? `<div class="challenge-details">
+              <div class="challenge-kicker">Hints</div>
+              <ul class="challenge-hints">
+                ${challenge.hints.map((hint) => `<li>${escapeHtml(hint)}</li>`).join("")}
+              </ul>
+            </div>`
+          : ""
+      }
+    </article>`;
+  }
+
+  function evaluateChallengeResult(challenge, definitions) {
+    const candidates = definitions.filter((definition) => definitionMatchesChallenge(definition, challenge));
+    if (!candidates.length) {
+      return {
+        done: false,
+        label: "Open",
+        summary: "Nog geen eigen oplossing opgeslagen.",
+      };
+    }
+
+    const attempts = candidates.map((definition) => runChallengeVerification(challenge, definition));
+    const passing = attempts.find((attempt) => attempt.done);
+    if (passing) {
+      return passing;
+    }
+
+    const bestAttempt = attempts.sort((left, right) => right.score - left.score)[0];
+    return bestAttempt;
+  }
+
+  function definitionMatchesChallenge(definition, challenge) {
+    return (
+      challenge.names.some(
+        (name) => normalizeChallengeName(definition.name) === normalizeChallengeName(name)
+      ) &&
+      definition.inputs.length === challenge.inputs &&
+      definition.outputs.length === challenge.outputs
+    );
+  }
+
+  function runChallengeVerification(challenge, definition) {
+    if (challenge.verification === "combinational") {
+      return runCombinationalChallengeVerification(challenge, definition);
+    }
+    if (challenge.verification === "sequential-register") {
+      return runRegisterChallengeVerification(challenge, definition);
+    }
+    return {
+      done: true,
+      label: "Shape OK",
+      summary: "Interface komt overeen met de opdracht.",
+      score: 1,
+    };
+  }
+
+  function normalizeChallengeName(name) {
+    return String(name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  }
+
+  function isStarterDefinition(definition) {
+    return Boolean(
+      (definition.description && definition.description.toLowerCase().startsWith("starter ")) ||
+        (definition.circuitSnapshot &&
+          definition.circuitSnapshot.meta &&
+          definition.circuitSnapshot.meta.isStarter)
+    );
+  }
+
+  function runCombinationalChallengeVerification(challenge, definition) {
+    const tests = Array.isArray(challenge.tests) ? challenge.tests : [];
+    let passed = 0;
+
+    for (const test of tests) {
+      const outputs = simulateDefinitionOutputs(definition, test.inputs, `challenge:${challenge.id}`);
+      const success = Object.entries(test.outputs).every(
+        ([name, expected]) => outputs[name] === expected
+      );
+      if (success) {
+        passed += 1;
+      }
+    }
+
+    const done = passed === tests.length;
+    return {
+      done,
+      label: done ? "Verified" : "Needs Work",
+      summary: `${passed}/${tests.length} functionele tests geslaagd.`,
+      score: tests.length ? passed / tests.length : 0,
+    };
+  }
+
+  function runRegisterChallengeVerification(challenge, definition) {
+    const originalRuntime = deepClone(state.project.runtime.registerStates);
+    const path = `challenge:${challenge.id}:${definition.id}`;
+    state.project.runtime.registerStates = {};
+
+    try {
+      const checkpoints = [];
+
+      checkpoints.push(
+        compareOutputs(
+          simulateDefinitionOutputs(definition, { D: "0", CLK: "0", RST: "0" }, path),
+          { Q: "0" }
+        )
+      );
+
+      applyDefinitionStep(definition, { D: "1", CLK: "1", RST: "0" }, path);
+      checkpoints.push(
+        compareOutputs(
+          simulateDefinitionOutputs(definition, { D: "1", CLK: "1", RST: "0" }, path),
+          { Q: "1" }
+        )
+      );
+
+      applyDefinitionStep(definition, { D: "0", CLK: "0", RST: "0" }, path);
+      checkpoints.push(
+        compareOutputs(
+          simulateDefinitionOutputs(definition, { D: "0", CLK: "0", RST: "0" }, path),
+          { Q: "1" }
+        )
+      );
+
+      applyDefinitionStep(definition, { D: "0", CLK: "1", RST: "0" }, path);
+      checkpoints.push(
+        compareOutputs(
+          simulateDefinitionOutputs(definition, { D: "0", CLK: "1", RST: "0" }, path),
+          { Q: "0" }
+        )
+      );
+
+      applyDefinitionStep(definition, { D: "1", CLK: "0", RST: "1" }, path);
+      checkpoints.push(
+        compareOutputs(
+          simulateDefinitionOutputs(definition, { D: "1", CLK: "0", RST: "1" }, path),
+          { Q: "0" }
+        )
+      );
+
+      const passed = checkpoints.filter(Boolean).length;
+      const done = passed === checkpoints.length;
+      return {
+        done,
+        label: done ? "Verified" : "Needs Work",
+        summary: `${passed}/${checkpoints.length} sequentiële checks geslaagd.`,
+        score: checkpoints.length ? passed / checkpoints.length : 0,
+      };
+    } finally {
+      state.project.runtime.registerStates = originalRuntime;
+    }
+  }
+
+  function compareOutputs(actual, expected) {
+    return Object.entries(expected).every(([name, value]) => actual[name] === value);
+  }
+
+  function simulateDefinitionOutputs(definition, namedInputs, path) {
+    const externalInputs = {};
+    definition.inputs.forEach((pin) => {
+      externalInputs[pin.key] = parseBits(namedInputs[pin.name] || "0", pin.width);
+    });
+    const evaluation = evaluateCircuit(definition.circuitSnapshot, externalInputs, path, new Set());
+    const namedOutputs = {};
+    definition.outputs.forEach((pin) => {
+      namedOutputs[pin.name] = formatBits(evaluation.interfaceOutputs[pin.key], pin.width);
+    });
+    return namedOutputs;
+  }
+
+  function applyDefinitionStep(definition, namedInputs, path) {
+    const externalInputs = {};
+    definition.inputs.forEach((pin) => {
+      externalInputs[pin.key] = parseBits(namedInputs[pin.name] || "0", pin.width);
+    });
+    const updates = collectRegisterUpdates(definition.circuitSnapshot, externalInputs, path, new Set());
+    updates.forEach((update) => {
+      state.project.runtime.registerStates[update.key] = { bits: update.bits };
+    });
+  }
+
   function renderCanvas() {
     const workspace = getCurrentWorkspace();
     const evaluation = state.lastEvaluation || { nodeSignals: {}, wireSignals: {}, errors: [] };
     const invalidNodeIds = new Set(evaluation.errors.flatMap((error) => error.nodeIds || []));
+    applyWorkspaceZoom();
     dom.emptyState.hidden = workspace.nodes.length > 0;
 
     dom.nodeLayer.innerHTML = workspace.nodes
@@ -635,9 +1148,40 @@
     updateConnectionStatus();
   }
 
+  function applyWorkspaceZoom() {
+    dom.workspaceStage.style.transform = `scale(${state.zoom})`;
+    dom.workspaceStageViewport.style.width = `${WORKSPACE_BASE_WIDTH * state.zoom}px`;
+    dom.workspaceStageViewport.style.height = `${WORKSPACE_BASE_HEIGHT * state.zoom}px`;
+    const percent = `${Math.round(state.zoom * 100)}%`;
+    dom.zoomValue.textContent = percent;
+    dom.zoomResetButton.textContent = percent;
+  }
+
+  function changeZoom(delta) {
+    setZoom(state.zoom + delta);
+  }
+
+  function setZoom(nextZoom) {
+    const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(nextZoom * 100) / 100));
+    if (clamped === state.zoom) {
+      return;
+    }
+    const previousZoom = state.zoom;
+    const centerX = dom.canvas.scrollLeft + dom.canvas.clientWidth / 2;
+    const centerY = dom.canvas.scrollTop + dom.canvas.clientHeight / 2;
+    const logicalCenterX = centerX / previousZoom;
+    const logicalCenterY = centerY / previousZoom;
+    state.zoom = clamped;
+    applyWorkspaceZoom();
+    dom.canvas.scrollLeft = Math.max(0, logicalCenterX * state.zoom - dom.canvas.clientWidth / 2);
+    dom.canvas.scrollTop = Math.max(0, logicalCenterY * state.zoom - dom.canvas.clientHeight / 2);
+    renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
+  }
+
   function renderNode(node, signalState, invalid) {
     const spec = getNodeSpec(node);
     const selected = node.id === state.selectedNodeId;
+    const quickDeleteVisible = node.id === state.quickDeleteNodeId;
     const lampValue = signalState && signalState.inputs && signalState.inputs.IN
       ? formatBits(signalState.inputs.IN, getPinWidth(spec.inputs, "IN"))
       : "0";
@@ -653,6 +1197,13 @@
     const body = renderNodeBody(node, spec, lampValue, registerText);
 
     return `<article class="node ${selected ? "selected" : ""} ${invalid ? "invalid" : ""}" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
+      ${
+        quickDeleteVisible
+          ? `<button class="node-quick-delete" type="button" data-quick-delete-node="${node.id}" aria-label="Delete ${escapeAttribute(
+              spec.title
+            )}">x</button>`
+          : ""
+      }
       <div class="node-shell" data-drag-surface="true" data-node-id="${node.id}">
         <div class="node-caption">
           <span class="node-label">${escapeHtml(spec.title)}</span>
@@ -721,6 +1272,14 @@
         <span class="gate-symbol">${escapeHtml(symbol)}</span>
       </div>
       <div class="gate-meta"><span class="register-readout">${escapeHtml(registerText)}</span></div></div>`;
+    }
+    if (node.type === "splitter" || node.type === "joiner") {
+      return `<div class="node-center"><div class="gate-face">
+        <span class="gate-symbol">${escapeHtml(symbol)}</span>
+      </div>
+      <div class="gate-meta"><span>${escapeHtml(
+        `${node.config.highWidth}/${node.config.width - node.config.highWidth}`
+      )}</span></div></div>`;
     }
     if (node.type === "chip-instance") {
       return `<div class="node-center"><div class="gate-face">
@@ -792,6 +1351,12 @@
     if (node.type === "register") {
       return "REG";
     }
+    if (node.type === "splitter") {
+      return "SPLIT";
+    }
+    if (node.type === "joiner") {
+      return "JOIN";
+    }
     return node.type.toUpperCase();
   }
 
@@ -818,6 +1383,12 @@
     if (node.type === "register") {
       return "D";
     }
+    if (node.type === "splitter") {
+      return "/\\";
+    }
+    if (node.type === "joiner") {
+      return "\\/";
+    }
     if (node.type === "input-pin") {
       return ">";
     }
@@ -831,7 +1402,6 @@
   }
 
   function renderWires(workspace, evaluation) {
-    const canvasRect = dom.canvas.getBoundingClientRect();
     const nodeLookup = new Map(workspace.nodes.map((node) => [node.id, node]));
 
     dom.wireLayer.innerHTML = workspace.wires
@@ -847,12 +1417,12 @@
           return "";
         }
 
-        const fromRect = fromElement.getBoundingClientRect();
-        const toRect = toElement.getBoundingClientRect();
-        const x1 = fromRect.left - canvasRect.left + fromRect.width / 2 + dom.canvas.scrollLeft;
-        const y1 = fromRect.top - canvasRect.top + fromRect.height / 2 + dom.canvas.scrollTop;
-        const x2 = toRect.left - canvasRect.left + toRect.width / 2 + dom.canvas.scrollLeft;
-        const y2 = toRect.top - canvasRect.top + toRect.height / 2 + dom.canvas.scrollTop;
+        const fromPoint = getElementOffsetCenter(fromElement, dom.nodeLayer);
+        const toPoint = getElementOffsetCenter(toElement, dom.nodeLayer);
+        const x1 = fromPoint.x;
+        const y1 = fromPoint.y;
+        const x2 = toPoint.x;
+        const y2 = toPoint.y;
         const delta = Math.max(60, Math.abs(x2 - x1) * 0.55);
         const path = `M ${x1} ${y1} C ${x1 + delta} ${y1}, ${x2 - delta} ${y2}, ${x2} ${y2}`;
         const wireSignal = evaluation.wireSignals[wire.id];
@@ -861,6 +1431,18 @@
         return `<path class="wire ${wireClass} ${invalidNode ? "invalid" : ""}" d="${path}" />`;
       })
       .join("");
+  }
+
+  function getElementOffsetCenter(element, boundary) {
+    let x = element.offsetLeft + element.offsetWidth / 2;
+    let y = element.offsetTop + element.offsetHeight / 2;
+    let current = element.offsetParent;
+    while (current && current !== boundary) {
+      x += current.offsetLeft;
+      y += current.offsetTop;
+      current = current.offsetParent;
+    }
+    return { x, y };
   }
 
   function renderInspector() {
@@ -971,6 +1553,17 @@
         </div>`;
     }
 
+    if (node.type === "splitter" || node.type === "joiner") {
+      return `${commonLabel}
+        ${renderWidthField(node)}
+        <div class="field-group">
+          <label for="split-width-input">High segment width</label>
+          <input id="split-width-input" type="number" min="1" max="${escapeAttribute(
+            String(Math.max(1, node.config.width - 1))
+          )}" step="1" data-config-key="highWidth" value="${escapeAttribute(String(node.config.highWidth))}" />
+        </div>`;
+    }
+
     if (node.type === "chip-instance") {
       const definition = getChipDefinition(node.config.definitionId);
       return `${commonLabel}
@@ -1069,7 +1662,85 @@
     }
   }
 
+  function handleChallengeListClick(event) {
+    const toggleButton = event.target.closest("[data-toggle-challenge]");
+    if (toggleButton) {
+      const challengeId = toggleButton.dataset.toggleChallenge;
+      state.selectedChallengeId = state.selectedChallengeId === challengeId ? null : challengeId;
+      renderChallenges();
+      return;
+    }
+
+    const openButton = event.target.closest("[data-open-challenge]");
+    if (openButton) {
+      openChallengeWorkspace(openButton.dataset.openChallenge);
+      return;
+    }
+
+    const submitButton = event.target.closest("[data-submit-challenge]");
+    if (submitButton) {
+      submitChallenge(submitButton.dataset.submitChallenge);
+      return;
+    }
+
+    const selectedCard = event.target.closest("[data-select-challenge]");
+    if (selectedCard) {
+      state.selectedChallengeId = selectedCard.dataset.selectChallenge;
+      renderChallenges();
+    }
+  }
+
+  function updateChallengeStartButton() {
+    const selectedChallenge = CHALLENGES.find((item) => item.id === state.selectedChallengeId);
+    if (!selectedChallenge) {
+      dom.challengeStartButton.disabled = true;
+      dom.challengeStartButton.textContent = "Start Selected";
+      return;
+    }
+    dom.challengeStartButton.disabled = false;
+    dom.challengeStartButton.textContent = `Start ${selectedChallenge.title}`;
+  }
+
+  function updateChallengeSubmitButton() {
+    const challenge = getActiveWorkspaceChallenge();
+    if (!challenge) {
+      dom.challengeSubmitButton.disabled = true;
+      dom.challengeSubmitButton.textContent = "Submit Current";
+      return;
+    }
+    dom.challengeSubmitButton.disabled = false;
+    dom.challengeSubmitButton.textContent = `Submit ${challenge.names[0]}`;
+  }
+
+  function startSelectedChallenge() {
+    if (!state.selectedChallengeId) {
+      return;
+    }
+    openChallengeWorkspace(state.selectedChallengeId);
+  }
+
+  function submitCurrentChallenge() {
+    const challenge = getActiveWorkspaceChallenge();
+    if (!challenge) {
+      const fallbackChallenge = CHALLENGES.find((item) => item.id === state.selectedChallengeId);
+      setStatus(
+        fallbackChallenge
+          ? `Open eerst de actieve sheet voor ${fallbackChallenge.title} en lever die daarna in.`
+          : "Open eerst een challenge-sheet om hem in te leveren."
+      );
+      render();
+      return;
+    }
+    submitChallenge(challenge.id);
+  }
+
   function handleNodeLayerClick(event) {
+    const quickDeleteButton = event.target.closest("[data-quick-delete-node]");
+    if (quickDeleteButton) {
+      deleteNode(quickDeleteButton.dataset.quickDeleteNode);
+      return;
+    }
+
     const actionButton = event.target.closest("[data-node-action]");
     if (actionButton) {
       const node = getCurrentWorkspace().nodes.find((item) => item.id === actionButton.dataset.nodeId);
@@ -1094,11 +1765,15 @@
     const nodeElement = event.target.closest("[data-node-id]");
     if (nodeElement) {
       state.selectedNodeId = nodeElement.dataset.nodeId;
+      if (state.quickDeleteNodeId && state.quickDeleteNodeId !== nodeElement.dataset.nodeId) {
+        state.quickDeleteNodeId = null;
+      }
       render();
       return;
     }
 
     state.selectedNodeId = null;
+    state.quickDeleteNodeId = null;
     render();
   }
 
@@ -1106,7 +1781,11 @@
     if (event.button !== 0) {
       return;
     }
-    if (event.target.closest("[data-pin-direction]") || event.target.closest("[data-node-action]")) {
+    if (
+      event.target.closest("[data-pin-direction]") ||
+      event.target.closest("[data-node-action]") ||
+      event.target.closest("[data-quick-delete-node]")
+    ) {
       return;
     }
     const surface = event.target.closest("[data-drag-surface]");
@@ -1121,6 +1800,7 @@
     event.preventDefault();
     event.stopPropagation();
     state.selectedNodeId = nodeId;
+    state.quickDeleteNodeId = null;
     state.dragging = {
       nodeId,
       pointerId: event.pointerId,
@@ -1132,6 +1812,7 @@
     if (surface.setPointerCapture) {
       surface.setPointerCapture(event.pointerId);
     }
+    startNodeLongPress(nodeId, event.pointerId, event.clientX, event.clientY);
   }
 
   function handleCanvasPointerDown(event) {
@@ -1142,6 +1823,9 @@
       return;
     }
     event.preventDefault();
+    clearLongPress();
+    const hadQuickDelete = Boolean(state.quickDeleteNodeId);
+    state.quickDeleteNodeId = null;
     state.panningCanvas = {
       pointerId: event.pointerId,
       startClientX: event.clientX,
@@ -1149,6 +1833,9 @@
       startScrollLeft: dom.canvas.scrollLeft,
       startScrollTop: dom.canvas.scrollTop,
     };
+    if (hadQuickDelete) {
+      render();
+    }
   }
 
   function handleInspectorInput(event) {
@@ -1177,6 +1864,10 @@
       if (node.type === "register") {
         node.config.resetValue = normalizeBitString(node.config.resetValue, width);
       }
+      if (node.type === "splitter" || node.type === "joiner") {
+        node.config.width = Math.max(2, width);
+        node.config.highWidth = clampSplitWidth(node.config.highWidth, node.config.width);
+      }
     }
 
     if (node.type === "switch" && key === "value") {
@@ -1190,6 +1881,9 @@
     }
     if (node.type === "register" && key === "resetValue") {
       node.config.resetValue = normalizeBitString(node.config.resetValue, node.config.width);
+    }
+    if ((node.type === "splitter" || node.type === "joiner") && key === "highWidth") {
+      node.config.highWidth = clampSplitWidth(node.config.highWidth, node.config.width);
     }
     if (node.type === "gate" && key === "gateType") {
       node.config.label = node.config.gateType;
@@ -1226,12 +1920,39 @@
     }
   }
 
+  function startNodeLongPress(nodeId, pointerId, clientX, clientY) {
+    clearLongPress();
+    state.longPress = {
+      nodeId,
+      pointerId,
+      startClientX: clientX,
+      startClientY: clientY,
+      timerId: window.setTimeout(() => {
+        if (!state.longPress || state.longPress.nodeId !== nodeId || state.longPress.pointerId !== pointerId) {
+          return;
+        }
+        state.quickDeleteNodeId = nodeId;
+        state.dragging = null;
+        state.longPress = null;
+        render();
+      }, LONG_PRESS_DELAY),
+    };
+  }
+
+  function clearLongPress(pointerId) {
+    if (!state.longPress) {
+      return;
+    }
+    if (pointerId != null && state.longPress.pointerId !== pointerId) {
+      return;
+    }
+    window.clearTimeout(state.longPress.timerId);
+    state.longPress = null;
+  }
+
   function addPartToWorkspace(partType, definitionId) {
     const workspace = getCurrentWorkspace();
-    const position = {
-      x: 120 + (workspace.nodes.length % 5) * 250,
-      y: 110 + Math.floor(workspace.nodes.length / 5) * 190,
-    };
+    const position = getSuggestedNodePosition(workspace);
     const node =
       partType === "chip-instance"
         ? createChipInstance(state.project, definitionId, position)
@@ -1240,6 +1961,49 @@
     state.selectedNodeId = node.id;
     setStatus(`${node.config.label || node.type} toegevoegd aan ${workspace.name}.`);
     render();
+  }
+
+  function getSuggestedNodePosition(workspace) {
+    const margin = 24;
+    const selectedNode = workspace.nodes.find((item) => item.id === state.selectedNodeId);
+    const anchor = selectedNode
+      ? { x: selectedNode.x + 110, y: selectedNode.y + 70 }
+      : getWorkspaceClusterAnchor(workspace);
+    const stagger = workspace.nodes.length % 4;
+    return {
+      x: clamp(anchor.x + stagger * 18, margin, WORKSPACE_BASE_WIDTH - 140),
+      y: clamp(anchor.y + stagger * 14, margin, WORKSPACE_BASE_HEIGHT - 110),
+    };
+  }
+
+  function getWorkspaceClusterAnchor(workspace) {
+    if (!workspace.nodes.length) {
+      return { x: 120, y: 110 };
+    }
+
+    const bounds = workspace.nodes.reduce(
+      (result, node) => ({
+        minX: Math.min(result.minX, node.x),
+        minY: Math.min(result.minY, node.y),
+        maxX: Math.max(result.maxX, node.x),
+        maxY: Math.max(result.maxY, node.y),
+      }),
+      {
+        minX: Infinity,
+        minY: Infinity,
+        maxX: -Infinity,
+        maxY: -Infinity,
+      }
+    );
+
+    return {
+      x: Math.min(bounds.maxX + 110, WORKSPACE_BASE_WIDTH - 140),
+      y: Math.min(bounds.maxY + 70, WORKSPACE_BASE_HEIGHT - 110),
+    };
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
   }
 
   function createWorkspaceFromPrompt() {
@@ -1253,6 +2017,59 @@
     state.selectedNodeId = null;
     setStatus(`Workspace "${workspace.name}" aangemaakt.`);
     render();
+  }
+
+  function openChallengeWorkspace(challengeId) {
+    const challenge = CHALLENGES.find((item) => item.id === challengeId);
+    if (!challenge) {
+      return;
+    }
+    const workspace = createWorkspace(state.project, `${challenge.title} Draft`, null, {
+      challengeId,
+    });
+    populateChallengeWorkspace(workspace, challenge);
+    state.project.workspaces.push(workspace);
+    state.project.currentWorkspaceId = workspace.id;
+    state.selectedNodeId = null;
+    state.selectedChallengeId = challengeId;
+    setStatus(`Challenge-sheet geopend voor ${challenge.title}.`);
+    render();
+  }
+
+  function getActiveWorkspaceChallenge() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace || !workspace.meta || !workspace.meta.challengeId) {
+      return null;
+    }
+    return CHALLENGES.find((item) => item.id === workspace.meta.challengeId) || null;
+  }
+
+  function populateChallengeWorkspace(workspace, challenge) {
+    const template = challenge.template || { inputs: [], outputs: [] };
+    const inputStep = Math.max(90, Math.floor(420 / Math.max(1, template.inputs.length)));
+    const outputStep = Math.max(90, Math.floor(420 / Math.max(1, template.outputs.length)));
+
+    template.inputs.forEach((name, index) => {
+      workspace.nodes.push(
+        createConfiguredNode(
+          state.project,
+          "input-pin",
+          { x: 120, y: 120 + index * inputStep },
+          { label: name, width: 1, previewValue: "0" }
+        )
+      );
+    });
+
+    template.outputs.forEach((name, index) => {
+      workspace.nodes.push(
+        createConfiguredNode(
+          state.project,
+          "output-pin",
+          { x: 760, y: 120 + index * outputStep },
+          { label: name, width: 1 }
+        )
+      );
+    });
   }
 
   function duplicateCurrentWorkspace() {
@@ -1294,32 +2111,42 @@
     render();
   }
 
-  function saveCurrentWorkspaceAsChip() {
+  function saveCurrentWorkspaceAsChip(options = {}) {
     const workspace = getCurrentWorkspace();
     const interfaceResult = extractChipInterface(workspace);
     if (interfaceResult.errors.length) {
       setStatus(interfaceResult.errors[0].message);
       render();
-      return;
+      return null;
     }
 
     const sourceSeries =
       workspace.meta && workspace.meta.sourceChipSeriesId
         ? getChipSeries(workspace.meta.sourceChipSeriesId)
         : null;
-    const suggestedName = sourceSeries
-      ? sourceSeries.name
-      : workspace.name.replace(/\s+copy$/i, "").trim() || "Custom Chip";
-    const chipName = window.prompt("Chip name", suggestedName);
+    const {
+      preferredName = "",
+      preferredDescription = "",
+      promptForName = true,
+      promptForDescription = true,
+    } = options;
+    const suggestedName =
+      preferredName ||
+      (sourceSeries ? sourceSeries.name : workspace.name.replace(/\s+copy$/i, "").trim()) ||
+      "Custom Chip";
+    const chipName = promptForName ? window.prompt("Chip name", suggestedName) : suggestedName;
     if (!chipName) {
-      return;
+      return null;
     }
     const trimmedName = chipName.trim();
     if (!trimmedName) {
-      return;
+      return null;
     }
-    const description =
-      window.prompt("Beschrijving van deze chip", `Snapshot vanuit workspace "${workspace.name}"`) || "";
+    const defaultDescription =
+      preferredDescription || `Snapshot vanuit workspace "${workspace.name}"`;
+    const description = promptForDescription
+      ? window.prompt("Beschrijving van deze chip", defaultDescription) || ""
+      : defaultDescription;
 
     let series =
       sourceSeries && sourceSeries.name.toLowerCase() === trimmedName.toLowerCase()
@@ -1358,6 +2185,38 @@
       draftMode: "new-version",
     };
     setStatus(`Chip "${trimmedName} v${version}" opgeslagen in de bibliotheek.`);
+    render();
+    return definition;
+  }
+
+  function submitChallenge(challengeId) {
+    const challenge = CHALLENGES.find((item) => item.id === challengeId);
+    const workspace = getCurrentWorkspace();
+    if (!challenge || !workspace) {
+      return;
+    }
+    if (!workspace.meta || workspace.meta.challengeId !== challengeId) {
+      setStatus(`Open eerst de challenge-sheet voor ${challenge.title} en lever die daarna in.`);
+      render();
+      return;
+    }
+
+    const definition = saveCurrentWorkspaceAsChip({
+      preferredName: challenge.names[0],
+      preferredDescription: `Challenge submission for ${challenge.title}`,
+      promptForName: false,
+      promptForDescription: false,
+    });
+    if (!definition) {
+      return;
+    }
+
+    const result = runChallengeVerification(challenge, definition);
+    setStatus(
+      result.done
+        ? `Ingeleverd: ${challenge.title} is verified.`
+        : `Ingeleverd: ${challenge.title} needs work. ${result.summary}`
+    );
     render();
   }
 
@@ -1838,6 +2697,9 @@
       (wire) => wire.fromNodeId !== nodeId && wire.toNodeId !== nodeId
     );
     state.selectedNodeId = null;
+    if (state.quickDeleteNodeId === nodeId) {
+      state.quickDeleteNodeId = null;
+    }
     state.pendingConnection = null;
     setStatus(`Node "${node.config.label || node.type}" verwijderd.`);
     render();
@@ -1860,8 +2722,18 @@
       event.preventDefault();
       const deltaX = event.clientX - state.dragging.startClientX;
       const deltaY = event.clientY - state.dragging.startClientY;
-      node.x = Math.max(20, state.dragging.startNodeX + deltaX);
-      node.y = Math.max(20, state.dragging.startNodeY + deltaY);
+      if (state.longPress && state.longPress.pointerId === event.pointerId) {
+        const distance = Math.hypot(
+          event.clientX - state.longPress.startClientX,
+          event.clientY - state.longPress.startClientY
+        );
+        if (distance <= LONG_PRESS_MOVE_THRESHOLD) {
+          return;
+        }
+        clearLongPress(event.pointerId);
+      }
+      node.x = Math.max(20, state.dragging.startNodeX + deltaX / state.zoom);
+      node.y = Math.max(20, state.dragging.startNodeY + deltaY / state.zoom);
       syncDraggedNodePosition(node);
       renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
       return;
@@ -1881,6 +2753,7 @@
       if (event && event.pointerId != null && event.pointerId !== state.dragging.pointerId) {
         return;
       }
+      clearLongPress(event ? event.pointerId : null);
       state.dragging = null;
       render();
       return;
@@ -1892,6 +2765,7 @@
       }
       state.panningCanvas = null;
     }
+    clearLongPress(event ? event.pointerId : null);
   }
 
   function syncDraggedNodePosition(node) {
@@ -2056,6 +2930,14 @@
         outputs.Q = stored
           ? ensureWidth(stored.bits, node.config.width)
           : parseBits(node.config.resetValue, node.config.width);
+      } else if (node.type === "splitter") {
+        const sourceBits = ensureWidth(inputValues.IN, node.config.width);
+        outputs.HI = sourceBits.slice(0, node.config.highWidth);
+        outputs.LO = sourceBits.slice(node.config.highWidth);
+      } else if (node.type === "joiner") {
+        const highBits = ensureWidth(inputValues.HI, node.config.highWidth);
+        const lowBits = ensureWidth(inputValues.LO, node.config.width - node.config.highWidth);
+        outputs.OUT = [...highBits, ...lowBits];
       } else if (node.type === "chip-instance") {
         const definition = getChipDefinition(node.config.definitionId);
         if (!definition) {
