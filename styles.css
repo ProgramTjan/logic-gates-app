@@ -1,22 +1,389 @@
-:root {
-  --bg: #f3f3ef;
-  --panel: #f8f8f4;
-  --panel-border: #d7d7cf;
-  --ink: #1d1d19;
-  --muted: #686860;
-  --accent: #2b6cb0;
-  --accent-strong: #1e4f83;
-  --signal-off: #cdcdc5;
-  --signal-high: #1f9d62;
-  --signal-low: #56564f;
-  --warning: #b03030;
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+/* =============================================
+   THEME VARIABLES
+   ============================================= */
+
+:root,
+[data-theme="dark"] {
+  /* Core palette */
+  --panel: #161b27;
+  --panel-border: #2d333b;
+  --ink: #c9d1d9;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --accent-strong: #388bfd;
+  --accent-soft: #1c2d4a;
+  --signal-off: #484f58;
+  --signal-high: #3fb950;
+  --warning: #f85149;
+  --shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
   --radius: 14px;
   --node-radius: 12px;
-  --grid: rgba(0, 0, 0, 0.06);
+  --grid: rgba(88, 166, 255, 0.06);
   --font-display: "Trebuchet MS", "Gill Sans", sans-serif;
   --font-body: "Trebuchet MS", "Gill Sans", sans-serif;
+
+  /* Body */
+  --body-bg:
+    radial-gradient(circle at top left, rgba(88, 166, 255, 0.07), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(63, 185, 80, 0.05), transparent 35%),
+    linear-gradient(180deg, #0d1117 0%, #080c14 100%);
+
+  /* Ghost button */
+  --ghost-bg: #21262d;
+  --ghost-hover: #30363d;
+  --ghost-border: #30363d;
+
+  /* Surface gradients */
+  --brand-bg: linear-gradient(180deg, rgba(28, 45, 74, 0.95), rgba(18, 32, 58, 0.95));
+  --brand-border: rgba(88, 166, 255, 0.22);
+  --left-bg: linear-gradient(180deg, rgba(26, 22, 14, 0.97), rgba(20, 17, 11, 0.97));
+  --right-bg: linear-gradient(180deg, rgba(17, 22, 36, 0.98), rgba(13, 17, 28, 0.98));
+  --toolbar-bg: linear-gradient(180deg, rgba(22, 27, 42, 0.98), rgba(17, 22, 34, 0.98));
+  --toolbar-border: rgba(45, 51, 59, 0.9);
+  --workspace-bg: linear-gradient(180deg, rgba(13, 17, 26, 0.99), rgba(10, 13, 22, 0.99));
+  --canvas-bg: linear-gradient(180deg, #0a0e18 0%, #080c14 100%);
+  --parts-menu-bg: linear-gradient(180deg, rgba(22, 28, 42, 0.99), rgba(17, 22, 35, 0.99));
+  --parts-menu-border: rgba(88, 166, 255, 0.15);
+
+  /* Misc surfaces */
+  --input-bg: #21262d;
+  --connection-chip-bg: #21262d;
+  --empty-state-bg: rgba(22, 27, 42, 0.9);
+  --empty-state-border: rgba(88, 166, 255, 0.25);
+  --state-pill-bg: rgba(13, 17, 23, 0.72);
+  --inspector-divider: rgba(255, 255, 255, 0.07);
+  --error-bg: rgba(248, 81, 73, 0.1);
+
+  /* Cards */
+  --workspace-card-bg: linear-gradient(180deg, rgba(26, 20, 10, 0.96), rgba(20, 16, 8, 0.96));
+  --workspace-card-border: rgba(180, 130, 60, 0.2);
+  --workspace-card-active-bg: linear-gradient(180deg, rgba(17, 32, 52, 0.98), rgba(13, 26, 44, 0.98));
+  --workspace-card-active-border: rgba(88, 166, 255, 0.42);
+  --chip-card-bg: linear-gradient(180deg, rgba(10, 26, 18, 0.98), rgba(8, 20, 14, 0.98));
+  --chip-card-border: rgba(63, 185, 80, 0.2);
+  --challenge-card-bg: linear-gradient(180deg, rgba(28, 22, 12, 0.98), rgba(22, 17, 9, 0.98));
+  --challenge-card-done-bg: linear-gradient(180deg, rgba(10, 28, 18, 0.98), rgba(8, 22, 14, 0.98));
+  --challenge-card-done-border: rgba(63, 185, 80, 0.28);
+  --challenge-card-selected-bg: linear-gradient(180deg, rgba(17, 32, 52, 0.98), rgba(13, 26, 44, 0.98));
+  --challenge-card-selected-border: rgba(88, 166, 255, 0.42);
+  --challenge-status-bg: #21262d;
+  --challenge-status-done-bg: rgba(63, 185, 80, 0.15);
+  --challenge-status-done-color: #3fb950;
+  --palette-btn-bg: linear-gradient(180deg, rgba(22, 30, 48, 0.96), rgba(17, 24, 38, 0.96));
+  --palette-btn-border: rgba(88, 166, 255, 0.15);
+  --palette-btn-hover-bg: linear-gradient(180deg, rgba(32, 46, 68, 1), rgba(26, 38, 58, 1));
+
+  /* Nodes */
+  --node-bg: linear-gradient(180deg, rgba(30, 36, 52, 0.98), rgba(22, 27, 40, 0.98));
+  --node-border: #2d333b;
+  --node-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --node-face-bg: linear-gradient(180deg, rgba(22, 28, 44, 0.92), rgba(16, 20, 34, 0.92));
+  --node-face-border: #2d333b;
+  --switch-bg: linear-gradient(180deg, rgba(40, 28, 8, 0.98), rgba(30, 22, 6, 0.98));
+  --switch-border: rgba(210, 160, 50, 0.32);
+  --lamp-bg: linear-gradient(180deg, rgba(44, 32, 4, 0.98), rgba(34, 25, 3, 0.98));
+  --lamp-border: rgba(230, 190, 30, 0.32);
+  --io-bg: linear-gradient(180deg, rgba(14, 26, 48, 0.98), rgba(10, 20, 38, 0.98));
+  --io-border: rgba(88, 166, 255, 0.28);
+  --reg-bg: linear-gradient(180deg, rgba(8, 28, 18, 0.98), rgba(6, 22, 14, 0.98));
+  --reg-border: rgba(63, 185, 80, 0.28);
+  --not-xor-bg: linear-gradient(180deg, rgba(28, 20, 56, 0.98), rgba(22, 16, 44, 0.98));
+  --not-xor-border: rgba(148, 102, 246, 0.3);
+  --and-nand-bg: linear-gradient(180deg, rgba(8, 30, 16, 0.98), rgba(6, 24, 12, 0.98));
+  --and-nand-border: rgba(63, 185, 80, 0.28);
+  --or-nor-bg: linear-gradient(180deg, rgba(42, 20, 6, 0.98), rgba(32, 15, 4, 0.98));
+  --or-nor-border: rgba(230, 130, 60, 0.28);
+  --node-selected-border: rgba(88, 166, 255, 0.55);
+  --node-selected-glow: rgba(88, 166, 255, 0.15);
+  --node-invalid-border: rgba(248, 81, 73, 0.55);
+  --delete-btn: #b91c1c;
+  --delete-btn-hover: #991b1b;
+  --delete-btn-border: rgba(248, 81, 73, 0.4);
+
+  /* Pins */
+  --pin-badge-border: #30363d;
+  --pin-hover-border: rgba(88, 166, 255, 0.42);
+  --pin-hover-bg: rgba(88, 166, 255, 0.08);
+  --pin-high-border: #2ea043;
+  --pin-low-bg: #f85149;
+  --pin-low-border: #cf3c2f;
+
+  /* Wires */
+  --wire-stroke: rgba(139, 148, 158, 0.35);
+  --wire-high: rgba(63, 185, 80, 0.9);
+  --wire-low: rgba(248, 81, 73, 0.7);
+  --wire-invalid: rgba(248, 81, 73, 0.9);
+
+  /* Lamp indicator */
+  --lamp-off-border: #30363d;
+  --lamp-on-bg: #f0c942;
+  --lamp-on-border: #d4aa00;
+  --lamp-on-glow: rgba(240, 201, 66, 0.6);
 }
+
+[data-theme="light"] {
+  --panel: #ffffff;
+  --panel-border: #d0d7de;
+  --ink: #1c2128;
+  --muted: #57606a;
+  --accent: #0969da;
+  --accent-strong: #0550ae;
+  --accent-soft: #ddf4ff;
+  --signal-off: #afb8c1;
+  --signal-high: #1a7f37;
+  --warning: #cf222e;
+  --shadow: 0 10px 26px rgba(36, 41, 47, 0.1);
+  --grid: rgba(36, 41, 47, 0.06);
+
+  --body-bg:
+    radial-gradient(circle at top left, rgba(9, 105, 218, 0.06), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(26, 127, 55, 0.04), transparent 35%),
+    linear-gradient(180deg, #f6f8fa 0%, #eef2f6 100%);
+
+  --ghost-bg: #f3f4f6;
+  --ghost-hover: #e8eaed;
+  --ghost-border: #d0d7de;
+
+  --brand-bg: linear-gradient(180deg, rgba(9, 105, 218, 0.1), rgba(9, 105, 218, 0.05));
+  --brand-border: rgba(9, 105, 218, 0.2);
+  --left-bg: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(252, 247, 234, 0.98));
+  --right-bg: linear-gradient(180deg, rgba(245, 250, 255, 0.98), rgba(238, 246, 252, 0.98));
+  --toolbar-bg: linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(252, 248, 240, 0.98));
+  --toolbar-border: rgba(200, 175, 115, 0.2);
+  --workspace-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.99));
+  --canvas-bg: linear-gradient(180deg, #f8fafc 0%, #f0f4f8 100%);
+  --parts-menu-bg: linear-gradient(180deg, rgba(245, 250, 255, 0.99), rgba(238, 246, 252, 0.99));
+  --parts-menu-border: rgba(9, 105, 218, 0.15);
+
+  --input-bg: #ffffff;
+  --connection-chip-bg: #f3f4f6;
+  --empty-state-bg: rgba(255, 255, 255, 0.92);
+  --empty-state-border: rgba(9, 105, 218, 0.3);
+  --state-pill-bg: rgba(255, 255, 255, 0.8);
+  --inspector-divider: rgba(36, 41, 47, 0.1);
+  --error-bg: rgba(207, 34, 46, 0.08);
+
+  --workspace-card-bg: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(252, 247, 234, 0.98));
+  --workspace-card-border: rgba(180, 140, 70, 0.22);
+  --workspace-card-active-bg: linear-gradient(180deg, #f0f7ff, #e6f0fb);
+  --workspace-card-active-border: rgba(9, 105, 218, 0.38);
+  --chip-card-bg: linear-gradient(180deg, rgba(246, 254, 248, 0.98), rgba(236, 250, 240, 0.98));
+  --chip-card-border: rgba(26, 127, 55, 0.2);
+  --challenge-card-bg: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(252, 248, 238, 0.98));
+  --challenge-card-done-bg: linear-gradient(180deg, #f0faf4, #e6f6ec);
+  --challenge-card-done-border: rgba(26, 127, 55, 0.28);
+  --challenge-card-selected-bg: linear-gradient(180deg, #f0f7ff, #e6f0fb);
+  --challenge-card-selected-border: rgba(9, 105, 218, 0.38);
+  --challenge-status-bg: #f3f4f6;
+  --challenge-status-done-bg: rgba(26, 127, 55, 0.12);
+  --challenge-status-done-color: #1a7f37;
+  --palette-btn-bg: linear-gradient(180deg, rgba(245, 250, 255, 0.96), rgba(236, 244, 252, 0.96));
+  --palette-btn-border: rgba(9, 105, 218, 0.15);
+  --palette-btn-hover-bg: linear-gradient(180deg, rgba(225, 242, 255, 1), rgba(214, 236, 252, 1));
+
+  --node-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 253, 0.98));
+  --node-border: #c8d0d9;
+  --node-shadow: 0 4px 12px rgba(36, 41, 47, 0.1);
+  --node-face-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.93), rgba(245, 248, 252, 0.93));
+  --node-face-border: #c8d0d9;
+  --switch-bg: linear-gradient(180deg, rgba(255, 244, 220, 0.98), rgba(252, 234, 196, 0.98));
+  --switch-border: rgba(180, 140, 60, 0.3);
+  --lamp-bg: linear-gradient(180deg, rgba(255, 250, 215, 0.98), rgba(252, 242, 186, 0.98));
+  --lamp-border: rgba(200, 165, 30, 0.32);
+  --io-bg: linear-gradient(180deg, rgba(234, 245, 255, 0.98), rgba(222, 238, 253, 0.98));
+  --io-border: rgba(9, 105, 218, 0.25);
+  --reg-bg: linear-gradient(180deg, rgba(240, 252, 244, 0.98), rgba(226, 247, 232, 0.98));
+  --reg-border: rgba(26, 127, 55, 0.25);
+  --not-xor-bg: linear-gradient(180deg, rgba(246, 240, 255, 0.98), rgba(236, 226, 253, 0.98));
+  --not-xor-border: rgba(130, 80, 220, 0.28);
+  --and-nand-bg: linear-gradient(180deg, rgba(234, 252, 237, 0.98), rgba(220, 248, 226, 0.98));
+  --and-nand-border: rgba(26, 127, 55, 0.26);
+  --or-nor-bg: linear-gradient(180deg, rgba(255, 242, 228, 0.98), rgba(252, 230, 210, 0.98));
+  --or-nor-border: rgba(200, 110, 50, 0.26);
+  --node-selected-border: rgba(9, 105, 218, 0.5);
+  --node-selected-glow: rgba(9, 105, 218, 0.12);
+  --node-invalid-border: rgba(207, 34, 46, 0.5);
+  --delete-btn: #b91c1c;
+  --delete-btn-hover: #991b1b;
+  --delete-btn-border: rgba(207, 34, 46, 0.4);
+
+  --pin-badge-border: #afb8c1;
+  --pin-hover-border: rgba(9, 105, 218, 0.38);
+  --pin-hover-bg: rgba(9, 105, 218, 0.06);
+  --pin-high-border: #157832;
+  --pin-low-bg: #cf222e;
+  --pin-low-border: #a6192e;
+
+  --wire-stroke: rgba(80, 90, 100, 0.38);
+  --wire-high: rgba(26, 127, 55, 0.86);
+  --wire-low: rgba(207, 34, 46, 0.7);
+  --wire-invalid: rgba(207, 34, 46, 0.9);
+
+  --lamp-off-border: #afb8c1;
+  --lamp-on-bg: #f0c942;
+  --lamp-on-border: #c89600;
+  --lamp-on-glow: rgba(240, 201, 66, 0.35);
+}
+
+[data-theme="neon"] {
+  --panel: #061009;
+  --panel-border: #0e2e18;
+  --ink: #80ffa4;
+  --muted: #3a7a52;
+  --accent: #00e05a;
+  --accent-strong: #00b848;
+  --accent-soft: #011a0a;
+  --signal-off: #0e2e18;
+  --signal-high: #00ff66;
+  --warning: #ff4422;
+  --shadow: 0 10px 26px rgba(0, 200, 80, 0.12);
+  --grid: rgba(0, 224, 90, 0.08);
+
+  --body-bg:
+    radial-gradient(circle at top left, rgba(0, 224, 90, 0.07), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(0, 180, 255, 0.04), transparent 35%),
+    linear-gradient(180deg, #020b04 0%, #010803 100%);
+
+  --ghost-bg: #0a1e10;
+  --ghost-hover: #0f2a18;
+  --ghost-border: #0e2e18;
+
+  --brand-bg: linear-gradient(180deg, rgba(0, 80, 30, 0.5), rgba(0, 50, 20, 0.5));
+  --brand-border: rgba(0, 224, 90, 0.3);
+  --left-bg: linear-gradient(180deg, rgba(4, 16, 8, 0.97), rgba(3, 12, 6, 0.97));
+  --right-bg: linear-gradient(180deg, rgba(4, 18, 10, 0.98), rgba(3, 14, 8, 0.98));
+  --toolbar-bg: linear-gradient(180deg, rgba(5, 18, 9, 0.98), rgba(4, 14, 7, 0.98));
+  --toolbar-border: rgba(0, 80, 30, 0.5);
+  --workspace-bg: linear-gradient(180deg, rgba(3, 10, 5, 0.99), rgba(2, 8, 4, 0.99));
+  --canvas-bg: linear-gradient(180deg, #020b04 0%, #010803 100%);
+  --parts-menu-bg: linear-gradient(180deg, rgba(5, 18, 10, 0.99), rgba(4, 14, 8, 0.99));
+  --parts-menu-border: rgba(0, 224, 90, 0.2);
+
+  --input-bg: #0a1e10;
+  --connection-chip-bg: #0a1e10;
+  --empty-state-bg: rgba(5, 18, 10, 0.9);
+  --empty-state-border: rgba(0, 224, 90, 0.3);
+  --state-pill-bg: rgba(2, 8, 4, 0.72);
+  --inspector-divider: rgba(0, 224, 90, 0.08);
+  --error-bg: rgba(255, 68, 34, 0.1);
+
+  --workspace-card-bg: linear-gradient(180deg, rgba(6, 20, 8, 0.96), rgba(4, 16, 6, 0.96));
+  --workspace-card-border: rgba(0, 150, 60, 0.25);
+  --workspace-card-active-bg: linear-gradient(180deg, rgba(4, 26, 12, 0.98), rgba(3, 20, 9, 0.98));
+  --workspace-card-active-border: rgba(0, 224, 90, 0.42);
+  --chip-card-bg: linear-gradient(180deg, rgba(4, 22, 10, 0.98), rgba(3, 18, 8, 0.98));
+  --chip-card-border: rgba(0, 180, 70, 0.25);
+  --challenge-card-bg: linear-gradient(180deg, rgba(6, 18, 8, 0.98), rgba(4, 14, 6, 0.98));
+  --challenge-card-done-bg: linear-gradient(180deg, rgba(4, 24, 10, 0.98), rgba(3, 20, 8, 0.98));
+  --challenge-card-done-border: rgba(0, 255, 102, 0.25);
+  --challenge-card-selected-bg: linear-gradient(180deg, rgba(4, 26, 12, 0.98), rgba(3, 20, 9, 0.98));
+  --challenge-card-selected-border: rgba(0, 224, 90, 0.42);
+  --challenge-status-bg: #0a1e10;
+  --challenge-status-done-bg: rgba(0, 255, 102, 0.12);
+  --challenge-status-done-color: #00ff66;
+  --palette-btn-bg: linear-gradient(180deg, rgba(5, 22, 10, 0.96), rgba(4, 18, 8, 0.96));
+  --palette-btn-border: rgba(0, 224, 90, 0.2);
+  --palette-btn-hover-bg: linear-gradient(180deg, rgba(8, 32, 14, 1), rgba(6, 26, 11, 1));
+
+  --node-bg: linear-gradient(180deg, rgba(8, 24, 12, 0.98), rgba(6, 18, 9, 0.98));
+  --node-border: #0e2e18;
+  --node-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  --node-face-bg: linear-gradient(180deg, rgba(4, 18, 8, 0.92), rgba(3, 14, 6, 0.92));
+  --node-face-border: #0e2e18;
+  --switch-bg: linear-gradient(180deg, rgba(20, 16, 2, 0.98), rgba(16, 12, 2, 0.98));
+  --switch-border: rgba(200, 160, 0, 0.35);
+  --lamp-bg: linear-gradient(180deg, rgba(24, 18, 0, 0.98), rgba(18, 14, 0, 0.98));
+  --lamp-border: rgba(240, 200, 0, 0.35);
+  --io-bg: linear-gradient(180deg, rgba(4, 20, 30, 0.98), rgba(3, 16, 24, 0.98));
+  --io-border: rgba(0, 180, 255, 0.3);
+  --reg-bg: linear-gradient(180deg, rgba(4, 24, 10, 0.98), rgba(3, 20, 8, 0.98));
+  --reg-border: rgba(0, 255, 102, 0.28);
+  --not-xor-bg: linear-gradient(180deg, rgba(18, 4, 30, 0.98), rgba(14, 3, 24, 0.98));
+  --not-xor-border: rgba(180, 80, 255, 0.32);
+  --and-nand-bg: linear-gradient(180deg, rgba(4, 24, 10, 0.98), rgba(3, 20, 8, 0.98));
+  --and-nand-border: rgba(0, 255, 102, 0.28);
+  --or-nor-bg: linear-gradient(180deg, rgba(24, 8, 0, 0.98), rgba(20, 6, 0, 0.98));
+  --or-nor-border: rgba(255, 140, 0, 0.3);
+  --node-selected-border: rgba(0, 224, 90, 0.6);
+  --node-selected-glow: rgba(0, 224, 90, 0.15);
+  --node-invalid-border: rgba(255, 68, 34, 0.6);
+  --delete-btn: #8b1a10;
+  --delete-btn-hover: #6e1408;
+  --delete-btn-border: rgba(255, 68, 34, 0.4);
+
+  --pin-badge-border: #0e2e18;
+  --pin-hover-border: rgba(0, 224, 90, 0.45);
+  --pin-hover-bg: rgba(0, 224, 90, 0.08);
+  --pin-high-border: #009940;
+  --pin-low-bg: #ff4422;
+  --pin-low-border: #cc3318;
+
+  --wire-stroke: rgba(0, 200, 80, 0.25);
+  --wire-high: rgba(0, 255, 102, 0.88);
+  --wire-low: rgba(255, 68, 34, 0.7);
+  --wire-invalid: rgba(255, 68, 34, 0.9);
+
+  --lamp-off-border: #0e2e18;
+  --lamp-on-bg: #f0c942;
+  --lamp-on-border: #c89000;
+  --lamp-on-glow: rgba(240, 201, 66, 0.55);
+}
+
+/* =============================================
+   THEME SWITCHER
+   ============================================= */
+
+.theme-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] .theme-switcher {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.theme-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: border-color 120ms ease, opacity 120ms ease;
+  opacity: 0.55;
+}
+
+.theme-btn:hover {
+  opacity: 1;
+}
+
+.theme-btn.active {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="light"] .theme-btn.active {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.theme-btn-dark  { background: #1c2128; color: #58a6ff; }
+.theme-btn-light { background: #f6f8fa; color: #0969da; }
+.theme-btn-neon  { background: #061009; color: #00e05a; }
+
+/* =============================================
+   RESET & GLOBAL
+   ============================================= */
 
 * {
   box-sizing: border-box;
@@ -27,7 +394,7 @@ body {
   min-height: 100vh;
   font-family: var(--font-body);
   color: var(--ink);
-  background: var(--bg);
+  background: var(--body-bg);
 }
 
 button,
@@ -58,14 +425,18 @@ button:disabled {
 }
 
 .ghost-button {
-  background: #ecece7;
+  background: var(--ghost-bg);
   color: var(--ink);
-  border-color: #dadad2;
+  border-color: var(--ghost-border);
 }
 
 .ghost-button:hover {
-  background: #e2e2db;
+  background: var(--ghost-hover);
 }
+
+/* =============================================
+   LAYOUT
+   ============================================= */
 
 .shell {
   display: grid;
@@ -100,6 +471,19 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
+.brand-panel {
+  background: var(--brand-bg);
+  border-color: var(--brand-border);
+}
+
+.left-panel .panel {
+  background: var(--left-bg);
+}
+
+.right-panel .panel {
+  background: var(--right-bg);
+}
+
 .brand-panel,
 .left-panel .panel,
 .right-panel .panel {
@@ -112,6 +496,8 @@ button:disabled {
   justify-content: space-between;
   gap: 0.7rem;
   padding: 0.75rem 0.85rem;
+  background: var(--toolbar-bg);
+  border-color: var(--toolbar-border);
 }
 
 .toolbar-group {
@@ -125,6 +511,7 @@ button:disabled {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  background: var(--workspace-bg);
 }
 
 .workspace-header {
@@ -141,6 +528,10 @@ button:disabled {
   gap: 0.8rem;
 }
 
+/* =============================================
+   PARTS DROPDOWN
+   ============================================= */
+
 .parts-dropdown {
   position: relative;
 }
@@ -149,16 +540,16 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #dadad2;
+  border: 1px solid var(--ghost-border);
   border-radius: 10px;
   padding: 0.5rem 0.8rem;
   color: var(--ink);
-  background: #ecece7;
+  background: var(--ghost-bg);
   cursor: pointer;
 }
 
 .parts-dropdown > summary.ghost-button:hover {
-  background: #e2e2db;
+  background: var(--ghost-hover);
 }
 
 .parts-dropdown > summary {
@@ -170,7 +561,7 @@ button:disabled {
 }
 
 .parts-dropdown[open] > summary {
-  background: #e2e2db;
+  background: var(--ghost-hover);
 }
 
 .parts-menu {
@@ -184,6 +575,8 @@ button:disabled {
   flex-direction: column;
   overflow: hidden;
   padding: 0.75rem;
+  background: var(--parts-menu-bg);
+  border-color: var(--parts-menu-border);
 }
 
 .parts-menu-head {
@@ -193,6 +586,10 @@ button:disabled {
   gap: 0.65rem;
   margin-bottom: 0.65rem;
 }
+
+/* =============================================
+   ZOOM CONTROLS
+   ============================================= */
 
 .workspace-zoom-controls {
   display: flex;
@@ -207,6 +604,10 @@ button:disabled {
   color: var(--muted);
 }
 
+/* =============================================
+   WORKSPACE CANVAS
+   ============================================= */
+
 .workspace-canvas {
   position: relative;
   flex: 1;
@@ -216,7 +617,7 @@ button:disabled {
   background:
     linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px),
-    #fbfbf8;
+    var(--canvas-bg);
   background-size: 24px 24px, 24px 24px, auto;
   touch-action: pan-x pan-y;
 }
@@ -255,10 +656,14 @@ button:disabled {
   max-width: 280px;
   padding: 0.7rem 0.8rem;
   border-radius: 10px;
-  background: rgba(248, 248, 244, 0.95);
+  background: var(--empty-state-bg);
   color: var(--muted);
-  border: 1px dashed var(--panel-border);
+  border: 1px dashed var(--empty-state-border);
 }
+
+/* =============================================
+   TYPOGRAPHY
+   ============================================= */
 
 .eyebrow {
   margin: 0 0 0.35rem;
@@ -294,6 +699,10 @@ h2 {
   font-size: 0.92rem;
 }
 
+/* =============================================
+   PANELS & CARDS
+   ============================================= */
+
 .panel-title-row {
   display: flex;
   align-items: center;
@@ -321,18 +730,18 @@ h2 {
   padding: 0.7rem;
   border-radius: 10px;
   border: 1px solid var(--panel-border);
-  background: white;
+  background: var(--challenge-card-bg);
   cursor: pointer;
 }
 
 .challenge-card.done {
-  background: #f0fbf4;
-  border-color: rgba(31, 157, 98, 0.28);
+  background: var(--challenge-card-done-bg);
+  border-color: var(--challenge-card-done-border);
 }
 
 .challenge-card.selected {
-  border-color: rgba(43, 108, 176, 0.38);
-  background: #f7fbff;
+  border-color: var(--challenge-card-selected-border);
+  background: var(--challenge-card-selected-bg);
 }
 
 .challenge-head {
@@ -353,13 +762,13 @@ h2 {
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
   font-size: 0.72rem;
-  background: #ecece7;
+  background: var(--challenge-status-bg);
   color: var(--muted);
 }
 
 .challenge-card.done .challenge-status {
-  background: rgba(31, 157, 98, 0.12);
-  color: #197347;
+  background: var(--challenge-status-done-bg);
+  color: var(--challenge-status-done-color);
 }
 
 .challenge-copy {
@@ -395,6 +804,10 @@ h2 {
   line-height: 1.45;
 }
 
+/* =============================================
+   PALETTE
+   ============================================= */
+
 .palette-grid {
   grid-template-columns: 1fr;
 }
@@ -407,19 +820,43 @@ h2 {
   padding-right: 0.15rem;
 }
 
+.palette-section-title,
+.palette-section-empty {
+  grid-column: 1 / -1;
+}
+
+.palette-section-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding-top: 0.15rem;
+}
+
+.palette-section-empty {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  padding: 0.2rem 0;
+}
+
 .palette-button,
 .workspace-card,
 .chip-card {
   border-radius: 10px;
   border: 1px solid var(--panel-border);
-  background: white;
 }
 
 .palette-button {
   text-align: left;
   color: var(--ink);
   padding: 0.6rem 0.7rem;
-  background: white;
+  background: var(--palette-btn-bg);
+  border-color: var(--palette-btn-border);
+}
+
+.palette-button:hover {
+  background: var(--palette-btn-hover-bg);
 }
 
 .palette-button small {
@@ -434,8 +871,18 @@ h2 {
 }
 
 .workspace-card.active {
-  border-color: rgba(43, 108, 176, 0.4);
-  background: #f7fbff;
+  border-color: var(--workspace-card-active-border);
+  background: var(--workspace-card-active-bg);
+}
+
+.workspace-card {
+  background: var(--workspace-card-bg);
+  border-color: var(--workspace-card-border);
+}
+
+.chip-card {
+  background: var(--chip-card-bg);
+  border-color: var(--chip-card-border);
 }
 
 .workspace-row,
@@ -467,16 +914,60 @@ h2 {
   font-size: 0.92rem;
 }
 
+/* =============================================
+   NODES
+   ============================================= */
+
 .node {
   position: absolute;
   width: 82px;
   min-height: 44px;
   padding: 0.22rem 0.24rem;
   border-radius: var(--node-radius);
-  border: 1px solid #bfc3bd;
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--node-border);
+  background: var(--node-bg);
+  box-shadow: var(--node-shadow);
   user-select: none;
+}
+
+.node-switch {
+  background: var(--switch-bg);
+  border-color: var(--switch-border);
+}
+
+.node-lamp {
+  background: var(--lamp-bg);
+  border-color: var(--lamp-border);
+}
+
+.node-input-pin,
+.node-output-pin {
+  background: var(--io-bg);
+  border-color: var(--io-border);
+}
+
+.node-register,
+.node-chip-instance {
+  background: var(--reg-bg);
+  border-color: var(--reg-border);
+}
+
+.gate-not,
+.gate-xor {
+  background: var(--not-xor-bg);
+  border-color: var(--not-xor-border);
+}
+
+.gate-and,
+.gate-nand {
+  background: var(--and-nand-bg);
+  border-color: var(--and-nand-border);
+}
+
+.gate-or,
+.gate-nor {
+  background: var(--or-nor-bg);
+  border-color: var(--or-nor-border);
 }
 
 .node-quick-delete {
@@ -488,24 +979,24 @@ h2 {
   height: 20px;
   padding: 0;
   border-radius: 999px;
-  border: 1px solid rgba(176, 48, 48, 0.28);
-  background: #b03030;
+  border: 1px solid var(--delete-btn-border);
+  background: var(--delete-btn);
   color: white;
   font-size: 0.72rem;
   line-height: 1;
 }
 
 .node-quick-delete:hover {
-  background: #8e2323;
+  background: var(--delete-btn-hover);
 }
 
 .node.selected {
-  border-color: rgba(43, 108, 176, 0.45);
-  box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.12);
+  border-color: var(--node-selected-border);
+  box-shadow: 0 0 0 2px var(--node-selected-glow), var(--node-shadow);
 }
 
 .node.invalid {
-  border-color: rgba(176, 48, 48, 0.45);
+  border-color: var(--node-invalid-border);
 }
 
 .node-shell {
@@ -559,9 +1050,9 @@ h2 {
   align-items: center;
   justify-content: center;
   min-height: 24px;
-  border: 1px solid #d5d8d2;
+  border: 1px solid var(--node-face-border);
   border-radius: 6px;
-  background: #f4f5f1;
+  background: var(--node-face-bg);
   text-align: center;
   padding: 0.08rem;
 }
@@ -593,12 +1084,13 @@ h2 {
   height: 8px;
   border-radius: 999px;
   background: var(--signal-off);
-  border: 1px solid #babbb3;
+  border: 1px solid var(--lamp-off-border);
 }
 
 .lamp-indicator.on {
-  background: #f0c942;
-  border-color: #d0aa1d;
+  background: var(--lamp-on-bg);
+  border-color: var(--lamp-on-border);
+  box-shadow: 0 0 5px var(--lamp-on-glow);
 }
 
 .register-readout {
@@ -625,9 +1117,13 @@ h2 {
   padding: 0.08rem 0.2rem;
   border-radius: 999px;
   font-size: 0.42rem;
-  background: #ebede8;
+  background: var(--state-pill-bg);
   color: var(--muted);
 }
+
+/* =============================================
+   PINS
+   ============================================= */
 
 .pin {
   display: flex;
@@ -642,8 +1138,8 @@ h2 {
 
 .pin:hover,
 .pin.pending {
-  border-color: rgba(43, 108, 176, 0.35);
-  background: rgba(43, 108, 176, 0.05);
+  border-color: var(--pin-hover-border);
+  background: var(--pin-hover-bg);
 }
 
 .pin.direction-output {
@@ -661,7 +1157,7 @@ h2 {
   height: 6px;
   border-radius: 999px;
   background: var(--signal-off);
-  border: 1px solid #bdbeb8;
+  border: 1px solid var(--pin-badge-border);
 }
 
 .pin-value {
@@ -670,33 +1166,41 @@ h2 {
 
 .pin.high .pin-badge {
   background: var(--signal-high);
-  border-color: #168a56;
+  border-color: var(--pin-high-border);
 }
 
 .pin.low .pin-badge {
-  background: var(--signal-low);
-  border-color: #4d4d47;
+  background: var(--pin-low-bg);
+  border-color: var(--pin-low-border);
 }
+
+/* =============================================
+   WIRES
+   ============================================= */
 
 .wire {
   fill: none;
-  stroke: rgba(86, 86, 79, 0.55);
+  stroke: var(--wire-stroke);
   stroke-width: 3;
   stroke-linecap: round;
 }
 
 .wire.high {
-  stroke: rgba(24, 138, 76, 0.86);
+  stroke: var(--wire-high);
 }
 
 .wire.low {
-  stroke: rgba(161, 76, 61, 0.84);
+  stroke: var(--wire-low);
 }
 
 .wire.invalid {
-  stroke: rgba(152, 47, 47, 0.9);
+  stroke: var(--wire-invalid);
   stroke-dasharray: 10 8;
 }
+
+/* =============================================
+   INSPECTOR
+   ============================================= */
 
 .inspector {
   display: grid;
@@ -724,7 +1228,7 @@ h2 {
   border-radius: 10px;
   border: 1px solid var(--panel-border);
   padding: 0.55rem 0.65rem;
-  background: white;
+  background: var(--input-bg);
   color: var(--ink);
 }
 
@@ -737,7 +1241,7 @@ h2 {
   display: grid;
   gap: 0.5rem;
   padding-top: 0.6rem;
-  border-top: 1px solid rgba(57, 45, 28, 0.1);
+  border-top: 1px solid var(--inspector-divider);
 }
 
 .connection-chip {
@@ -747,7 +1251,7 @@ h2 {
   gap: 0.6rem;
   padding: 0.45rem 0.55rem;
   border-radius: 10px;
-  background: #eff0eb;
+  background: var(--connection-chip-bg);
 }
 
 .error-list {
@@ -759,8 +1263,12 @@ h2 {
   padding: 0.55rem 0.65rem;
   border-radius: 10px;
   color: var(--warning);
-  background: rgba(176, 48, 48, 0.08);
+  background: var(--error-bg);
 }
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
 
 @media (max-width: 1280px) {
   .shell {

@@ -1,5 +1,26 @@
+import {
+  bitwiseBinary,
+  bitwiseUnary,
+  bitsToBoolean,
+  clampSplitWidth,
+  clampWidth,
+  ensureWidth,
+  formatBits,
+  normalizeBitString,
+  parseBits,
+  zeroBits,
+} from "./src/sim/bits.js";
+import { clamp, deepClone } from "./src/lib/utils.js";
+import {
+  createProject as createProjectState,
+  loadProject as loadProjectState,
+  normalizeProject as normalizeProjectState,
+  normalizeWorkspace as normalizeWorkspaceState,
+  normalizeWorkspaceMeta as normalizeWorkspaceMetaState,
+  saveProject as saveProjectState,
+} from "./src/state/project.js";
+
 (function () {
-  const STORAGE_KEY = "forge-logic-project-v1";
   const WORKSPACE_BASE_WIDTH = 1800;
   const WORKSPACE_BASE_HEIGHT = 1200;
   const MIN_ZOOM = 0.25;
@@ -263,7 +284,11 @@
     zoomResetButton: document.getElementById("zoom-reset-button"),
     zoomInButton: document.getElementById("zoom-in-button"),
     zoomValue: document.getElementById("zoom-value"),
+    undoButton: document.getElementById("undo-button"),
+    redoButton: document.getElementById("redo-button"),
   };
+
+  const UNDO_LIMIT = 50;
 
   const state = {
     project: loadProject(),
@@ -276,9 +301,21 @@
     panningCanvas: null,
     lastEvaluation: null,
     zoom: 1,
+    undoStack: [],
+    redoStack: [],
+    inspectorUndoPushed: false,
   };
+  let appStarted = false;
 
-  initializeApp();
+  window.ForgeLogicApp = {
+    start() {
+      if (appStarted) {
+        return;
+      }
+      appStarted = true;
+      initializeApp();
+    },
+  };
 
   function initializeApp() {
     try {
@@ -300,7 +337,68 @@
     }
   }
 
+  // =============================================
+  // UNDO / REDO
+  // =============================================
+
+  function pushUndo() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace) return;
+    state.undoStack.push({
+      workspaceId: workspace.id,
+      snapshot: deepClone(workspace),
+    });
+    if (state.undoStack.length > UNDO_LIMIT) {
+      state.undoStack.shift();
+    }
+    state.redoStack = [];
+    state.inspectorUndoPushed = false;
+  }
+
+  function undo() {
+    if (!state.undoStack.length) return;
+    const entry = state.undoStack.pop();
+    const workspace = state.project.workspaces.find((w) => w.id === entry.workspaceId);
+    if (!workspace) return;
+    state.redoStack.push({
+      workspaceId: workspace.id,
+      snapshot: deepClone(workspace),
+    });
+    Object.assign(workspace, entry.snapshot);
+    state.selectedNodeId = null;
+    state.pendingConnection = null;
+    state.quickDeleteNodeId = null;
+    state.inspectorUndoPushed = false;
+    setStatus("Ongedaan gemaakt.");
+    render();
+  }
+
+  function redo() {
+    if (!state.redoStack.length) return;
+    const entry = state.redoStack.pop();
+    const workspace = state.project.workspaces.find((w) => w.id === entry.workspaceId);
+    if (!workspace) return;
+    state.undoStack.push({
+      workspaceId: workspace.id,
+      snapshot: deepClone(workspace),
+    });
+    Object.assign(workspace, entry.snapshot);
+    state.selectedNodeId = null;
+    state.pendingConnection = null;
+    state.quickDeleteNodeId = null;
+    state.inspectorUndoPushed = false;
+    setStatus("Opnieuw uitgevoerd.");
+    render();
+  }
+
+  function updateUndoRedoButtons() {
+    dom.undoButton.disabled = state.undoStack.length === 0;
+    dom.redoButton.disabled = state.redoStack.length === 0;
+  }
+
   function bindEvents() {
+    dom.undoButton.addEventListener("click", undo);
+    dom.redoButton.addEventListener("click", redo);
     dom.newWorkspaceButton.addEventListener("click", createWorkspaceFromPrompt);
     dom.duplicateWorkspaceButton.addEventListener("click", duplicateCurrentWorkspace);
     dom.saveChipButton.addEventListener("click", saveCurrentWorkspaceAsChip);
@@ -323,6 +421,7 @@
     dom.nodeLayer.addEventListener("click", handleNodeLayerClick);
     dom.nodeLayer.addEventListener("pointerdown", handleNodeLayerPointerDown);
     dom.canvas.addEventListener("pointerdown", handleCanvasPointerDown);
+    dom.inspector.addEventListener("focusin", handleInspectorFocusIn);
     dom.inspector.addEventListener("input", handleInspectorInput);
     dom.inspector.addEventListener("click", handleInspectorClick);
 
@@ -333,120 +432,35 @@
   }
 
   function loadProject() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        return createProject();
-      }
-      return normalizeProject(JSON.parse(raw));
-    } catch (error) {
-      console.error(error);
-      return createProject();
-    }
+    return loadProjectState(getProjectStateDeps(), localStorage);
   }
 
   function saveProject() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.project));
+    saveProjectState(state.project, localStorage);
   }
 
   function createProject() {
-    const project = {
-      version: 1,
-      nextId: 1,
-      workspaces: [],
-      currentWorkspaceId: null,
-      chipSeries: [],
-      chipDefinitions: [],
-      runtime: {
-        registerStates: {},
-      },
-    };
-    const workspace = createWorkspace(project, "Main Workspace");
-    workspace.nodes.push(createNode(project, "switch", { x: 120, y: 140 }));
-    workspace.nodes.push(createNode(project, "lamp", { x: 470, y: 150 }));
-    project.workspaces.push(workspace);
-    project.currentWorkspaceId = workspace.id;
-    ensureStarterChips(project);
-    return project;
+    return createProjectState(getProjectStateDeps());
   }
 
   function normalizeProject(project) {
-    if (!project || typeof project !== "object") {
-      return createProject();
-    }
-    const normalized = {
-      version: 1,
-      nextId: Number(project.nextId) || 1,
-      workspaces: Array.isArray(project.workspaces) ? project.workspaces.map(normalizeWorkspace) : [],
-      currentWorkspaceId: project.currentWorkspaceId || null,
-      chipSeries: Array.isArray(project.chipSeries) ? project.chipSeries : [],
-      chipDefinitions: Array.isArray(project.chipDefinitions)
-        ? project.chipDefinitions.map(normalizeChipDefinition)
-        : [],
-      runtime: {
-        registerStates:
-          project.runtime && typeof project.runtime.registerStates === "object"
-            ? project.runtime.registerStates
-            : {},
-      },
-    };
-
-    if (!normalized.workspaces.length) {
-      const workspace = createWorkspace(normalized, "Main Workspace");
-      normalized.workspaces.push(workspace);
-      normalized.currentWorkspaceId = workspace.id;
-    }
-
-    if (!normalized.workspaces.some((workspace) => workspace.id === normalized.currentWorkspaceId)) {
-      normalized.currentWorkspaceId = normalized.workspaces[0].id;
-    }
-
-    ensureStarterChips(normalized);
-    return normalized;
+    return normalizeProjectState(project, getProjectStateDeps());
   }
 
   function normalizeWorkspace(workspace) {
-    return {
-      id: workspace.id || `ws-${Date.now()}`,
-      name: workspace.name || "Workspace",
-      nodes: Array.isArray(workspace.nodes) ? workspace.nodes.map(normalizeNode) : [],
-      wires: Array.isArray(workspace.wires)
-        ? workspace.wires
-            .filter((wire) => wire && wire.id && wire.fromNodeId && wire.fromPin && wire.toNodeId && wire.toPin)
-            .map((wire) => ({ ...wire }))
-        : [],
-      createdAt: workspace.createdAt || new Date().toISOString(),
-      meta: normalizeWorkspaceMeta(workspace.meta),
-    };
+    return normalizeWorkspaceState(workspace, { normalizeNode });
   }
 
   function normalizeWorkspaceMeta(meta) {
-    return {
-      sourceChipDefinitionId: meta && meta.sourceChipDefinitionId ? meta.sourceChipDefinitionId : null,
-      sourceChipSeriesId: meta && meta.sourceChipSeriesId ? meta.sourceChipSeriesId : null,
-      sourceChipVersion: meta && Number(meta.sourceChipVersion) ? Number(meta.sourceChipVersion) : null,
-      draftMode: meta && meta.draftMode ? String(meta.draftMode) : null,
-      challengeId: meta && meta.challengeId ? String(meta.challengeId) : null,
-      isStarter: Boolean(meta && meta.isStarter),
-    };
+    return normalizeWorkspaceMetaState(meta);
   }
 
-  function normalizeChipDefinition(definition) {
+  function getProjectStateDeps() {
     return {
-      id: definition.id,
-      seriesId: definition.seriesId,
-      name: definition.name || "Chip",
-      version: Number(definition.version) || 1,
-      description: definition.description || "",
-      inputs: Array.isArray(definition.inputs) ? definition.inputs : [],
-      outputs: Array.isArray(definition.outputs) ? definition.outputs : [],
-      createdAt: definition.createdAt || new Date().toISOString(),
-      circuitSnapshot: normalizeWorkspace({
-        id: `snapshot-${definition.id}`,
-        name: definition.name || "Chip Snapshot",
-        nodes: definition.circuitSnapshot ? definition.circuitSnapshot.nodes : [],
-        wires: definition.circuitSnapshot ? definition.circuitSnapshot.wires : [],
-      }),
+      createWorkspace,
+      createNode,
+      ensureStarterChips,
+      normalizeNode,
     };
   }
 
@@ -598,60 +612,6 @@
     }
 
     return normalized;
-  }
-
-  function clampWidth(width) {
-    const numeric = Number(width) || 1;
-    return Math.max(1, Math.min(16, Math.round(numeric)));
-  }
-
-  function clampSplitWidth(highWidth, totalWidth) {
-    const numeric = Number(highWidth) || 1;
-    return Math.max(1, Math.min(totalWidth - 1, Math.round(numeric)));
-  }
-
-  function normalizeBitString(value, width) {
-    const cleaned = String(value == null ? "" : value).replace(/[^01]/g, "");
-    const fallback = cleaned.length ? cleaned : "0";
-    return fallback.slice(-width).padStart(width, "0");
-  }
-
-  function parseBits(value, width) {
-    return normalizeBitString(value, width).split("").map((bit) => bit === "1");
-  }
-
-  function formatBits(bits, width) {
-    if (!bits) {
-      return "0".padStart(width || 1, "0");
-    }
-    return bits.map((bit) => (bit ? "1" : "0")).join("");
-  }
-
-  function zeroBits(width) {
-    return Array.from({ length: width }, () => false);
-  }
-
-  function ensureWidth(bits, width) {
-    if (!Array.isArray(bits)) {
-      return zeroBits(width);
-    }
-    return parseBits(formatBits(bits, width), width);
-  }
-
-  function bitwiseBinary(a, b, operation) {
-    return a.map((bit, index) => Boolean(operation(bit, b[index])));
-  }
-
-  function bitwiseUnary(bits, operation) {
-    return bits.map((bit) => Boolean(operation(bit)));
-  }
-
-  function bitsToBoolean(bits) {
-    return Boolean(bits && bits[bits.length - 1]);
-  }
-
-  function deepClone(value) {
-    return JSON.parse(JSON.stringify(value));
   }
 
   function getCurrentWorkspace() {
@@ -812,17 +772,41 @@
     renderCanvas();
     renderInspector();
     renderErrors();
+    updateUndoRedoButtons();
     saveProject();
   }
 
   function renderBuiltinPalette() {
-    dom.builtinPalette.innerHTML = BUILTIN_PARTS.map(
+    const builtinMarkup = BUILTIN_PARTS.map(
       (part) =>
         `<button class="palette-button" type="button" data-part-type="${part.type}">
           ${escapeHtml(part.label)}
           <small>${escapeHtml(part.copy)}</small>
         </button>`
     ).join("");
+
+    const latestDefinitions = state.project.chipSeries
+      .map((series) => getLatestChipDefinitionForSeries(series.id))
+      .filter(Boolean)
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    const chipMarkup = latestDefinitions.length
+      ? latestDefinitions
+          .map(
+            (definition) => `<button class="palette-button chip-palette-button" type="button" data-place-chip="${definition.id}">
+              ${escapeHtml(definition.name)}
+              <small>${escapeHtml(`${definition.inputs.length} in • ${definition.outputs.length} out • v${definition.version}`)}</small>
+            </button>`
+          )
+          .join("")
+      : '<div class="palette-section-empty">Sla eerst een chip op via `Snapshot`.</div>';
+
+    dom.builtinPalette.innerHTML = `
+      <div class="palette-section-title">Basic Parts</div>
+      ${builtinMarkup}
+      <div class="palette-section-title">Saved Chips</div>
+      ${chipMarkup}
+    `;
   }
 
   function renderWorkspaceList() {
@@ -1182,6 +1166,11 @@
     const spec = getNodeSpec(node);
     const selected = node.id === state.selectedNodeId;
     const quickDeleteVisible = node.id === state.quickDeleteNodeId;
+    const typeClass = `node-${node.type}`;
+    const gateClass =
+      node.type === "gate" && node.config.gateType
+        ? `gate-${String(node.config.gateType).toLowerCase()}`
+        : "";
     const lampValue = signalState && signalState.inputs && signalState.inputs.IN
       ? formatBits(signalState.inputs.IN, getPinWidth(spec.inputs, "IN"))
       : "0";
@@ -1196,7 +1185,9 @@
         : "";
     const body = renderNodeBody(node, spec, lampValue, registerText);
 
-    return `<article class="node ${selected ? "selected" : ""} ${invalid ? "invalid" : ""}" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
+    return `<article class="node ${typeClass} ${gateClass} ${selected ? "selected" : ""} ${
+      invalid ? "invalid" : ""
+    }" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
       ${
         quickDeleteVisible
           ? `<button class="node-quick-delete" type="button" data-quick-delete-node="${node.id}" aria-label="Delete ${escapeAttribute(
@@ -1614,10 +1605,24 @@
 
   function handleBuiltinPaletteClick(event) {
     const button = event.target.closest("[data-part-type]");
-    if (!button) {
+    if (button) {
+      addPartToWorkspace(button.dataset.partType);
+      closePartsDropdown();
       return;
     }
-    addPartToWorkspace(button.dataset.partType);
+
+    const chipButton = event.target.closest("[data-place-chip]");
+    if (chipButton) {
+      addPartToWorkspace("chip-instance", chipButton.dataset.placeChip);
+      closePartsDropdown();
+    }
+  }
+
+  function closePartsDropdown() {
+    const dropdown = document.querySelector(".parts-dropdown");
+    if (dropdown && dropdown.open) {
+      dropdown.open = false;
+    }
   }
 
   function handleWorkspaceListClick(event) {
@@ -1801,6 +1806,7 @@
     event.stopPropagation();
     state.selectedNodeId = nodeId;
     state.quickDeleteNodeId = null;
+    pushUndo();
     state.dragging = {
       nodeId,
       pointerId: event.pointerId,
@@ -1835,6 +1841,15 @@
     };
     if (hadQuickDelete) {
       render();
+    }
+  }
+
+  function handleInspectorFocusIn(event) {
+    const input = event.target.closest("[data-config-key]");
+    if (!input) return;
+    if (!state.inspectorUndoPushed) {
+      pushUndo();
+      state.inspectorUndoPushed = true;
     }
   }
 
@@ -1906,17 +1921,29 @@
   }
 
   function handleKeyboardShortcuts(event) {
-    if (event.key !== "Delete" && event.key !== "Backspace") {
-      return;
-    }
-
     const tagName = document.activeElement ? document.activeElement.tagName : "";
-    if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+    const inInput = tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT";
+
+    const ctrl = event.ctrlKey || event.metaKey;
+
+    if (ctrl && event.key === "z" && !event.shiftKey) {
+      event.preventDefault();
+      undo();
       return;
     }
 
-    if (state.selectedNodeId) {
-      deleteNode(state.selectedNodeId);
+    if (ctrl && (event.key === "y" || (event.key === "z" && event.shiftKey))) {
+      event.preventDefault();
+      redo();
+      return;
+    }
+
+    if (inInput) return;
+
+    if (event.key === "Delete" || event.key === "Backspace") {
+      if (state.selectedNodeId) {
+        deleteNode(state.selectedNodeId);
+      }
     }
   }
 
@@ -1957,6 +1984,7 @@
       partType === "chip-instance"
         ? createChipInstance(state.project, definitionId, position)
         : createNode(state.project, partType, position);
+    pushUndo();
     workspace.nodes.push(node);
     state.selectedNodeId = node.id;
     setStatus(`${node.config.label || node.type} toegevoegd aan ${workspace.name}.`);
@@ -2000,10 +2028,6 @@
       x: Math.min(bounds.maxX + 110, WORKSPACE_BASE_WIDTH - 140),
       y: Math.min(bounds.maxY + 70, WORKSPACE_BASE_HEIGHT - 110),
     };
-  }
-
-  function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
   }
 
   function createWorkspaceFromPrompt() {
@@ -2676,6 +2700,7 @@
       return { ok: false, message: "Deze input-pin heeft al een driver." };
     }
 
+    pushUndo();
     workspace.wires.push({
       id: allocateId(state.project, "wire"),
       fromNodeId,
@@ -2692,6 +2717,7 @@
     if (!node) {
       return;
     }
+    pushUndo();
     workspace.nodes = workspace.nodes.filter((item) => item.id !== nodeId);
     workspace.wires = workspace.wires.filter(
       (wire) => wire.fromNodeId !== nodeId && wire.toNodeId !== nodeId
@@ -2707,6 +2733,7 @@
 
   function removeWire(wireId) {
     const workspace = getCurrentWorkspace();
+    pushUndo();
     workspace.wires = workspace.wires.filter((wire) => wire.id !== wireId);
     setStatus("Verbinding verwijderd.");
     render();
@@ -2752,6 +2779,14 @@
     if (state.dragging) {
       if (event && event.pointerId != null && event.pointerId !== state.dragging.pointerId) {
         return;
+      }
+      const wasMoved =
+        event &&
+        (Math.abs(event.clientX - state.dragging.startClientX) > 2 ||
+          Math.abs(event.clientY - state.dragging.startClientY) > 2);
+      if (!wasMoved && state.undoStack.length) {
+        // Node was clicked but not moved — discard the drag undo snapshot
+        state.undoStack.pop();
       }
       clearLongPress(event ? event.pointerId : null);
       state.dragging = null;

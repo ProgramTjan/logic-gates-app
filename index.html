@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Forge Logic</title>
     <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // Apply saved theme before first paint to prevent flash
+      (function () {
+        var t = localStorage.getItem("lg-theme") || "dark";
+        document.documentElement.setAttribute("data-theme", t);
+      })();
+    </script>
   </head>
   <body>
     <div class="shell">
@@ -39,6 +46,10 @@
       <main class="main-panel">
         <header class="toolbar panel">
           <div class="toolbar-group">
+            <button id="undo-button" class="ghost-button" type="button" title="Ongedaan maken (Ctrl+Z)" disabled>↩ Undo</button>
+            <button id="redo-button" class="ghost-button" type="button" title="Opnieuw uitvoeren (Ctrl+Y)" disabled>↪ Redo</button>
+          </div>
+          <div class="toolbar-group">
             <button id="duplicate-workspace-button" type="button">
               Duplicate Workspace
             </button>
@@ -57,6 +68,11 @@
             <button id="import-button" class="ghost-button" type="button">
               Import
             </button>
+          </div>
+          <div class="theme-switcher" id="theme-switcher" title="Kies een thema">
+            <button class="theme-btn theme-btn-dark" data-theme="dark" type="button" title="Dark">●</button>
+            <button class="theme-btn theme-btn-light" data-theme="light" type="button" title="Light">○</button>
+            <button class="theme-btn theme-btn-neon" data-theme="neon" type="button" title="Neon">◉</button>
           </div>
         </header>
 
@@ -142,6 +158,28 @@
     </div>
 
     <input id="import-input" type="file" accept="application/json" hidden />
-    <script src="./script.js"></script>
+    <script type="module" src="./src/main.js"></script>
+    <script>
+      (function () {
+        var switcher = document.getElementById("theme-switcher");
+        if (!switcher) return;
+
+        function applyTheme(theme) {
+          document.documentElement.setAttribute("data-theme", theme);
+          localStorage.setItem("lg-theme", theme);
+          switcher.querySelectorAll(".theme-btn").forEach(function (btn) {
+            btn.classList.toggle("active", btn.dataset.theme === theme);
+          });
+        }
+
+        // Mark current active button
+        applyTheme(document.documentElement.getAttribute("data-theme") || "dark");
+
+        switcher.addEventListener("click", function (e) {
+          var btn = e.target.closest(".theme-btn");
+          if (btn) applyTheme(btn.dataset.theme);
+        });
+      })();
+    </script>
   </body>
 </html>
