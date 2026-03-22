@@ -1,0 +1,16 @@
+export const BUILTIN_PARTS = [
+  { type: "switch", label: "Switch", copy: "Handmatige input" },
+  { type: "lamp", label: "Lamp", copy: "Zichtbare output" },
+  { type: "gate-not", label: "NOT", copy: "Unary inverter" },
+  { type: "gate-and", label: "AND", copy: "Bitwise AND" },
+  { type: "gate-or", label: "OR", copy: "Bitwise OR" },
+  { type: "gate-xor", label: "XOR", copy: "Bitwise XOR" },
+  { type: "gate-nand", label: "NAND", copy: "Inverse AND" },
+  { type: "gate-nor", label: "NOR", copy: "Inverse OR" },
+  { type: "splitter", label: "Bus Split", copy: "High/low bus split" },
+  { type: "joiner", label: "Bus Join", copy: "Bus merge" },
+  { type: "input-pin", label: "Input", copy: "Publieke chipinput" },
+  { type: "output-pin", label: "Output", copy: "Publieke chipoutput" },
+  { type: "clock", label: "Clock", copy: "1-bit klokbron" },
+  { type: "register", label: "Register", copy: "Latched opslag" },
+];

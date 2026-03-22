@@ -19,6 +19,14 @@ import {
   normalizeWorkspaceMeta as normalizeWorkspaceMetaState,
   saveProject as saveProjectState,
 } from "./src/state/project.js";
+import { BUILTIN_PARTS } from "./src/data/builtinParts.js";
+import { CHALLENGES } from "./src/data/challenges.js";
+import { createChallengeVerifier } from "./src/challenges/verification.js";
+import { createChipDefinitionsService } from "./src/chips/definitions.js";
+import { createCanvasRenderers } from "./src/ui/canvas.js";
+import { createInteractionHandlers } from "./src/ui/events.js";
+import { createInspectorRenderers } from "./src/ui/inspector.js";
+import { createWorkspaceActionHandlers } from "./src/ui/workspace-actions.js";
 
 (function () {
   const WORKSPACE_BASE_WIDTH = 1800;
@@ -28,230 +36,6 @@ import {
   const ZOOM_STEP = 0.25;
   const LONG_PRESS_DELAY = 450;
   const LONG_PRESS_MOVE_THRESHOLD = 8;
-  const BUILTIN_PARTS = [
-    { type: "switch", label: "Switch", copy: "Handmatige input" },
-    { type: "lamp", label: "Lamp", copy: "Zichtbare output" },
-    { type: "gate-not", label: "NOT", copy: "Unary inverter" },
-    { type: "gate-and", label: "AND", copy: "Bitwise AND" },
-    { type: "gate-or", label: "OR", copy: "Bitwise OR" },
-    { type: "gate-xor", label: "XOR", copy: "Bitwise XOR" },
-    { type: "gate-nand", label: "NAND", copy: "Inverse AND" },
-    { type: "gate-nor", label: "NOR", copy: "Inverse OR" },
-    { type: "splitter", label: "Bus Split", copy: "High/low bus split" },
-    { type: "joiner", label: "Bus Join", copy: "Bus merge" },
-    { type: "input-pin", label: "Input", copy: "Publieke chipinput" },
-    { type: "output-pin", label: "Output", copy: "Publieke chipoutput" },
-    { type: "clock", label: "Clock", copy: "1-bit klokbron" },
-    { type: "register", label: "Register", copy: "Latched opslag" },
-  ];
-  const CHALLENGES = [
-    {
-      id: "nand",
-      phase: "Project 1",
-      title: "Build NAND",
-      names: ["NAND"],
-      inputs: 2,
-      outputs: 1,
-      description: "Maak je eigen NAND-chip zonder de starterversie te gebruiken.",
-      verification: "combinational",
-      template: { inputs: ["A", "B"], outputs: ["OUT"] },
-      hints: [
-        "Gebruik twee Input nodes met namen A en B.",
-        "Maak precies één Output node met naam OUT.",
-        "Bouw met bestaande poorten en sla daarna je chip op als NAND.",
-      ],
-      tests: [
-        { inputs: { A: "0", B: "0" }, outputs: { OUT: "1" } },
-        { inputs: { A: "0", B: "1" }, outputs: { OUT: "1" } },
-        { inputs: { A: "1", B: "0" }, outputs: { OUT: "1" } },
-        { inputs: { A: "1", B: "1" }, outputs: { OUT: "0" } },
-      ],
-    },
-    {
-      id: "not",
-      phase: "Project 1",
-      title: "Build NOT",
-      names: ["NOT"],
-      inputs: 1,
-      outputs: 1,
-      description: "Bouw een inverterchip met 1 input en 1 output.",
-      verification: "combinational",
-      template: { inputs: ["IN"], outputs: ["OUT"] },
-      hints: [
-        "Gebruik één Input en één Output.",
-        "Laat OUT altijd het inverse zijn van IN.",
-      ],
-      tests: [
-        { inputs: { IN: "0" }, outputs: { OUT: "1" } },
-        { inputs: { IN: "1" }, outputs: { OUT: "0" } },
-      ],
-    },
-    {
-      id: "and",
-      phase: "Project 1",
-      title: "Build AND",
-      names: ["AND"],
-      inputs: 2,
-      outputs: 1,
-      description: "Bouw AND uit je bestaande bouwblokken.",
-      verification: "combinational",
-      template: { inputs: ["A", "B"], outputs: ["OUT"] },
-      hints: [
-        "Gebruik A en B als inputs en OUT als output.",
-        "Alleen wanneer A en B beide 1 zijn mag OUT ook 1 zijn.",
-      ],
-      tests: [
-        { inputs: { A: "0", B: "0" }, outputs: { OUT: "0" } },
-        { inputs: { A: "0", B: "1" }, outputs: { OUT: "0" } },
-        { inputs: { A: "1", B: "0" }, outputs: { OUT: "0" } },
-        { inputs: { A: "1", B: "1" }, outputs: { OUT: "1" } },
-      ],
-    },
-    {
-      id: "or",
-      phase: "Project 1",
-      title: "Build OR",
-      names: ["OR"],
-      inputs: 2,
-      outputs: 1,
-      description: "Maak een OR-chip in dezelfde stijl als NAND2Tetris.",
-      verification: "combinational",
-      template: { inputs: ["A", "B"], outputs: ["OUT"] },
-      hints: [
-        "Gebruik twee data-inputs A en B.",
-        "OUT is 1 zodra minstens één input 1 is.",
-      ],
-      tests: [
-        { inputs: { A: "0", B: "0" }, outputs: { OUT: "0" } },
-        { inputs: { A: "0", B: "1" }, outputs: { OUT: "1" } },
-        { inputs: { A: "1", B: "0" }, outputs: { OUT: "1" } },
-        { inputs: { A: "1", B: "1" }, outputs: { OUT: "1" } },
-      ],
-    },
-    {
-      id: "xor",
-      phase: "Project 1",
-      title: "Build XOR",
-      names: ["XOR"],
-      inputs: 2,
-      outputs: 1,
-      description: "Bouw XOR als composietchip.",
-      verification: "combinational",
-      template: { inputs: ["A", "B"], outputs: ["OUT"] },
-      hints: [
-        "Gebruik XOR-logica: precies één input hoog geeft een hoge output.",
-        "Controleer alle vier combinaties voordat je opslaat.",
-      ],
-      tests: [
-        { inputs: { A: "0", B: "0" }, outputs: { OUT: "0" } },
-        { inputs: { A: "0", B: "1" }, outputs: { OUT: "1" } },
-        { inputs: { A: "1", B: "0" }, outputs: { OUT: "1" } },
-        { inputs: { A: "1", B: "1" }, outputs: { OUT: "0" } },
-      ],
-    },
-    {
-      id: "mux",
-      phase: "Project 1",
-      title: "Build MUX",
-      names: ["MUX", "Mux"],
-      inputs: 3,
-      outputs: 1,
-      description: "Maak een multiplexer met twee datalijnen en één select.",
-      verification: "combinational",
-      template: { inputs: ["A", "B", "SEL"], outputs: ["OUT"] },
-      hints: [
-        "Gebruik A, B en SEL als inputs.",
-        "Als SEL=0 moet OUT=A zijn; als SEL=1 moet OUT=B zijn.",
-      ],
-      tests: [
-        { inputs: { A: "0", B: "1", SEL: "0" }, outputs: { OUT: "0" } },
-        { inputs: { A: "0", B: "1", SEL: "1" }, outputs: { OUT: "1" } },
-        { inputs: { A: "1", B: "0", SEL: "0" }, outputs: { OUT: "1" } },
-        { inputs: { A: "1", B: "0", SEL: "1" }, outputs: { OUT: "0" } },
-      ],
-    },
-    {
-      id: "dmux",
-      phase: "Project 1",
-      title: "Build DMUX",
-      names: ["DMUX", "DMux"],
-      inputs: 2,
-      outputs: 2,
-      description: "Splits één input naar twee outputs op basis van een select-lijn.",
-      verification: "combinational",
-      template: { inputs: ["IN", "SEL"], outputs: ["A", "B"] },
-      hints: [
-        "Gebruik IN en SEL als inputs.",
-        "Als SEL=0 gaat IN naar A en blijft B laag.",
-        "Als SEL=1 gaat IN naar B en blijft A laag.",
-      ],
-      tests: [
-        { inputs: { IN: "0", SEL: "0" }, outputs: { A: "0", B: "0" } },
-        { inputs: { IN: "1", SEL: "0" }, outputs: { A: "1", B: "0" } },
-        { inputs: { IN: "0", SEL: "1" }, outputs: { A: "0", B: "0" } },
-        { inputs: { IN: "1", SEL: "1" }, outputs: { A: "0", B: "1" } },
-      ],
-    },
-    {
-      id: "half-adder",
-      phase: "Project 2",
-      title: "Build Half Adder",
-      names: ["Half Adder", "HalfAdder"],
-      inputs: 2,
-      outputs: 2,
-      description: "Bouw SUM en CARRY als aparte outputs.",
-      verification: "combinational",
-      template: { inputs: ["A", "B"], outputs: ["SUM", "CARRY"] },
-      hints: [
-        "SUM werkt als XOR van A en B.",
-        "CARRY werkt als AND van A en B.",
-      ],
-      tests: [
-        { inputs: { A: "0", B: "0" }, outputs: { SUM: "0", CARRY: "0" } },
-        { inputs: { A: "0", B: "1" }, outputs: { SUM: "1", CARRY: "0" } },
-        { inputs: { A: "1", B: "0" }, outputs: { SUM: "1", CARRY: "0" } },
-        { inputs: { A: "1", B: "1" }, outputs: { SUM: "0", CARRY: "1" } },
-      ],
-    },
-    {
-      id: "full-adder",
-      phase: "Project 2",
-      title: "Build Full Adder",
-      names: ["Full Adder", "FullAdder"],
-      inputs: 3,
-      outputs: 2,
-      description: "Combineer adders tot een volledige 1-bit adder met carry-in en carry-out.",
-      verification: "combinational",
-      template: { inputs: ["A", "B", "CIN"], outputs: ["SUM", "COUT"] },
-      hints: [
-        "Gebruik twee half adders of een eigen equivalent.",
-        "COUT is hoog zodra minstens twee inputs hoog zijn.",
-      ],
-      tests: [
-        { inputs: { A: "0", B: "0", CIN: "0" }, outputs: { SUM: "0", COUT: "0" } },
-        { inputs: { A: "0", B: "1", CIN: "0" }, outputs: { SUM: "1", COUT: "0" } },
-        { inputs: { A: "1", B: "0", CIN: "1" }, outputs: { SUM: "0", COUT: "1" } },
-        { inputs: { A: "1", B: "1", CIN: "0" }, outputs: { SUM: "0", COUT: "1" } },
-        { inputs: { A: "1", B: "1", CIN: "1" }, outputs: { SUM: "1", COUT: "1" } },
-      ],
-    },
-    {
-      id: "register-chip",
-      phase: "Project 3",
-      title: "Build Register",
-      names: ["Bit", "Register"],
-      inputs: 3,
-      outputs: 1,
-      description: "Maak een eigen registerachtige chip als opstap naar geheugen.",
-      verification: "sequential-register",
-      template: { inputs: ["D", "CLK", "RST"], outputs: ["Q"] },
-      hints: [
-        "Gebruik D, CLK en RST als inputs en Q als output.",
-        "Na een step met CLK=1 moet Q de waarde van D overnemen.",
-        "Bij RST=1 moet Q terug naar 0.",
-      ],
-    },
-  ];
 
   const dom = {
     builtinPalette: document.getElementById("builtin-palette"),
@@ -305,6 +89,82 @@ import {
     redoStack: [],
     inspectorUndoPushed: false,
   };
+  const chipDefinitionsService = createChipDefinitionsService({
+    allocateId,
+    createWorkspace,
+    createNode,
+    createChipInstance,
+    normalizeNode,
+    normalizeWorkspace,
+    deepClone,
+  });
+  const challengeVerifier = createChallengeVerifier({
+    deepClone,
+    parseBits,
+    formatBits,
+    evaluateCircuit: (circuit, externalInputs, path, recursionTrail) =>
+      evaluateCircuit(circuit, externalInputs, path, recursionTrail),
+    collectRegisterUpdates: (circuit, externalInputs, path, recursionTrail) =>
+      collectRegisterUpdates(circuit, externalInputs, path, recursionTrail),
+    getRuntimeRegisterStates: () => state.project.runtime.registerStates,
+    setRuntimeRegisterStates: (next) => {
+      state.project.runtime.registerStates = next;
+    },
+  });
+  const canvasRenderers = createCanvasRenderers({
+    dom,
+    state,
+    getCurrentWorkspace,
+    getNodeSpec,
+    getPinWidth,
+    makeRegisterStateKey,
+    formatBits,
+    parseBits,
+    escapeHtml,
+    escapeAttribute,
+  });
+  const interactionHandlers = createInteractionHandlers({
+    dom,
+    state,
+    render: () => render(),
+    pushUndo,
+    getCurrentWorkspace,
+    deleteNode,
+    toggleSwitchNode,
+    toggleClockNode,
+    handlePinClick,
+    evaluateWorkspace,
+    canvasRenderers,
+    longPressDelay: LONG_PRESS_DELAY,
+    longPressMoveThreshold: LONG_PRESS_MOVE_THRESHOLD,
+  });
+  const inspectorRenderers = createInspectorRenderers({
+    dom,
+    state,
+    getCurrentWorkspace,
+    getNodeSpec,
+    getNodeConnections,
+    getChipDefinition,
+    escapeHtml,
+    escapeAttribute,
+  });
+  const workspaceActions = createWorkspaceActionHandlers({
+    dom,
+    state,
+    challenges: CHALLENGES,
+    render: () => render(),
+    renderChallenges: () => renderChallenges(),
+    getCurrentWorkspace,
+    getActiveWorkspaceChallenge,
+    setStatus,
+    addPartToWorkspace,
+    duplicateWorkspace,
+    deleteWorkspace,
+    editChipAsNewVersion,
+    cloneChipToWorkspace,
+    openChallengeWorkspace,
+    submitChallenge,
+  });
   let appStarted = false;
 
   window.ForgeLogicApp = {
@@ -411,23 +271,23 @@ import {
     dom.zoomOutButton.addEventListener("click", () => changeZoom(-ZOOM_STEP));
     dom.zoomResetButton.addEventListener("click", () => setZoom(1));
     dom.zoomInButton.addEventListener("click", () => changeZoom(ZOOM_STEP));
-    dom.challengeStartButton.addEventListener("click", startSelectedChallenge);
-    dom.challengeSubmitButton.addEventListener("click", submitCurrentChallenge);
+    dom.challengeStartButton.addEventListener("click", workspaceActions.startSelectedChallenge);
+    dom.challengeSubmitButton.addEventListener("click", workspaceActions.submitCurrentChallenge);
 
-    dom.builtinPalette.addEventListener("click", handleBuiltinPaletteClick);
-    dom.workspaceList.addEventListener("click", handleWorkspaceListClick);
-    dom.chipLibrary.addEventListener("click", handleChipLibraryClick);
-    dom.challengeList.addEventListener("click", handleChallengeListClick);
-    dom.nodeLayer.addEventListener("click", handleNodeLayerClick);
-    dom.nodeLayer.addEventListener("pointerdown", handleNodeLayerPointerDown);
-    dom.canvas.addEventListener("pointerdown", handleCanvasPointerDown);
+    dom.builtinPalette.addEventListener("click", workspaceActions.handleBuiltinPaletteClick);
+    dom.workspaceList.addEventListener("click", workspaceActions.handleWorkspaceListClick);
+    dom.chipLibrary.addEventListener("click", workspaceActions.handleChipLibraryClick);
+    dom.challengeList.addEventListener("click", workspaceActions.handleChallengeListClick);
+    dom.nodeLayer.addEventListener("click", interactionHandlers.handleNodeLayerClick);
+    dom.nodeLayer.addEventListener("pointerdown", interactionHandlers.handleNodeLayerPointerDown);
+    dom.canvas.addEventListener("pointerdown", interactionHandlers.handleCanvasPointerDown);
     dom.inspector.addEventListener("focusin", handleInspectorFocusIn);
     dom.inspector.addEventListener("input", handleInspectorInput);
     dom.inspector.addEventListener("click", handleInspectorClick);
 
-    document.addEventListener("pointermove", handleDragMove);
-    document.addEventListener("pointerup", stopDragging);
-    document.addEventListener("pointercancel", stopDragging);
+    document.addEventListener("pointermove", interactionHandlers.handleDragMove);
+    document.addEventListener("pointerup", interactionHandlers.stopDragging);
+    document.addEventListener("pointercancel", interactionHandlers.stopDragging);
     document.addEventListener("keydown", handleKeyboardShortcuts);
   }
 
@@ -462,6 +322,19 @@ import {
       ensureStarterChips,
       normalizeNode,
     };
+  }
+
+  function ensureStarterChips(project) {
+    // Avoid touching chipDefinitionsService during initial state bootstrap.
+    createChipDefinitionsService({
+      allocateId,
+      createWorkspace,
+      createNode,
+      createChipInstance,
+      normalizeNode,
+      normalizeWorkspace,
+      deepClone,
+    }).ensureStarterChips(project);
   }
 
   function allocateId(project, prefix) {
@@ -770,8 +643,8 @@ import {
     }
 
     renderCanvas();
-    renderInspector();
-    renderErrors();
+    inspectorRenderers.renderInspector();
+    inspectorRenderers.renderErrors();
     updateUndoRedoButtons();
     saveProject();
   }
@@ -888,10 +761,12 @@ import {
     if (!state.selectedChallengeId && CHALLENGES.length) {
       state.selectedChallengeId = CHALLENGES[0].id;
     }
-    const userDefinitions = state.project.chipDefinitions.filter((definition) => !isStarterDefinition(definition));
+    const userDefinitions = state.project.chipDefinitions.filter(
+      (definition) => !challengeVerifier.isStarterDefinition(definition)
+    );
     const challengeStates = CHALLENGES.map((challenge) => ({
       challenge,
-      result: evaluateChallengeResult(challenge, userDefinitions),
+      result: challengeVerifier.evaluateChallengeResult(challenge, userDefinitions),
     }));
     const completedCount = challengeStates.filter((item) => item.result.done).length;
     dom.challengeList.innerHTML = [
@@ -906,8 +781,8 @@ import {
       </div>`,
       ...challengeStates.map(({ challenge, result }) => renderChallengeCard(challenge, result)),
     ].join("");
-    updateChallengeStartButton();
-    updateChallengeSubmitButton();
+    workspaceActions.updateChallengeStartButton();
+    workspaceActions.updateChallengeSubmitButton();
   }
 
   function renderChallengeCard(challenge, result) {
@@ -946,177 +821,6 @@ import {
     </article>`;
   }
 
-  function evaluateChallengeResult(challenge, definitions) {
-    const candidates = definitions.filter((definition) => definitionMatchesChallenge(definition, challenge));
-    if (!candidates.length) {
-      return {
-        done: false,
-        label: "Open",
-        summary: "Nog geen eigen oplossing opgeslagen.",
-      };
-    }
-
-    const attempts = candidates.map((definition) => runChallengeVerification(challenge, definition));
-    const passing = attempts.find((attempt) => attempt.done);
-    if (passing) {
-      return passing;
-    }
-
-    const bestAttempt = attempts.sort((left, right) => right.score - left.score)[0];
-    return bestAttempt;
-  }
-
-  function definitionMatchesChallenge(definition, challenge) {
-    return (
-      challenge.names.some(
-        (name) => normalizeChallengeName(definition.name) === normalizeChallengeName(name)
-      ) &&
-      definition.inputs.length === challenge.inputs &&
-      definition.outputs.length === challenge.outputs
-    );
-  }
-
-  function runChallengeVerification(challenge, definition) {
-    if (challenge.verification === "combinational") {
-      return runCombinationalChallengeVerification(challenge, definition);
-    }
-    if (challenge.verification === "sequential-register") {
-      return runRegisterChallengeVerification(challenge, definition);
-    }
-    return {
-      done: true,
-      label: "Shape OK",
-      summary: "Interface komt overeen met de opdracht.",
-      score: 1,
-    };
-  }
-
-  function normalizeChallengeName(name) {
-    return String(name || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-  }
-
-  function isStarterDefinition(definition) {
-    return Boolean(
-      (definition.description && definition.description.toLowerCase().startsWith("starter ")) ||
-        (definition.circuitSnapshot &&
-          definition.circuitSnapshot.meta &&
-          definition.circuitSnapshot.meta.isStarter)
-    );
-  }
-
-  function runCombinationalChallengeVerification(challenge, definition) {
-    const tests = Array.isArray(challenge.tests) ? challenge.tests : [];
-    let passed = 0;
-
-    for (const test of tests) {
-      const outputs = simulateDefinitionOutputs(definition, test.inputs, `challenge:${challenge.id}`);
-      const success = Object.entries(test.outputs).every(
-        ([name, expected]) => outputs[name] === expected
-      );
-      if (success) {
-        passed += 1;
-      }
-    }
-
-    const done = passed === tests.length;
-    return {
-      done,
-      label: done ? "Verified" : "Needs Work",
-      summary: `${passed}/${tests.length} functionele tests geslaagd.`,
-      score: tests.length ? passed / tests.length : 0,
-    };
-  }
-
-  function runRegisterChallengeVerification(challenge, definition) {
-    const originalRuntime = deepClone(state.project.runtime.registerStates);
-    const path = `challenge:${challenge.id}:${definition.id}`;
-    state.project.runtime.registerStates = {};
-
-    try {
-      const checkpoints = [];
-
-      checkpoints.push(
-        compareOutputs(
-          simulateDefinitionOutputs(definition, { D: "0", CLK: "0", RST: "0" }, path),
-          { Q: "0" }
-        )
-      );
-
-      applyDefinitionStep(definition, { D: "1", CLK: "1", RST: "0" }, path);
-      checkpoints.push(
-        compareOutputs(
-          simulateDefinitionOutputs(definition, { D: "1", CLK: "1", RST: "0" }, path),
-          { Q: "1" }
-        )
-      );
-
-      applyDefinitionStep(definition, { D: "0", CLK: "0", RST: "0" }, path);
-      checkpoints.push(
-        compareOutputs(
-          simulateDefinitionOutputs(definition, { D: "0", CLK: "0", RST: "0" }, path),
-          { Q: "1" }
-        )
-      );
-
-      applyDefinitionStep(definition, { D: "0", CLK: "1", RST: "0" }, path);
-      checkpoints.push(
-        compareOutputs(
-          simulateDefinitionOutputs(definition, { D: "0", CLK: "1", RST: "0" }, path),
-          { Q: "0" }
-        )
-      );
-
-      applyDefinitionStep(definition, { D: "1", CLK: "0", RST: "1" }, path);
-      checkpoints.push(
-        compareOutputs(
-          simulateDefinitionOutputs(definition, { D: "1", CLK: "0", RST: "1" }, path),
-          { Q: "0" }
-        )
-      );
-
-      const passed = checkpoints.filter(Boolean).length;
-      const done = passed === checkpoints.length;
-      return {
-        done,
-        label: done ? "Verified" : "Needs Work",
-        summary: `${passed}/${checkpoints.length} sequentiële checks geslaagd.`,
-        score: checkpoints.length ? passed / checkpoints.length : 0,
-      };
-    } finally {
-      state.project.runtime.registerStates = originalRuntime;
-    }
-  }
-
-  function compareOutputs(actual, expected) {
-    return Object.entries(expected).every(([name, value]) => actual[name] === value);
-  }
-
-  function simulateDefinitionOutputs(definition, namedInputs, path) {
-    const externalInputs = {};
-    definition.inputs.forEach((pin) => {
-      externalInputs[pin.key] = parseBits(namedInputs[pin.name] || "0", pin.width);
-    });
-    const evaluation = evaluateCircuit(definition.circuitSnapshot, externalInputs, path, new Set());
-    const namedOutputs = {};
-    definition.outputs.forEach((pin) => {
-      namedOutputs[pin.name] = formatBits(evaluation.interfaceOutputs[pin.key], pin.width);
-    });
-    return namedOutputs;
-  }
-
-  function applyDefinitionStep(definition, namedInputs, path) {
-    const externalInputs = {};
-    definition.inputs.forEach((pin) => {
-      externalInputs[pin.key] = parseBits(namedInputs[pin.name] || "0", pin.width);
-    });
-    const updates = collectRegisterUpdates(definition.circuitSnapshot, externalInputs, path, new Set());
-    updates.forEach((update) => {
-      state.project.runtime.registerStates[update.key] = { bits: update.bits };
-    });
-  }
-
   function renderCanvas() {
     const workspace = getCurrentWorkspace();
     const evaluation = state.lastEvaluation || { nodeSignals: {}, wireSignals: {}, errors: [] };
@@ -1125,11 +829,11 @@ import {
     dom.emptyState.hidden = workspace.nodes.length > 0;
 
     dom.nodeLayer.innerHTML = workspace.nodes
-      .map((node) => renderNode(node, evaluation.nodeSignals[node.id], invalidNodeIds.has(node.id)))
+      .map((node) => canvasRenderers.renderNode(node, evaluation.nodeSignals[node.id], invalidNodeIds.has(node.id)))
       .join("");
 
-    renderWires(workspace, evaluation);
-    updateConnectionStatus();
+    canvasRenderers.renderWires(workspace, evaluation);
+    canvasRenderers.updateConnectionStatus();
   }
 
   function applyWorkspaceZoom() {
@@ -1159,689 +863,10 @@ import {
     applyWorkspaceZoom();
     dom.canvas.scrollLeft = Math.max(0, logicalCenterX * state.zoom - dom.canvas.clientWidth / 2);
     dom.canvas.scrollTop = Math.max(0, logicalCenterY * state.zoom - dom.canvas.clientHeight / 2);
-    renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
-  }
-
-  function renderNode(node, signalState, invalid) {
-    const spec = getNodeSpec(node);
-    const selected = node.id === state.selectedNodeId;
-    const quickDeleteVisible = node.id === state.quickDeleteNodeId;
-    const typeClass = `node-${node.type}`;
-    const gateClass =
-      node.type === "gate" && node.config.gateType
-        ? `gate-${String(node.config.gateType).toLowerCase()}`
-        : "";
-    const lampValue = signalState && signalState.inputs && signalState.inputs.IN
-      ? formatBits(signalState.inputs.IN, getPinWidth(spec.inputs, "IN"))
-      : "0";
-    const registerKey = makeRegisterStateKey(`workspace:${getCurrentWorkspace().id}`, node.id);
-    const registerState = state.project.runtime.registerStates[registerKey];
-    const registerText =
-      node.type === "register"
-        ? formatBits(
-            registerState ? registerState.bits : parseBits(node.config.resetValue, node.config.width),
-            node.config.width
-          )
-        : "";
-    const body = renderNodeBody(node, spec, lampValue, registerText);
-
-    return `<article class="node ${typeClass} ${gateClass} ${selected ? "selected" : ""} ${
-      invalid ? "invalid" : ""
-    }" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
-      ${
-        quickDeleteVisible
-          ? `<button class="node-quick-delete" type="button" data-quick-delete-node="${node.id}" aria-label="Delete ${escapeAttribute(
-              spec.title
-            )}">x</button>`
-          : ""
-      }
-      <div class="node-shell" data-drag-surface="true" data-node-id="${node.id}">
-        <div class="node-caption">
-          <span class="node-label">${escapeHtml(spec.title)}</span>
-          <span class="node-state-pill">${escapeHtml(getNodeTag(node))}</span>
-        </div>
-        <div class="node-core">
-          <div class="pin-stack">
-            ${spec.inputs
-              .map((pin) =>
-                renderPin(
-                  node.id,
-                  pin,
-                  "input",
-                  signalState && signalState.inputs ? signalState.inputs[pin.key] : null
-                )
-              )
-              .join("")}
-          </div>
-          ${body}
-          <div class="pin-stack right">
-            ${spec.outputs
-              .map((pin) =>
-                renderPin(
-                  node.id,
-                  pin,
-                  "output",
-                  signalState && signalState.outputs ? signalState.outputs[pin.key] : null
-                )
-              )
-              .join("")}
-          </div>
-        </div>
-      </div>
-    </article>`;
-  }
-
-  function renderNodeBody(node, spec, lampValue, registerText) {
-    const symbol = getNodeSymbol(node);
-    if (node.type === "switch") {
-      return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
-      </div>
-      <div class="gate-meta">
-        <span>${escapeHtml(node.config.value)}</span>
-        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-switch" data-node-id="${node.id}">toggle</button>
-      </div></div>`;
-    }
-    if (node.type === "clock") {
-      return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
-      </div>
-      <div class="gate-meta">
-        <span>${escapeHtml(node.config.value)}</span>
-        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-clock" data-node-id="${node.id}">toggle</button>
-      </div></div>`;
-    }
-    if (node.type === "lamp") {
-      const isOn = /1/.test(lampValue);
-      return `<div class="node-center"><div class="gate-face">
-        <span class="lamp-indicator ${isOn ? "on" : ""}"></span>
-      </div>
-      <div class="gate-meta"><span>${escapeHtml(lampValue)}</span></div></div>`;
-    }
-    if (node.type === "register") {
-      return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
-      </div>
-      <div class="gate-meta"><span class="register-readout">${escapeHtml(registerText)}</span></div></div>`;
-    }
-    if (node.type === "splitter" || node.type === "joiner") {
-      return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
-      </div>
-      <div class="gate-meta"><span>${escapeHtml(
-        `${node.config.highWidth}/${node.config.width - node.config.highWidth}`
-      )}</span></div></div>`;
-    }
-    if (node.type === "chip-instance") {
-      return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
-      </div>
-      <div class="gate-meta"><span>${escapeHtml(
-        `${spec.inputs.length}:${spec.outputs.length}`
-      )}</span></div></div>`;
-    }
-    if (node.type === "input-pin") {
-      return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
-      </div>
-      <div class="gate-meta"><span>${escapeHtml(node.config.previewValue)}</span></div></div>`;
-    }
-    if (node.type === "output-pin") {
-      return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
-      </div>
-      <div class="gate-meta"><span>${escapeHtml(node.config.width)}b</span></div></div>`;
-    }
-    return `<div class="node-center"><div class="gate-face">
-      <span class="gate-symbol">${escapeHtml(symbol)}</span>
-    </div>
-    <div class="gate-meta"><span>${escapeHtml(node.config.width)}b</span></div></div>`;
-  }
-
-  function renderPin(nodeId, pin, direction, bits) {
-    const bitString = bits ? formatBits(bits, pin.width) : "0".padStart(pin.width, "0");
-    const signalClass = /1/.test(bitString) ? "high" : "low";
-    const pending =
-      state.pendingConnection &&
-      state.pendingConnection.nodeId === nodeId &&
-      state.pendingConnection.pinKey === pin.key &&
-      state.pendingConnection.direction === direction;
-
-    return `<button class="pin direction-${direction} ${signalClass} ${pending ? "pending" : ""}" type="button"
-      data-pin-direction="${direction}"
-      data-node-id="${nodeId}"
-      data-pin-key="${pin.key}">
-      ${direction === "input" ? `<span class="pin-label">${escapeHtml(pin.name)}</span>` : ""}
-      <span class="pin-badge"></span>
-      ${direction === "output" ? `<span class="pin-label">${escapeHtml(pin.name)}</span>` : ""}
-    </button>`;
-  }
-
-  function getNodeTag(node) {
-    if (node.type === "gate") {
-      return node.config.gateType;
-    }
-    if (node.type === "chip-instance") {
-      return "CHIP";
-    }
-    if (node.type === "input-pin") {
-      return "IN";
-    }
-    if (node.type === "output-pin") {
-      return "OUT";
-    }
-    if (node.type === "switch") {
-      return "SW";
-    }
-    if (node.type === "lamp") {
-      return "L";
-    }
-    if (node.type === "clock") {
-      return "CLK";
-    }
-    if (node.type === "register") {
-      return "REG";
-    }
-    if (node.type === "splitter") {
-      return "SPLIT";
-    }
-    if (node.type === "joiner") {
-      return "JOIN";
-    }
-    return node.type.toUpperCase();
-  }
-
-  function getNodeSymbol(node) {
-    if (node.type === "gate") {
-      return {
-        NOT: "!",
-        AND: "&",
-        OR: "1+",
-        XOR: "=1",
-        NAND: "!&",
-        NOR: "!|",
-      }[node.config.gateType] || node.config.gateType;
-    }
-    if (node.type === "switch") {
-      return "S";
-    }
-    if (node.type === "lamp") {
-      return "O";
-    }
-    if (node.type === "clock") {
-      return "CLK";
-    }
-    if (node.type === "register") {
-      return "D";
-    }
-    if (node.type === "splitter") {
-      return "/\\";
-    }
-    if (node.type === "joiner") {
-      return "\\/";
-    }
-    if (node.type === "input-pin") {
-      return ">";
-    }
-    if (node.type === "output-pin") {
-      return "<";
-    }
-    if (node.type === "chip-instance") {
-      return "[]";
-    }
-    return "?";
-  }
-
-  function renderWires(workspace, evaluation) {
-    const nodeLookup = new Map(workspace.nodes.map((node) => [node.id, node]));
-
-    dom.wireLayer.innerHTML = workspace.wires
-      .map((wire) => {
-        const fromElement = dom.nodeLayer.querySelector(
-          `[data-node-id="${wire.fromNodeId}"][data-pin-key="${wire.fromPin}"][data-pin-direction="output"]`
-        );
-        const toElement = dom.nodeLayer.querySelector(
-          `[data-node-id="${wire.toNodeId}"][data-pin-key="${wire.toPin}"][data-pin-direction="input"]`
-        );
-
-        if (!fromElement || !toElement) {
-          return "";
-        }
-
-        const fromPoint = getElementOffsetCenter(fromElement, dom.nodeLayer);
-        const toPoint = getElementOffsetCenter(toElement, dom.nodeLayer);
-        const x1 = fromPoint.x;
-        const y1 = fromPoint.y;
-        const x2 = toPoint.x;
-        const y2 = toPoint.y;
-        const delta = Math.max(60, Math.abs(x2 - x1) * 0.55);
-        const path = `M ${x1} ${y1} C ${x1 + delta} ${y1}, ${x2 - delta} ${y2}, ${x2} ${y2}`;
-        const wireSignal = evaluation.wireSignals[wire.id];
-        const wireClass = wireSignal ? (wireSignal.invalid ? "invalid" : wireSignal.high ? "high" : "low") : "";
-        const invalidNode = !nodeLookup.has(wire.fromNodeId) || !nodeLookup.has(wire.toNodeId);
-        return `<path class="wire ${wireClass} ${invalidNode ? "invalid" : ""}" d="${path}" />`;
-      })
-      .join("");
-  }
-
-  function getElementOffsetCenter(element, boundary) {
-    let x = element.offsetLeft + element.offsetWidth / 2;
-    let y = element.offsetTop + element.offsetHeight / 2;
-    let current = element.offsetParent;
-    while (current && current !== boundary) {
-      x += current.offsetLeft;
-      y += current.offsetTop;
-      current = current.offsetParent;
-    }
-    return { x, y };
-  }
-
-  function renderInspector() {
-    const workspace = getCurrentWorkspace();
-    const node = workspace.nodes.find((item) => item.id === state.selectedNodeId);
-    if (!node) {
-      dom.inspector.className = "inspector empty";
-      dom.inspector.innerHTML = "Selecteer een node om de eigenschappen te bewerken.";
-      return;
-    }
-
-    const spec = getNodeSpec(node);
-    const connections = getNodeConnections(workspace, node.id);
-    dom.inspector.className = "inspector";
-    dom.inspector.innerHTML = `
-      <div>
-        <h3>${escapeHtml(spec.title)}</h3>
-        <p class="micro-copy">${escapeHtml(spec.subtitle)}</p>
-      </div>
-      ${renderInspectorFields(node)}
-      <div class="inspector-section">
-        <h3>Connections</h3>
-        ${
-          connections.length
-            ? connections
-                .map(
-                  (connection) => `<div class="connection-chip">
-                    <span>${escapeHtml(connection.label)}</span>
-                    <button class="ghost-button" type="button" data-remove-wire="${connection.wireId}">Remove</button>
-                  </div>`
-                )
-                .join("")
-            : '<p class="micro-copy">Nog geen verbindingen voor deze node.</p>'
-        }
-      </div>
-      <div class="inspector-section">
-        <button type="button" data-delete-node="${node.id}">Delete Node</button>
-      </div>
-    `;
-  }
-
-  function renderInspectorFields(node) {
-    const commonLabel = `<div class="field-group">
-      <label for="node-label-input">Label</label>
-      <input id="node-label-input" type="text" data-config-key="label" value="${escapeAttribute(node.config.label || "")}" />
-    </div>`;
-
-    if (node.type === "switch") {
-      return `${commonLabel}
-        ${renderWidthField(node)}
-        <div class="field-group">
-          <label for="node-value-input">Bit value</label>
-          <input id="node-value-input" type="text" data-config-key="value" value="${escapeAttribute(node.config.value)}" />
-        </div>`;
-    }
-
-    if (node.type === "lamp") {
-      return `${commonLabel}${renderWidthField(node)}`;
-    }
-
-    if (node.type === "gate") {
-      return `${commonLabel}
-        <div class="field-group">
-          <label for="gate-type-select">Gate type</label>
-          <select id="gate-type-select" data-config-key="gateType">
-            ${["NOT", "AND", "OR", "XOR", "NAND", "NOR"]
-              .map(
-                (option) =>
-                  `<option value="${option}" ${node.config.gateType === option ? "selected" : ""}>${option}</option>`
-              )
-              .join("")}
-          </select>
-        </div>
-        ${renderWidthField(node)}`;
-    }
-
-    if (node.type === "input-pin") {
-      return `${commonLabel}
-        ${renderWidthField(node)}
-        <div class="field-group">
-          <label for="preview-value-input">Preview value</label>
-          <input id="preview-value-input" type="text" data-config-key="previewValue" value="${escapeAttribute(
-            node.config.previewValue
-          )}" />
-        </div>`;
-    }
-
-    if (node.type === "output-pin") {
-      return `${commonLabel}${renderWidthField(node)}`;
-    }
-
-    if (node.type === "clock") {
-      return `${commonLabel}
-        <div class="field-group">
-          <label for="clock-level-input">Clock level</label>
-          <input id="clock-level-input" type="text" data-config-key="value" value="${escapeAttribute(node.config.value)}" />
-        </div>`;
-    }
-
-    if (node.type === "register") {
-      return `${commonLabel}
-        ${renderWidthField(node)}
-        <div class="field-group">
-          <label for="reset-value-input">Reset value</label>
-          <input id="reset-value-input" type="text" data-config-key="resetValue" value="${escapeAttribute(
-            node.config.resetValue
-          )}" />
-        </div>`;
-    }
-
-    if (node.type === "splitter" || node.type === "joiner") {
-      return `${commonLabel}
-        ${renderWidthField(node)}
-        <div class="field-group">
-          <label for="split-width-input">High segment width</label>
-          <input id="split-width-input" type="number" min="1" max="${escapeAttribute(
-            String(Math.max(1, node.config.width - 1))
-          )}" step="1" data-config-key="highWidth" value="${escapeAttribute(String(node.config.highWidth))}" />
-        </div>`;
-    }
-
-    if (node.type === "chip-instance") {
-      const definition = getChipDefinition(node.config.definitionId);
-      return `${commonLabel}
-        <div class="field-group">
-          <label>Definition</label>
-          <div class="micro-copy">${escapeHtml(
-            definition ? `${definition.name} v${definition.version}` : "Missing chip definition"
-          )}</div>
-        </div>`;
-    }
-
-    return commonLabel;
-  }
-
-  function renderWidthField(node) {
-    return `<div class="field-group">
-      <label for="node-width-input">Bit width</label>
-      <input id="node-width-input" type="number" min="1" max="16" step="1" data-config-key="width" value="${escapeAttribute(
-        String(node.config.width || 1)
-      )}" />
-    </div>`;
-  }
-
-  function renderErrors() {
-    const errors = state.lastEvaluation ? state.lastEvaluation.errors : [];
-    if (!errors.length) {
-      dom.errorList.innerHTML = "Geen fouten in de actieve workspace.";
-      return;
-    }
-    dom.errorList.innerHTML = errors
-      .map((error) => `<div class="error-item">${escapeHtml(error.message)}</div>`)
-      .join("");
-  }
-
-  function updateConnectionStatus(message) {
-    if (message) {
-      dom.connectionStatus.textContent = message;
-      return;
-    }
-    if (state.pendingConnection) {
-      dom.connectionStatus.textContent =
-        "Verbinding gestart. Klik nu op een input-pin met dezelfde bitbreedte.";
-      return;
-    }
-    dom.connectionStatus.textContent =
-      "Klik eerst op een output-pin en daarna op een input-pin om een verbinding te maken.";
-  }
-
-  function handleBuiltinPaletteClick(event) {
-    const button = event.target.closest("[data-part-type]");
-    if (button) {
-      addPartToWorkspace(button.dataset.partType);
-      closePartsDropdown();
-      return;
-    }
-
-    const chipButton = event.target.closest("[data-place-chip]");
-    if (chipButton) {
-      addPartToWorkspace("chip-instance", chipButton.dataset.placeChip);
-      closePartsDropdown();
-    }
-  }
-
-  function closePartsDropdown() {
-    const dropdown = document.querySelector(".parts-dropdown");
-    if (dropdown && dropdown.open) {
-      dropdown.open = false;
-    }
-  }
-
-  function handleWorkspaceListClick(event) {
-    const openButton = event.target.closest("[data-open-workspace]");
-    if (openButton) {
-      state.project.currentWorkspaceId = openButton.dataset.openWorkspace;
-      state.selectedNodeId = null;
-      state.pendingConnection = null;
-      setStatus(`Workspace "${getCurrentWorkspace().name}" geopend.`);
-      render();
-      return;
-    }
-
-    const duplicateButton = event.target.closest("[data-duplicate-workspace]");
-    if (duplicateButton) {
-      duplicateWorkspace(duplicateButton.dataset.duplicateWorkspace);
-      return;
-    }
-
-    const deleteButton = event.target.closest("[data-delete-workspace]");
-    if (deleteButton) {
-      deleteWorkspace(deleteButton.dataset.deleteWorkspace);
-    }
-  }
-
-  function handleChipLibraryClick(event) {
-    const addButton = event.target.closest("[data-place-chip]");
-    if (addButton) {
-      addPartToWorkspace("chip-instance", addButton.dataset.placeChip);
-      return;
-    }
-
-    const editButton = event.target.closest("[data-edit-chip]");
-    if (editButton) {
-      editChipAsNewVersion(editButton.dataset.editChip);
-      return;
-    }
-
-    const cloneButton = event.target.closest("[data-clone-chip]");
-    if (cloneButton) {
-      cloneChipToWorkspace(cloneButton.dataset.cloneChip);
-    }
-  }
-
-  function handleChallengeListClick(event) {
-    const toggleButton = event.target.closest("[data-toggle-challenge]");
-    if (toggleButton) {
-      const challengeId = toggleButton.dataset.toggleChallenge;
-      state.selectedChallengeId = state.selectedChallengeId === challengeId ? null : challengeId;
-      renderChallenges();
-      return;
-    }
-
-    const openButton = event.target.closest("[data-open-challenge]");
-    if (openButton) {
-      openChallengeWorkspace(openButton.dataset.openChallenge);
-      return;
-    }
-
-    const submitButton = event.target.closest("[data-submit-challenge]");
-    if (submitButton) {
-      submitChallenge(submitButton.dataset.submitChallenge);
-      return;
-    }
-
-    const selectedCard = event.target.closest("[data-select-challenge]");
-    if (selectedCard) {
-      state.selectedChallengeId = selectedCard.dataset.selectChallenge;
-      renderChallenges();
-    }
-  }
-
-  function updateChallengeStartButton() {
-    const selectedChallenge = CHALLENGES.find((item) => item.id === state.selectedChallengeId);
-    if (!selectedChallenge) {
-      dom.challengeStartButton.disabled = true;
-      dom.challengeStartButton.textContent = "Start Selected";
-      return;
-    }
-    dom.challengeStartButton.disabled = false;
-    dom.challengeStartButton.textContent = `Start ${selectedChallenge.title}`;
-  }
-
-  function updateChallengeSubmitButton() {
-    const challenge = getActiveWorkspaceChallenge();
-    if (!challenge) {
-      dom.challengeSubmitButton.disabled = true;
-      dom.challengeSubmitButton.textContent = "Submit Current";
-      return;
-    }
-    dom.challengeSubmitButton.disabled = false;
-    dom.challengeSubmitButton.textContent = `Submit ${challenge.names[0]}`;
-  }
-
-  function startSelectedChallenge() {
-    if (!state.selectedChallengeId) {
-      return;
-    }
-    openChallengeWorkspace(state.selectedChallengeId);
-  }
-
-  function submitCurrentChallenge() {
-    const challenge = getActiveWorkspaceChallenge();
-    if (!challenge) {
-      const fallbackChallenge = CHALLENGES.find((item) => item.id === state.selectedChallengeId);
-      setStatus(
-        fallbackChallenge
-          ? `Open eerst de actieve sheet voor ${fallbackChallenge.title} en lever die daarna in.`
-          : "Open eerst een challenge-sheet om hem in te leveren."
-      );
-      render();
-      return;
-    }
-    submitChallenge(challenge.id);
-  }
-
-  function handleNodeLayerClick(event) {
-    const quickDeleteButton = event.target.closest("[data-quick-delete-node]");
-    if (quickDeleteButton) {
-      deleteNode(quickDeleteButton.dataset.quickDeleteNode);
-      return;
-    }
-
-    const actionButton = event.target.closest("[data-node-action]");
-    if (actionButton) {
-      const node = getCurrentWorkspace().nodes.find((item) => item.id === actionButton.dataset.nodeId);
-      if (!node) {
-        return;
-      }
-      if (actionButton.dataset.nodeAction === "toggle-switch") {
-        toggleSwitchNode(node);
-      } else if (actionButton.dataset.nodeAction === "toggle-clock") {
-        toggleClockNode(node);
-      }
-      render();
-      return;
-    }
-
-    const pin = event.target.closest("[data-pin-direction]");
-    if (pin) {
-      handlePinClick(pin);
-      return;
-    }
-
-    const nodeElement = event.target.closest("[data-node-id]");
-    if (nodeElement) {
-      state.selectedNodeId = nodeElement.dataset.nodeId;
-      if (state.quickDeleteNodeId && state.quickDeleteNodeId !== nodeElement.dataset.nodeId) {
-        state.quickDeleteNodeId = null;
-      }
-      render();
-      return;
-    }
-
-    state.selectedNodeId = null;
-    state.quickDeleteNodeId = null;
-    render();
-  }
-
-  function handleNodeLayerPointerDown(event) {
-    if (event.button !== 0) {
-      return;
-    }
-    if (
-      event.target.closest("[data-pin-direction]") ||
-      event.target.closest("[data-node-action]") ||
-      event.target.closest("[data-quick-delete-node]")
-    ) {
-      return;
-    }
-    const surface = event.target.closest("[data-drag-surface]");
-    if (!surface) {
-      return;
-    }
-    const nodeId = surface.dataset.nodeId;
-    const node = getCurrentWorkspace().nodes.find((item) => item.id === nodeId);
-    if (!node) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    state.selectedNodeId = nodeId;
-    state.quickDeleteNodeId = null;
-    pushUndo();
-    state.dragging = {
-      nodeId,
-      pointerId: event.pointerId,
-      startClientX: event.clientX,
-      startClientY: event.clientY,
-      startNodeX: node.x,
-      startNodeY: node.y,
-    };
-    if (surface.setPointerCapture) {
-      surface.setPointerCapture(event.pointerId);
-    }
-    startNodeLongPress(nodeId, event.pointerId, event.clientX, event.clientY);
-  }
-
-  function handleCanvasPointerDown(event) {
-    if (event.button !== 0) {
-      return;
-    }
-    if (event.target.closest("[data-node-id]") || event.target.closest("[data-pin-direction]")) {
-      return;
-    }
-    event.preventDefault();
-    clearLongPress();
-    const hadQuickDelete = Boolean(state.quickDeleteNodeId);
-    state.quickDeleteNodeId = null;
-    state.panningCanvas = {
-      pointerId: event.pointerId,
-      startClientX: event.clientX,
-      startClientY: event.clientY,
-      startScrollLeft: dom.canvas.scrollLeft,
-      startScrollTop: dom.canvas.scrollTop,
-    };
-    if (hadQuickDelete) {
-      render();
-    }
+    canvasRenderers.renderWires(
+      getCurrentWorkspace(),
+      state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace())
+    );
   }
 
   function handleInspectorFocusIn(event) {
@@ -1947,36 +972,6 @@ import {
     }
   }
 
-  function startNodeLongPress(nodeId, pointerId, clientX, clientY) {
-    clearLongPress();
-    state.longPress = {
-      nodeId,
-      pointerId,
-      startClientX: clientX,
-      startClientY: clientY,
-      timerId: window.setTimeout(() => {
-        if (!state.longPress || state.longPress.nodeId !== nodeId || state.longPress.pointerId !== pointerId) {
-          return;
-        }
-        state.quickDeleteNodeId = nodeId;
-        state.dragging = null;
-        state.longPress = null;
-        render();
-      }, LONG_PRESS_DELAY),
-    };
-  }
-
-  function clearLongPress(pointerId) {
-    if (!state.longPress) {
-      return;
-    }
-    if (pointerId != null && state.longPress.pointerId !== pointerId) {
-      return;
-    }
-    window.clearTimeout(state.longPress.timerId);
-    state.longPress = null;
-  }
-
   function addPartToWorkspace(partType, definitionId) {
     const workspace = getCurrentWorkspace();
     const position = getSuggestedNodePosition(workspace);
@@ -2075,7 +1070,7 @@ import {
 
     template.inputs.forEach((name, index) => {
       workspace.nodes.push(
-        createConfiguredNode(
+        chipDefinitionsService.createConfiguredNode(
           state.project,
           "input-pin",
           { x: 120, y: 120 + index * inputStep },
@@ -2086,7 +1081,7 @@ import {
 
     template.outputs.forEach((name, index) => {
       workspace.nodes.push(
-        createConfiguredNode(
+        chipDefinitionsService.createConfiguredNode(
           state.project,
           "output-pin",
           { x: 760, y: 120 + index * outputStep },
@@ -2137,7 +1132,7 @@ import {
 
   function saveCurrentWorkspaceAsChip(options = {}) {
     const workspace = getCurrentWorkspace();
-    const interfaceResult = extractChipInterface(workspace);
+    const interfaceResult = chipDefinitionsService.extractChipInterface(workspace);
     if (interfaceResult.errors.length) {
       setStatus(interfaceResult.errors[0].message);
       render();
@@ -2235,7 +1230,7 @@ import {
       return;
     }
 
-    const result = runChallengeVerification(challenge, definition);
+    const result = challengeVerifier.runChallengeVerification(challenge, definition);
     setStatus(
       result.done
         ? `Ingeleverd: ${challenge.title} is verified.`
@@ -2300,207 +1295,6 @@ import {
       .filter(Boolean)
       .sort((left, right) => right.version - left.version);
     return definitions[0] || null;
-  }
-
-  function ensureStarterChips(project) {
-    ensureStarterChip(project, "NAND", buildStarterNandDefinition);
-    ensureStarterChip(project, "Half Adder", buildStarterHalfAdderDefinition);
-    ensureStarterChip(project, "Full Adder", buildStarterFullAdderDefinition);
-  }
-
-  function ensureStarterChip(project, seriesName, factory) {
-    const existingSeries = project.chipSeries.find(
-      (series) => series.name.toLowerCase() === seriesName.toLowerCase()
-    );
-    if (existingSeries && existingSeries.definitionIds.length) {
-      return getLatestChipDefinitionForProject(project, existingSeries.id);
-    }
-    return factory(project, existingSeries || null);
-  }
-
-  function getLatestChipDefinitionForProject(project, seriesId) {
-    const series = project.chipSeries.find((entry) => entry.id === seriesId);
-    if (!series) {
-      return null;
-    }
-    return (
-      series.definitionIds
-        .map((definitionId) => project.chipDefinitions.find((definition) => definition.id === definitionId))
-        .filter(Boolean)
-        .sort((left, right) => right.version - left.version)[0] || null
-    );
-  }
-
-  function buildStarterNandDefinition(project, existingSeries) {
-    const workspace = createWorkspace(project, "NAND Starter", null, { isStarter: true });
-    const inputA = createConfiguredNode(project, "input-pin", { x: 90, y: 100 }, { label: "A", width: 1, previewValue: "0" });
-    const inputB = createConfiguredNode(project, "input-pin", { x: 90, y: 210 }, { label: "B", width: 1, previewValue: "0" });
-    const andGate = createConfiguredNode(project, "gate-and", { x: 280, y: 150 }, { label: "AND", width: 1 });
-    const notGate = createConfiguredNode(project, "gate-not", { x: 450, y: 150 }, { label: "NOT", width: 1 });
-    const output = createConfiguredNode(project, "output-pin", { x: 620, y: 150 }, { label: "OUT", width: 1 });
-    workspace.nodes.push(inputA, inputB, andGate, notGate, output);
-    addWire(project, workspace, inputA, "OUT", andGate, "A");
-    addWire(project, workspace, inputB, "OUT", andGate, "B");
-    addWire(project, workspace, andGate, "OUT", notGate, "A");
-    addWire(project, workspace, notGate, "OUT", output, "IN");
-    return addDefinitionFromWorkspace(project, existingSeries, "NAND", "Starter NAND opgebouwd uit AND + NOT.", workspace);
-  }
-
-  function buildStarterHalfAdderDefinition(project, existingSeries) {
-    const workspace = createWorkspace(project, "Half Adder Starter", null, { isStarter: true });
-    const inputA = createConfiguredNode(project, "input-pin", { x: 90, y: 90 }, { label: "A", width: 1, previewValue: "0" });
-    const inputB = createConfiguredNode(project, "input-pin", { x: 90, y: 220 }, { label: "B", width: 1, previewValue: "0" });
-    const xorGate = createConfiguredNode(project, "gate-xor", { x: 280, y: 110 }, { label: "XOR", width: 1 });
-    const andGate = createConfiguredNode(project, "gate-and", { x: 280, y: 240 }, { label: "AND", width: 1 });
-    const sumOut = createConfiguredNode(project, "output-pin", { x: 500, y: 110 }, { label: "SUM", width: 1 });
-    const carryOut = createConfiguredNode(project, "output-pin", { x: 500, y: 240 }, { label: "CARRY", width: 1 });
-    workspace.nodes.push(inputA, inputB, xorGate, andGate, sumOut, carryOut);
-    addWire(project, workspace, inputA, "OUT", xorGate, "A");
-    addWire(project, workspace, inputB, "OUT", xorGate, "B");
-    addWire(project, workspace, xorGate, "OUT", sumOut, "IN");
-    addWire(project, workspace, inputA, "OUT", andGate, "A");
-    addWire(project, workspace, inputB, "OUT", andGate, "B");
-    addWire(project, workspace, andGate, "OUT", carryOut, "IN");
-    return addDefinitionFromWorkspace(
-      project,
-      existingSeries,
-      "Half Adder",
-      "Starter half adder met SUM en CARRY.",
-      workspace
-    );
-  }
-
-  function buildStarterFullAdderDefinition(project, existingSeries) {
-    const halfAdder = ensureStarterChip(project, "Half Adder", buildStarterHalfAdderDefinition);
-    const workspace = createWorkspace(project, "Full Adder Starter", null, { isStarter: true });
-    const inputA = createConfiguredNode(project, "input-pin", { x: 90, y: 70 }, { label: "A", width: 1, previewValue: "0" });
-    const inputB = createConfiguredNode(project, "input-pin", { x: 90, y: 190 }, { label: "B", width: 1, previewValue: "0" });
-    const inputCin = createConfiguredNode(project, "input-pin", { x: 90, y: 310 }, { label: "CIN", width: 1, previewValue: "0" });
-    const halfAdder1 = createChipInstance(project, halfAdder.id, { x: 280, y: 110 });
-    const halfAdder2 = createChipInstance(project, halfAdder.id, { x: 500, y: 190 });
-    const orGate = createConfiguredNode(project, "gate-or", { x: 710, y: 210 }, { label: "OR", width: 1 });
-    const outputSum = createConfiguredNode(project, "output-pin", { x: 930, y: 150 }, { label: "SUM", width: 1 });
-    const outputCarry = createConfiguredNode(project, "output-pin", { x: 930, y: 280 }, { label: "COUT", width: 1 });
-    const firstPins = getDefinitionPinsByName(halfAdder);
-    const secondPins = getDefinitionPinsByName(halfAdder);
-    workspace.nodes.push(inputA, inputB, inputCin, halfAdder1, halfAdder2, orGate, outputSum, outputCarry);
-    addWire(project, workspace, inputA, "OUT", halfAdder1, firstPins.inputs.A.key);
-    addWire(project, workspace, inputB, "OUT", halfAdder1, firstPins.inputs.B.key);
-    addWire(project, workspace, halfAdder1, firstPins.outputs.SUM.key, halfAdder2, secondPins.inputs.A.key);
-    addWire(project, workspace, inputCin, "OUT", halfAdder2, secondPins.inputs.B.key);
-    addWire(project, workspace, halfAdder2, secondPins.outputs.SUM.key, outputSum, "IN");
-    addWire(project, workspace, halfAdder1, firstPins.outputs.CARRY.key, orGate, "A");
-    addWire(project, workspace, halfAdder2, secondPins.outputs.CARRY.key, orGate, "B");
-    addWire(project, workspace, orGate, "OUT", outputCarry, "IN");
-    return addDefinitionFromWorkspace(
-      project,
-      existingSeries,
-      "Full Adder",
-      "Starter full adder opgebouwd uit twee Half Adders en een OR.",
-      workspace
-    );
-  }
-
-  function createConfiguredNode(project, type, position, configOverrides) {
-    const node = createNode(project, type, position);
-    node.config = {
-      ...node.config,
-      ...(configOverrides || {}),
-    };
-    return normalizeNode(node);
-  }
-
-  function addWire(project, workspace, fromNode, fromPin, toNode, toPin) {
-    workspace.wires.push({
-      id: allocateId(project, "wire"),
-      fromNodeId: fromNode.id,
-      fromPin,
-      toNodeId: toNode.id,
-      toPin,
-    });
-  }
-
-  function addDefinitionFromWorkspace(project, existingSeries, name, description, workspace) {
-    const interfaceResult = extractChipInterface(workspace);
-    let series = existingSeries;
-    if (!series) {
-      series = { id: allocateId(project, "chip-series"), name, definitionIds: [] };
-      project.chipSeries.push(series);
-    }
-    const definition = {
-      id: allocateId(project, "chip-def"),
-      seriesId: series.id,
-      name,
-      version: series.definitionIds.length + 1,
-      description,
-      inputs: interfaceResult.inputs,
-      outputs: interfaceResult.outputs,
-      createdAt: new Date().toISOString(),
-      circuitSnapshot: normalizeWorkspace({
-        id: `snapshot-${Date.now()}-${name}`,
-        name: `${name} Snapshot`,
-        nodes: deepClone(workspace.nodes),
-        wires: deepClone(workspace.wires),
-        meta: { isStarter: true },
-      }),
-    };
-    project.chipDefinitions.push(definition);
-    series.definitionIds.push(definition.id);
-    return definition;
-  }
-
-  function getDefinitionPinsByName(definition) {
-    const inputs = {};
-    const outputs = {};
-    definition.inputs.forEach((pin) => {
-      inputs[pin.name] = pin;
-    });
-    definition.outputs.forEach((pin) => {
-      outputs[pin.name] = pin;
-    });
-    return { inputs, outputs };
-  }
-
-  function extractChipInterface(workspace) {
-    const inputs = workspace.nodes
-      .filter((node) => node.type === "input-pin")
-      .map((node) => ({ key: node.id, name: node.config.label.trim(), width: node.config.width }));
-    const outputs = workspace.nodes
-      .filter((node) => node.type === "output-pin")
-      .map((node) => ({ key: node.id, name: node.config.label.trim(), width: node.config.width }));
-    const errors = [];
-
-    if (!inputs.length) {
-      errors.push({ message: "Een chip heeft minimaal één Input node nodig." });
-    }
-    if (!outputs.length) {
-      errors.push({ message: "Een chip heeft minimaal één Output node nodig." });
-    }
-
-    const duplicateInputNames = findDuplicateNames(inputs.map((item) => item.name));
-    const duplicateOutputNames = findDuplicateNames(outputs.map((item) => item.name));
-    if (duplicateInputNames.length) {
-      errors.push({ message: `Dubbele inputnamen: ${duplicateInputNames.join(", ")}` });
-    }
-    if (duplicateOutputNames.length) {
-      errors.push({ message: `Dubbele outputnamen: ${duplicateOutputNames.join(", ")}` });
-    }
-    if (inputs.some((item) => !item.name)) {
-      errors.push({ message: "Elke Input node heeft een naam nodig." });
-    }
-    if (outputs.some((item) => !item.name)) {
-      errors.push({ message: "Elke Output node heeft een naam nodig." });
-    }
-
-    return { inputs, outputs, errors };
-  }
-
-  function findDuplicateNames(names) {
-    const counts = new Map();
-    names.forEach((name) => {
-      counts.set(name, (counts.get(name) || 0) + 1);
-    });
-    return [...counts.entries()].filter((entry) => entry[1] > 1).map((entry) => entry[0]);
   }
 
   function toggleSwitchNode(node) {
@@ -2737,79 +1531,6 @@ import {
     workspace.wires = workspace.wires.filter((wire) => wire.id !== wireId);
     setStatus("Verbinding verwijderd.");
     render();
-  }
-
-  function handleDragMove(event) {
-    if (state.dragging && event.pointerId === state.dragging.pointerId) {
-      const workspace = getCurrentWorkspace();
-      const node = workspace.nodes.find((item) => item.id === state.dragging.nodeId);
-      if (!node) {
-        return;
-      }
-      event.preventDefault();
-      const deltaX = event.clientX - state.dragging.startClientX;
-      const deltaY = event.clientY - state.dragging.startClientY;
-      if (state.longPress && state.longPress.pointerId === event.pointerId) {
-        const distance = Math.hypot(
-          event.clientX - state.longPress.startClientX,
-          event.clientY - state.longPress.startClientY
-        );
-        if (distance <= LONG_PRESS_MOVE_THRESHOLD) {
-          return;
-        }
-        clearLongPress(event.pointerId);
-      }
-      node.x = Math.max(20, state.dragging.startNodeX + deltaX / state.zoom);
-      node.y = Math.max(20, state.dragging.startNodeY + deltaY / state.zoom);
-      syncDraggedNodePosition(node);
-      renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
-      return;
-    }
-
-    if (state.panningCanvas && event.pointerId === state.panningCanvas.pointerId) {
-      event.preventDefault();
-      const deltaX = event.clientX - state.panningCanvas.startClientX;
-      const deltaY = event.clientY - state.panningCanvas.startClientY;
-      dom.canvas.scrollLeft = state.panningCanvas.startScrollLeft - deltaX;
-      dom.canvas.scrollTop = state.panningCanvas.startScrollTop - deltaY;
-    }
-  }
-
-  function stopDragging(event) {
-    if (state.dragging) {
-      if (event && event.pointerId != null && event.pointerId !== state.dragging.pointerId) {
-        return;
-      }
-      const wasMoved =
-        event &&
-        (Math.abs(event.clientX - state.dragging.startClientX) > 2 ||
-          Math.abs(event.clientY - state.dragging.startClientY) > 2);
-      if (!wasMoved && state.undoStack.length) {
-        // Node was clicked but not moved — discard the drag undo snapshot
-        state.undoStack.pop();
-      }
-      clearLongPress(event ? event.pointerId : null);
-      state.dragging = null;
-      render();
-      return;
-    }
-
-    if (state.panningCanvas) {
-      if (event && event.pointerId != null && event.pointerId !== state.panningCanvas.pointerId) {
-        return;
-      }
-      state.panningCanvas = null;
-    }
-    clearLongPress(event ? event.pointerId : null);
-  }
-
-  function syncDraggedNodePosition(node) {
-    const element = dom.nodeLayer.querySelector(`article[data-node-id="${node.id}"]`);
-    if (!element) {
-      return;
-    }
-    element.style.left = `${node.x}px`;
-    element.style.top = `${node.y}px`;
   }
 
   function getNodeConnections(workspace, nodeId) {
