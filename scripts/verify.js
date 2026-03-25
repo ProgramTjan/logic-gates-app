@@ -14,6 +14,7 @@ import {
 } from "../src/sim/bits.js";
 import { createSimulationEngine } from "../src/sim/evaluate.js";
 import { createChallengeVerifier } from "../src/challenges/verification.js";
+import { createNodeSpecFactory } from "../src/model/nodespec.js";
 
 let passed = 0;
 let failed = 0;
@@ -57,27 +58,7 @@ assert(
 // ── 2. evaluate.js ────────────────────────────────────────────────────────────
 console.log("\n[2] evaluate.js — AND-circuit fixture");
 
-function getNodeSpec(node) {
-  if (!node) return { inputs: [], outputs: [] };
-  if (node.type === "input-pin")
-    return { inputs: [], outputs: [{ key: "OUT", width: node.config.width || 1 }] };
-  if (node.type === "output-pin")
-    return { inputs: [{ key: "IN", width: node.config.width || 1 }], outputs: [] };
-  if (node.type === "gate" && node.config.gateType === "AND")
-    return {
-      inputs: [
-        { key: "A", width: node.config.width || 1 },
-        { key: "B", width: node.config.width || 1 },
-      ],
-      outputs: [{ key: "OUT", width: node.config.width || 1 }],
-    };
-  if (node.type === "gate" && node.config.gateType === "NOT")
-    return {
-      inputs: [{ key: "A", width: node.config.width || 1 }],
-      outputs: [{ key: "OUT", width: node.config.width || 1 }],
-    };
-  return { inputs: [], outputs: [] };
-}
+const { getNodeSpec } = createNodeSpecFactory({ getChipDefinition: () => null });
 
 const sim = createSimulationEngine({
   getNodeSpec,

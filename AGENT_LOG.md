@@ -63,6 +63,25 @@
 
 ---
 
+## 2026-03-25 — Stap 5 (vervolg): nodespec + render-orchestrator geëxtraheerd
+
+**Uitgevoerd:**
+- `src/model/nodespec.js` aangemaakt met `createNodeSpecFactory({ getChipDefinition })` factory
+- `src/ui/render.js` aangemaakt met `createRenderOrchestrator(deps)` factory
+- In script.js: imports toegevoegd voor beide modules; `nodeSpecService` aangemaakt vóór `simulationEngine`
+- `simulationEngine` gebruikt nu `nodeSpecService.getNodeSpec` i.p.v. inline-declaratie
+- `renderOrchestrator` aangemaakt na `panelRenderers`; `render`, `renderCanvas`, `applyWorkspaceZoom` zijn nu 1-regel wrappers
+- Bug gefixed: `renderChallenges: () => renderChallenges()` → `() => panelRenderers.renderChallenges()`
+- `scripts/verify.js` bijgewerkt: lokale mini-getNodeSpec vervangen door echte `createNodeSpecFactory` import
+- script.js: 1267 → 1129 regels (−138)
+- `node scripts/verify.js` → 19/19 groen
+
+**Aanname:** `nodeSpecService` aangemaakt voor `simulationEngine` omdat die `getNodeSpec` als dep krijgt. `getChipDefinition` is hoisted function declaration, dus veilig als lazy dep voor `nodeSpecService` vóór `const state`.
+
+**Resultaat:** groen
+
+---
+
 ## 2026-03-25 — Stap 3: Node-model extraheren → src/model/nodes.js + src/model/chips.js
 
 **Uitgevoerd:**
