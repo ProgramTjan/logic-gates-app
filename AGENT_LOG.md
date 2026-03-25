@@ -34,6 +34,20 @@
 
 ---
 
+## 2026-03-25 — Stap 5 (deel): Panel-renderers → src/ui/panels.js
+
+**Uitgevoerd:**
+- `src/ui/panels.js` aangemaakt met `createPanelRenderers(deps)` factory
+- Geëxtraheerd: `renderBuiltinPalette`, `renderWorkspaceList`, `renderChipLibrary`, `renderChallenges`, `renderChallengeCard`
+- `renderWorkspaceList` krijgt `currentWorkspace` als expliciete parameter (was: `getCurrentWorkspace()` intern)
+- script.js: `render()` gebruikt nu `panelRenderers.*`; inline declaraties verwijderd
+- script.js: 1426 → 1267 regels (−159)
+- `node scripts/verify.js` → 19/19 nog steeds groen
+
+**Resultaat:** groen
+
+---
+
 ## 2026-03-25 — Stap 4: Test harness → scripts/verify.js
 
 **Uitgevoerd:**
