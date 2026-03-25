@@ -9,6 +9,8 @@ Tasks 1-3 officieel compleet. Modules voor Tasks 4-7 zijn al gecreëerd en geïm
 
 ## ~~Stap 2: Extracteer simulatie-engine → src/sim/evaluate.js~~ ✅ gedaan 2026-03-25
 
+## ~~Stap 3: Extracteer node-model → src/model/nodes.js + src/model/chips.js~~ ✅ gedaan 2026-03-25
+
 ## Stap 1: Sync de roadmap met werkelijke staat
 
 **Bestand:** `docs/refactor-roadmap.md`

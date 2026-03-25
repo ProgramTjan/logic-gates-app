@@ -31,3 +31,20 @@
 **Aanname:** `stepRegisters` in script.js blijft een actie-functie (schrijft state + roept render aan) — niet geëxtraheerd naar evaluate.js. De engine levert de berekening, script.js past de state toe.
 
 **Resultaat:** groen — node --check OK op alle bestanden
+
+---
+
+## 2026-03-25 — Stap 3: Node-model extraheren → src/model/nodes.js + src/model/chips.js
+
+**Uitgevoerd:**
+- `src/model/nodes.js` aangemaakt: `normalizeNode` als directe export (imports bit-helpers), `createNodeFactory(deps)` returning `{ createNode }`
+- `src/model/chips.js` aangemaakt: `createChipsFactory(deps)` returning `{ createWorkspace, createChipInstance }`
+- In script.js: imports toegevoegd voor `normalizeNode`, `createNodeFactory`, `createChipsFactory`
+- Factory-instantiaties aangemaakt VOOR `const state = { project: loadProject() }` (zodat hoisting niet nodig is)
+- Inline declaraties `normalizeNode`, `createNode`, `createWorkspace`, `createChipInstance` verwijderd uit script.js
+- script.js: 1559 → 1426 regels (−133)
+- Alle syntax checks groen
+
+**Aanname:** `getChipDefinition` wordt doorgegeven als lazy-ref aan `createChipsFactory`. Wordt niet aangeroepen tijdens initialisatie — alleen bij `createChipInstance` via user-interactie. Veilig.
+
+**Resultaat:** groen — node --check OK op alle bestanden
