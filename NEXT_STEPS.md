@@ -17,6 +17,8 @@ Tasks 1-3 officieel compleet. Modules voor Tasks 4-7 zijn al gecreëerd en geïm
 
 ## ~~Stap 5 (vervolg): nodespec + render-orchestrator → src/model/nodespec.js + src/ui/render.js~~ ✅ gedaan 2026-03-25
 
+## ~~Stap 5 (afsluiting): boot.js event-binder + dead code sweep~~ ✅ gedaan 2026-03-25
+
 ## Stap 1: Sync de roadmap met werkelijke staat
 
 **Bestand:** `docs/refactor-roadmap.md`

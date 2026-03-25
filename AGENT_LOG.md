@@ -63,6 +63,22 @@
 
 ---
 
+## 2026-03-25 — Stap 5 (afsluiting): boot.js + dead code cleanup
+
+**Uitgevoerd:**
+- `src/ui/boot.js` aangemaakt: `createEventBinder({ dom, handlers, workspaceActions, interactionHandlers })`
+- Handlers gegroepeerd in een `handlers`-object: undo/redo, workspace-acties, zoom, inspector, keyboard
+- In script.js: import toegevoegd, `eventBinder` aangemaakt na `renderOrchestrator`; `bindEvents` body → 1-regel wrapper
+- Dead code removed: `renderCanvas()` wrapper in script.js (nooit aangeroepen — render.js heeft eigen interne versie)
+- script.js: 1267 → 1120 regels (cumulatief, t.o.v. vorige sessie)
+- node scripts/verify.js → 19/19 groen
+
+**Aanname:** Handlers (`handleInspectorFocusIn` etc.) blijven in script.js — te diep gekoppeld aan state/pushUndo. `createEventBinder` registreert alleen; logica blijft waar ze hoort.
+
+**Resultaat:** groen — Stap 5 volledig, Stap 6 dead-code sweep klaar
+
+---
+
 ## 2026-03-25 — Stap 5 (vervolg): nodespec + render-orchestrator geëxtraheerd
 
 **Uitgevoerd:**

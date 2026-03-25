@@ -33,6 +33,7 @@ import { normalizeNode, createNodeFactory } from "./src/model/nodes.js";
 import { createChipsFactory } from "./src/model/chips.js";
 import { createNodeSpecFactory } from "./src/model/nodespec.js";
 import { createRenderOrchestrator } from "./src/ui/render.js";
+import { createEventBinder } from "./src/ui/boot.js";
 
 (function () {
   const WORKSPACE_BASE_WIDTH = 1800;
@@ -218,6 +219,31 @@ import { createRenderOrchestrator } from "./src/ui/render.js";
     WORKSPACE_BASE_WIDTH,
     WORKSPACE_BASE_HEIGHT,
   });
+  const eventBinder = createEventBinder({
+    dom,
+    workspaceActions,
+    interactionHandlers,
+    handlers: {
+      undo,
+      redo,
+      createWorkspaceFromPrompt,
+      duplicateCurrentWorkspace,
+      saveCurrentWorkspaceAsChip,
+      toggleWorkspaceClocks,
+      stepRegisters,
+      resetRuntimeState,
+      exportProject,
+      importClick: () => dom.importInput.click(),
+      importProjectFromFile,
+      zoomOut: () => changeZoom(-ZOOM_STEP),
+      zoomReset: () => setZoom(1),
+      zoomIn: () => changeZoom(ZOOM_STEP),
+      inspectorFocusIn: handleInspectorFocusIn,
+      inspectorInput: handleInspectorInput,
+      inspectorClick: handleInspectorClick,
+      keydown: handleKeyboardShortcuts,
+    },
+  });
   let appStarted = false;
 
   window.ForgeLogicApp = {
@@ -310,38 +336,7 @@ import { createRenderOrchestrator } from "./src/ui/render.js";
   }
 
   function bindEvents() {
-    dom.undoButton.addEventListener("click", undo);
-    dom.redoButton.addEventListener("click", redo);
-    dom.newWorkspaceButton.addEventListener("click", createWorkspaceFromPrompt);
-    dom.duplicateWorkspaceButton.addEventListener("click", duplicateCurrentWorkspace);
-    dom.saveChipButton.addEventListener("click", saveCurrentWorkspaceAsChip);
-    dom.toggleClocksButton.addEventListener("click", toggleWorkspaceClocks);
-    dom.stepRegistersButton.addEventListener("click", stepRegisters);
-    dom.resetStateButton.addEventListener("click", resetRuntimeState);
-    dom.exportButton.addEventListener("click", exportProject);
-    dom.importButton.addEventListener("click", () => dom.importInput.click());
-    dom.importInput.addEventListener("change", importProjectFromFile);
-    dom.zoomOutButton.addEventListener("click", () => changeZoom(-ZOOM_STEP));
-    dom.zoomResetButton.addEventListener("click", () => setZoom(1));
-    dom.zoomInButton.addEventListener("click", () => changeZoom(ZOOM_STEP));
-    dom.challengeStartButton.addEventListener("click", workspaceActions.startSelectedChallenge);
-    dom.challengeSubmitButton.addEventListener("click", workspaceActions.submitCurrentChallenge);
-
-    dom.builtinPalette.addEventListener("click", workspaceActions.handleBuiltinPaletteClick);
-    dom.workspaceList.addEventListener("click", workspaceActions.handleWorkspaceListClick);
-    dom.chipLibrary.addEventListener("click", workspaceActions.handleChipLibraryClick);
-    dom.challengeList.addEventListener("click", workspaceActions.handleChallengeListClick);
-    dom.nodeLayer.addEventListener("click", interactionHandlers.handleNodeLayerClick);
-    dom.nodeLayer.addEventListener("pointerdown", interactionHandlers.handleNodeLayerPointerDown);
-    dom.canvas.addEventListener("pointerdown", interactionHandlers.handleCanvasPointerDown);
-    dom.inspector.addEventListener("focusin", handleInspectorFocusIn);
-    dom.inspector.addEventListener("input", handleInspectorInput);
-    dom.inspector.addEventListener("click", handleInspectorClick);
-
-    document.addEventListener("pointermove", interactionHandlers.handleDragMove);
-    document.addEventListener("pointerup", interactionHandlers.stopDragging);
-    document.addEventListener("pointercancel", interactionHandlers.stopDragging);
-    document.addEventListener("keydown", handleKeyboardShortcuts);
+    eventBinder.bindEvents();
   }
 
   function loadProject() {
@@ -418,10 +413,6 @@ import { createRenderOrchestrator } from "./src/ui/render.js";
 
   function render() {
     renderOrchestrator.render();
-  }
-
-  function renderCanvas() {
-    renderOrchestrator.renderCanvas();
   }
 
   function applyWorkspaceZoom() {
