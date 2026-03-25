@@ -11,6 +11,8 @@ Tasks 1-3 officieel compleet. Modules voor Tasks 4-7 zijn al gecreëerd en geïm
 
 ## ~~Stap 3: Extracteer node-model → src/model/nodes.js + src/model/chips.js~~ ✅ gedaan 2026-03-25
 
+## ~~Stap 4: Voeg test harness toe voor pure modules (Task 8)~~ ✅ gedaan 2026-03-25
+
 ## Stap 1: Sync de roadmap met werkelijke staat
 
 **Bestand:** `docs/refactor-roadmap.md`

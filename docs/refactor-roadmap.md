@@ -14,13 +14,16 @@
   - [script.js](/root/logic-gates-app/script.js) now uses thin local wrappers around the state module so the rest of the app stays stable
   - Task 4-7 UI/logic modules scaffolded: src/challenges/verification.js, src/chips/definitions.js, src/ui/canvas.js, src/ui/events.js, src/ui/inspector.js, src/ui/workspace-actions.js, src/data/builtinParts.js, src/data/challenges.js
   - All src/ modules pass `node --check` (verified 2026-03-25)
-- Next recommended step: extract simulation engine (evaluateCircuit, evaluateWorkspace, collectRegisterUpdates, stepRegisters, makeRegisterStateKey, evaluateGate) from script.js into src/sim/evaluate.js
-- Resume rule: keep simulation extraction isolated from render or pointer-handler extraction in the same session
+  - src/sim/evaluate.js extracted (evaluateCircuit, evaluateWorkspace, collectRegisterUpdates, evaluateGate)
+  - src/model/nodes.js extracted (normalizeNode, createNode)
+  - src/model/chips.js extracted (createWorkspace, createChipInstance)
+  - scripts/verify.js test harness: 19/19 checks pass (node scripts/verify.js)
+  - script.js: 1846 → 1426 lines (-420)
+- Next recommended step: extract render orchestration (render + sub-renders) into src/ui/render.js
+- Resume rule: keep render extraction isolated from event handler extraction in the same session
 - Remaining in script.js (to extract):
-  - Lines 1325-1340: `stepRegisters`, `collectRegisterUpdates`
-  - Lines 1555-1840: `evaluateWorkspace`, `evaluateCircuit`, `makeRegisterStateKey`, `evaluateGate`
-  - Lines 346-460: `createWorkspace`, `createNode`, `createChipInstance`, `normalizeNode`
-  - Lines 628-825: `render` and all sub-render functions
+  - `render()` and sub-renders: renderBuiltinPalette, renderWorkspaceList, renderChipLibrary, renderChallenges, renderCanvas
+  - Event registration: bindEvents and all addEventListener calls
 - Verification baseline after Tasks 1-3 + scaffold inventory (2026-03-25):
   - module entrypoint loads
   - app boot still succeeds

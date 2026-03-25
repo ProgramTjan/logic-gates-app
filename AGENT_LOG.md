@@ -34,6 +34,21 @@
 
 ---
 
+## 2026-03-25 — Stap 4: Test harness → scripts/verify.js
+
+**Uitgevoerd:**
+- `package.json` aangemaakt met `"type": "module"` voor Node.js ES module support
+- `scripts/verify.js` aangemaakt: 19 fixture-tests in 3 secties
+  - Sectie 1 (bits.js): parseBits, formatBits, bitwiseBinary, bitsToBoolean, zeroBits, ensureWidth
+  - Sectie 2 (evaluate.js): AND-circuit fixture — alle 4 inputcombinaties getest
+  - Sectie 3 (verification.js): NAND challenge fixture — correcte NAND verified, kapotte AND-only fails
+- `node scripts/verify.js` → 19/19 geslaagd
+- Roadmap bijgewerkt met verify-commando en actuele status
+
+**Resultaat:** groen — 19/19 tests geslaagd
+
+---
+
 ## 2026-03-25 — Stap 3: Node-model extraheren → src/model/nodes.js + src/model/chips.js
 
 **Uitgevoerd:**
