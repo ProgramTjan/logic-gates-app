@@ -94,10 +94,12 @@ import { createEventBinder } from "./src/ui/boot.js";
     project: loadProject(),
     selectedNodeId: null,
     quickDeleteNodeId: null,
+    quickDeleteWireId: null,
     selectedChallengeId: null,
     pendingConnection: null,
     dragging: null,
     longPress: null,
+    longPressWire: null,
     panningCanvas: null,
     lastEvaluation: null,
     zoom: 1,
@@ -159,8 +161,10 @@ import { createEventBinder } from "./src/ui/boot.js";
     pushUndo,
     getCurrentWorkspace,
     deleteNode,
+    removeWire,
     toggleSwitchNode,
     toggleClockNode,
+    toggleInputPinNode,
     handlePinClick,
     evaluateWorkspace,
     canvasRenderers,
@@ -642,24 +646,28 @@ import { createEventBinder } from "./src/ui/boot.js";
     const inputStep = Math.max(90, Math.floor(420 / Math.max(1, template.inputs.length)));
     const outputStep = Math.max(90, Math.floor(420 / Math.max(1, template.outputs.length)));
 
-    template.inputs.forEach((name, index) => {
+    template.inputs.forEach((item, index) => {
+      const label = typeof item === "string" ? item : item.name;
+      const width = typeof item === "string" ? 1 : (item.width || 1);
       workspace.nodes.push(
         chipDefinitionsService.createConfiguredNode(
           state.project,
           "input-pin",
           { x: 120, y: 120 + index * inputStep },
-          { label: name, width: 1, previewValue: "0" }
+          { label, width, previewValue: "0".repeat(width) }
         )
       );
     });
 
-    template.outputs.forEach((name, index) => {
+    template.outputs.forEach((item, index) => {
+      const label = typeof item === "string" ? item : item.name;
+      const width = typeof item === "string" ? 1 : (item.width || 1);
       workspace.nodes.push(
         chipDefinitionsService.createConfiguredNode(
           state.project,
           "output-pin",
           { x: 760, y: 120 + index * outputStep },
-          { label: name, width: 1 }
+          { label, width }
         )
       );
     });
@@ -869,6 +877,11 @@ import { createEventBinder } from "./src/ui/boot.js";
       .filter(Boolean)
       .sort((left, right) => right.version - left.version);
     return definitions[0] || null;
+  }
+
+  function toggleInputPinNode(node) {
+    node.config.previewValue = node.config.previewValue === "1" ? "0" : "1";
+    setStatus(`${node.config.label} is nu ${node.config.previewValue}.`);
   }
 
   function toggleSwitchNode(node) {

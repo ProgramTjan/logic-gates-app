@@ -25,6 +25,8 @@ export function createEventBinder(deps) {
     dom.challengeList.addEventListener("click", workspaceActions.handleChallengeListClick);
     dom.nodeLayer.addEventListener("click", interactionHandlers.handleNodeLayerClick);
     dom.nodeLayer.addEventListener("pointerdown", interactionHandlers.handleNodeLayerPointerDown);
+    dom.wireLayer.addEventListener("pointerdown", interactionHandlers.handleWirePointerDown);
+    dom.wireLayer.addEventListener("click", interactionHandlers.handleWireClick);
     dom.canvas.addEventListener("pointerdown", interactionHandlers.handleCanvasPointerDown);
     dom.inspector.addEventListener("focusin", handlers.inspectorFocusIn);
     dom.inspector.addEventListener("input", handlers.inspectorInput);

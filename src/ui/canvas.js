@@ -93,6 +93,16 @@ export function createCanvasRenderers(deps) {
         <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-switch" data-node-id="${node.id}">toggle</button>
       </div></div>`;
     }
+    if (node.type === "input-pin") {
+      const isOn = /1/.test(node.config.previewValue);
+      return `<div class="node-center"><div class="gate-face">
+        <span class="lamp-indicator ${isOn ? "on" : ""}"></span>
+      </div>
+      <div class="gate-meta">
+        <span>${escapeHtml(node.config.previewValue)}</span>
+        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-input-pin" data-node-id="${node.id}">toggle</button>
+      </div></div>`;
+    }
     if (node.type === "clock") {
       return `<div class="node-center"><div class="gate-face">
         <span class="gate-symbol">${escapeHtml(symbol)}</span>
@@ -131,17 +141,12 @@ export function createCanvasRenderers(deps) {
         `${spec.inputs.length}:${spec.outputs.length}`
       )}</span></div></div>`;
     }
-    if (node.type === "input-pin") {
-      return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
-      </div>
-      <div class="gate-meta"><span>${escapeHtml(node.config.previewValue)}</span></div></div>`;
-    }
     if (node.type === "output-pin") {
+      const isOn = /1/.test(lampValue);
       return `<div class="node-center"><div class="gate-face">
-        <span class="gate-symbol">${escapeHtml(symbol)}</span>
+        <span class="lamp-indicator ${isOn ? "on" : ""}"></span>
       </div>
-      <div class="gate-meta"><span>${escapeHtml(node.config.width)}b</span></div></div>`;
+      <div class="gate-meta"><span>${escapeHtml(lampValue)}</span></div></div>`;
     }
     return `<div class="node-center"><div class="gate-face">
       <span class="gate-symbol">${escapeHtml(symbol)}</span>
@@ -270,7 +275,20 @@ export function createCanvasRenderers(deps) {
         const wireSignal = evaluation.wireSignals[wire.id];
         const wireClass = wireSignal ? (wireSignal.invalid ? "invalid" : wireSignal.high ? "high" : "low") : "";
         const invalidNode = !nodeLookup.has(wire.fromNodeId) || !nodeLookup.has(wire.toNodeId);
-        return `<path class="wire ${wireClass} ${invalidNode ? "invalid" : ""}" d="${path}" />`;
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        const showDelete = state.quickDeleteWireId === wire.id;
+
+        return [
+          `<path class="wire-hit" data-wire-id="${wire.id}" d="${path}" />`,
+          `<path class="wire ${wireClass} ${invalidNode ? "invalid" : ""}" d="${path}" />`,
+          showDelete
+            ? `<g class="wire-delete-btn" data-quick-delete-wire="${wire.id}">` +
+              `<circle cx="${mx}" cy="${my}" r="9"/>` +
+              `<text x="${mx}" y="${my}" dy="0.35em" text-anchor="middle">×</text>` +
+              `</g>`
+            : "",
+        ].join("");
       })
       .join("");
   }

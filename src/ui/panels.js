@@ -119,11 +119,20 @@ export function createPanelRenderers(deps) {
       .join("");
   }
 
-  function renderChallengeCard(challenge, result) {
-    const expanded = state.selectedChallengeId === challenge.id;
-    return `<article class="challenge-card ${result.done ? "done" : ""} ${
-      expanded ? "selected" : ""
-    }" data-select-challenge="${challenge.id}">
+  function renderChallengeDetail(challenge, result) {
+    const theoryHtml = (challenge.theory || [])
+      .map((paragraph) => `<p class="theory-paragraph">${escapeHtml(paragraph)}</p>`)
+      .join("");
+
+    const testsHtml = (challenge.tests || [])
+      .map((test) => {
+        const inputs = Object.entries(test.inputs).map(([k, v]) => `${k}=${v}`).join("  ");
+        const outputs = Object.entries(test.outputs).map(([k, v]) => `${k}=${v}`).join("  ");
+        return `<div class="challenge-test-row"><span>${escapeHtml(inputs)}</span><span>→</span><span>${escapeHtml(outputs)}</span></div>`;
+      })
+      .join("");
+
+    return `<article class="challenge-card challenge-detail-card ${result.done ? "done" : ""}">
       <div class="challenge-head">
         <div>
           <h3>${escapeHtml(challenge.title)}</h3>
@@ -134,24 +143,28 @@ export function createPanelRenderers(deps) {
         <span class="challenge-status">${escapeHtml(result.label)}</span>
       </div>
       <p class="challenge-copy">${escapeHtml(challenge.description)}</p>
-      <p class="challenge-copy">${escapeHtml(result.summary)}</p>
+      ${result.summary ? `<p class="challenge-copy challenge-result-summary">${escapeHtml(result.summary)}</p>` : ""}
       <div class="challenge-actions">
         <button class="ghost-button" type="button" data-open-challenge="${challenge.id}">Start</button>
         <button class="ghost-button" type="button" data-submit-challenge="${challenge.id}">Submit</button>
-        <button class="ghost-button" type="button" data-toggle-challenge="${challenge.id}">${
-          expanded ? "Hide Details" : "Show Details"
-        }</button>
       </div>
-      ${
-        expanded
-          ? `<div class="challenge-details">
-              <div class="challenge-kicker">Hints</div>
-              <ul class="challenge-hints">
-                ${challenge.hints.map((hint) => `<li>${escapeHtml(hint)}</li>`).join("")}
-              </ul>
-            </div>`
-          : ""
-      }
+
+      ${theoryHtml ? `<div class="challenge-details theory-section">
+        <div class="challenge-kicker theory-kicker">📖 Achtergrond</div>
+        ${theoryHtml}
+      </div>` : ""}
+
+      <div class="challenge-details">
+        <div class="challenge-kicker">Hints</div>
+        <ul class="challenge-hints">
+          ${challenge.hints.map((hint) => `<li>${escapeHtml(hint)}</li>`).join("")}
+        </ul>
+      </div>
+
+      ${testsHtml ? `<div class="challenge-details">
+        <div class="challenge-kicker">Waarheidstabel (${challenge.tests.length} tests)</div>
+        <div class="challenge-tests">${testsHtml}</div>
+      </div>` : ""}
     </article>`;
   }
 
@@ -167,18 +180,61 @@ export function createPanelRenderers(deps) {
       result: challengeVerifier.evaluateChallengeResult(challenge, userDefinitions),
     }));
     const completedCount = challengeStates.filter((item) => item.result.done).length;
-    dom.challengeList.innerHTML = [
-      `<div class="challenge-card">
-        <div class="challenge-head">
-          <div>
-            <h3>Progress</h3>
-            <div class="challenge-kicker">${completedCount}/${CHALLENGES.length} klaar</div>
-          </div>
-          <span class="challenge-status">${Math.round((completedCount / CHALLENGES.length) * 100)}%</span>
+
+    const phases = [...new Set(CHALLENGES.map((c) => c.phase))];
+    const pickerMarkup = phases.map((phase) => {
+      const items = challengeStates
+        .filter(({ challenge }) => challenge.phase === phase)
+        .map(({ challenge, result }) => {
+          const active = state.selectedChallengeId === challenge.id;
+          return `<button class="challenge-picker-item ${result.done ? "done" : ""} ${active ? "active" : ""}"
+            type="button" data-select-challenge="${challenge.id}">
+            <span class="challenge-picker-dot"></span>
+            <span class="challenge-picker-name">${escapeHtml(challenge.title)}</span>
+            ${result.done ? `<span class="challenge-picker-check">✓</span>` : ""}
+          </button>`;
+        })
+        .join("");
+      return `<div class="challenge-picker-group">
+        <div class="challenge-picker-phase">${escapeHtml(phase)}</div>
+        ${items}
+      </div>`;
+    }).join("");
+
+    const selected = challengeStates.find(({ challenge }) => challenge.id === state.selectedChallengeId);
+    const detailMarkup = selected ? renderChallengeDetail(selected.challenge, selected.result) : "";
+
+    dom.challengeList.innerHTML = `
+      <div class="challenge-progress">
+        <span>${completedCount}/${CHALLENGES.length} voltooid</span>
+        <div class="challenge-progress-bar">
+          <div class="challenge-progress-fill" style="width:${Math.round((completedCount / CHALLENGES.length) * 100)}%"></div>
         </div>
-      </div>`,
-      ...challengeStates.map(({ challenge, result }) => renderChallengeCard(challenge, result)),
-    ].join("");
+      </div>
+      <div class="challenge-picker">${pickerMarkup}</div>
+      ${detailMarkup}
+      <div class="challenge-card how-to-card">
+        <div class="challenge-kicker theory-kicker">🚀 Hoe werkt dit?</div>
+        <div class="how-to-body">
+          <p><strong>1. Kies een opdracht</strong> in het menu hierboven en klik <em>Start</em>. Er opent een nieuwe sheet met kant-en-klare Input- en Output-pins.</p>
+          <p><strong>2. Bouw je circuit</strong> via <em>Parts → Quick Add</em>. Sleep gates naar de canvas en verbind ze door op een output-pin te klikken en daarna een input-pin.</p>
+          <p><strong>3. Test direct</strong>: klik de toggle-knop op een Input-node om de waarde te wisselen. De Output-node toont een lampje — groen = 1, grijs = 0.</p>
+          <p><strong>4. Sla op als chip</strong> via de <em>Snapshot</em>-knop (linksboven). Geef je chip de exacte naam die in de opdracht staat (bijv. <code>NAND</code>).</p>
+          <p><strong>5. Submit</strong> via de knop in het detailpaneel. Het systeem draait alle tests automatisch en toont hoeveel er slagen.</p>
+          <p><strong>6. Gebruik je chips opnieuw</strong>: opgeslagen chips verschijnen in de Chips-bibliotheek (links) en in de Parts-balk. Bouw complexere chips op je eigen bouwblokken.</p>
+        </div>
+        <div class="how-to-tips">
+          <div class="challenge-kicker">Tips</div>
+          <ul class="challenge-hints">
+            <li>Verwijder een draad: hou hem ~½ sec ingedrukt → rode × verschijnt.</li>
+            <li>Verwijder een node: hou hem ~½ sec ingedrukt → rode × in de hoek.</li>
+            <li>Meerdere chips bewaren van hetzelfde type? Gebruik <em>Edit as New Version</em>.</li>
+            <li>Draden kleuren groen (=1) of rood (=0) — zo zie je signaalstromen in één oogopslag.</li>
+            <li>Gebruik Splitter/Joiner voor multi-bit bussen (nodig voor Add4, Inc4).</li>
+          </ul>
+        </div>
+      </div>
+    `;
     workspaceActions.updateChallengeStartButton();
     workspaceActions.updateChallengeSubmitButton();
   }

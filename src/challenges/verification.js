@@ -51,6 +51,9 @@ export function createChallengeVerifier(deps) {
     if (challenge.verification === "sequential-register") {
       return runRegisterChallengeVerification(challenge, definition);
     }
+    if (challenge.verification === "sequential-counter") {
+      return runCounterChallengeVerification(challenge, definition);
+    }
     return {
       done: true,
       label: "Shape OK",
@@ -134,6 +137,59 @@ export function createChallengeVerifier(deps) {
         label: done ? "Verified" : "Needs Work",
         summary: `${passed}/${checkpoints.length} sequentiële checks geslaagd.`,
         score: checkpoints.length ? passed / checkpoints.length : 0,
+      };
+    } finally {
+      deps.setRuntimeRegisterStates(originalRuntime);
+    }
+  }
+
+  function runCounterChallengeVerification(challenge, definition) {
+    const originalRuntime = deps.deepClone(deps.getRuntimeRegisterStates());
+    const path = `challenge:${challenge.id}:${definition.id}`;
+    deps.setRuntimeRegisterStates({});
+
+    try {
+      const checks = [];
+
+      function step(inputs, expect) {
+        applyDefinitionStep(definition, inputs, path);
+        const actual = simulateDefinitionOutputs(definition, inputs, path);
+        checks.push(compareOutputs(actual, expect));
+      }
+
+      // Beginstaat: OUT = 0
+      checks.push(
+        compareOutputs(
+          simulateDefinitionOutputs(definition, { IN: "0", LOAD: "0", INC: "0", RST: "0" }, path),
+          { OUT: "0" }
+        )
+      );
+
+      // RST=1 → OUT blijft 0
+      step({ IN: "1", LOAD: "0", INC: "0", RST: "1" }, { OUT: "0" });
+
+      // LOAD=1, IN=1 → OUT = 1
+      step({ IN: "1", LOAD: "1", INC: "0", RST: "0" }, { OUT: "1" });
+
+      // Hold (geen actie) → OUT blijft 1
+      step({ IN: "0", LOAD: "0", INC: "0", RST: "0" }, { OUT: "1" });
+
+      // INC=1 → OUT = 0  (1+1 overflow voor 1-bit)
+      step({ IN: "0", LOAD: "0", INC: "1", RST: "0" }, { OUT: "0" });
+
+      // INC=1 → OUT = 1  (0+1)
+      step({ IN: "0", LOAD: "0", INC: "1", RST: "0" }, { OUT: "1" });
+
+      // RST heeft hogere prioriteit dan LOAD en INC → OUT = 0
+      step({ IN: "1", LOAD: "1", INC: "1", RST: "1" }, { OUT: "0" });
+
+      const passed = checks.filter(Boolean).length;
+      const done = passed === checks.length;
+      return {
+        done,
+        label: done ? "Verified" : "Needs Work",
+        summary: `${passed}/${checks.length} sequentiële PC-checks geslaagd.`,
+        score: checks.length ? passed / checks.length : 0,
       };
     } finally {
       deps.setRuntimeRegisterStates(originalRuntime);

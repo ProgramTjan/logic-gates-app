@@ -6,8 +6,10 @@ export function createInteractionHandlers(deps) {
     pushUndo,
     getCurrentWorkspace,
     deleteNode,
+    removeWire,
     toggleSwitchNode,
     toggleClockNode,
+    toggleInputPinNode,
     handlePinClick,
     evaluateWorkspace,
     canvasRenderers,
@@ -62,6 +64,8 @@ export function createInteractionHandlers(deps) {
         toggleSwitchNode(node);
       } else if (actionButton.dataset.nodeAction === "toggle-clock") {
         toggleClockNode(node);
+      } else if (actionButton.dataset.nodeAction === "toggle-input-pin") {
+        toggleInputPinNode(node);
       }
       render();
       return;
@@ -151,6 +155,16 @@ export function createInteractionHandlers(deps) {
   }
 
   function handleDragMove(event) {
+    if (state.longPressWire && event.pointerId === state.longPressWire.pointerId) {
+      const distance = Math.hypot(
+        event.clientX - state.longPressWire.startClientX,
+        event.clientY - state.longPressWire.startClientY
+      );
+      if (distance > longPressMoveThreshold) {
+        clearWireLongPress(event.pointerId);
+      }
+    }
+
     if (state.dragging && event.pointerId === state.dragging.pointerId) {
       const workspace = getCurrentWorkspace();
       const node = workspace.nodes.find((item) => item.id === state.dragging.nodeId);
@@ -190,6 +204,8 @@ export function createInteractionHandlers(deps) {
   }
 
   function stopDragging(event) {
+    clearWireLongPress(event ? event.pointerId : null);
+
     if (state.dragging) {
       if (event && event.pointerId != null && event.pointerId !== state.dragging.pointerId) {
         return;
@@ -216,6 +232,62 @@ export function createInteractionHandlers(deps) {
     clearLongPress(event ? event.pointerId : null);
   }
 
+  function startWireLongPress(wireId, pointerId, clientX, clientY) {
+    clearWireLongPress();
+    state.longPressWire = {
+      wireId,
+      pointerId,
+      startClientX: clientX,
+      startClientY: clientY,
+      timerId: window.setTimeout(() => {
+        if (!state.longPressWire || state.longPressWire.wireId !== wireId) {
+          return;
+        }
+        state.quickDeleteWireId = wireId;
+        state.longPressWire = null;
+        render();
+      }, longPressDelay),
+    };
+  }
+
+  function clearWireLongPress(pointerId) {
+    if (!state.longPressWire) {
+      return;
+    }
+    if (pointerId != null && state.longPressWire.pointerId !== pointerId) {
+      return;
+    }
+    window.clearTimeout(state.longPressWire.timerId);
+    state.longPressWire = null;
+  }
+
+  function handleWirePointerDown(event) {
+    if (event.button !== 0) {
+      return;
+    }
+    if (event.target.closest("[data-quick-delete-wire]")) {
+      return;
+    }
+    const wireEl = event.target.closest("[data-wire-id]");
+    if (!wireEl) {
+      return;
+    }
+    event.stopPropagation();
+    startWireLongPress(wireEl.dataset.wireId, event.pointerId, event.clientX, event.clientY);
+  }
+
+  function handleWireClick(event) {
+    const deleteBtn = event.target.closest("[data-quick-delete-wire]");
+    if (deleteBtn) {
+      removeWire(deleteBtn.dataset.quickDeleteWire);
+      return;
+    }
+    if (state.quickDeleteWireId) {
+      state.quickDeleteWireId = null;
+      render();
+    }
+  }
+
   function syncDraggedNodePosition(node) {
     const element = dom.nodeLayer.querySelector(`article[data-node-id="${node.id}"]`);
     if (!element) {
@@ -231,6 +303,8 @@ export function createInteractionHandlers(deps) {
     handleDragMove,
     handleNodeLayerClick,
     handleNodeLayerPointerDown,
+    handleWirePointerDown,
+    handleWireClick,
     stopDragging,
   };
 }
