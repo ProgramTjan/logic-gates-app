@@ -12,3 +12,16 @@ export function deepClone(value) {
   }
   return JSON.parse(JSON.stringify(value));
 }
+
+export function debounce(fn, delayMs) {
+  let timerId = null;
+  return function debounced(...args) {
+    if (timerId !== null) {
+      clearTimeout(timerId);
+    }
+    timerId = setTimeout(() => {
+      timerId = null;
+      fn.apply(this, args);
+    }, delayMs);
+  };
+}

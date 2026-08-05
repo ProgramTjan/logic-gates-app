@@ -2,7 +2,7 @@ export function createInteractionHandlers(deps) {
   const {
     dom,
     state,
-    render,
+    renderWorkspace,
     pushUndo,
     getCurrentWorkspace,
     deleteNode,
@@ -15,6 +15,10 @@ export function createInteractionHandlers(deps) {
     canvasRenderers,
     longPressDelay,
     longPressMoveThreshold,
+    selectSingleNode,
+    toggleSelectionNode,
+    clearSelection,
+    setSelection,
   } = deps;
 
   function startNodeLongPress(nodeId, pointerId, clientX, clientY) {
@@ -31,7 +35,7 @@ export function createInteractionHandlers(deps) {
         state.quickDeleteNodeId = nodeId;
         state.dragging = null;
         state.longPress = null;
-        render();
+        renderWorkspace();
       }, longPressDelay),
     };
   }
@@ -48,6 +52,13 @@ export function createInteractionHandlers(deps) {
   }
 
   function handleNodeLayerClick(event) {
+    // Na een marquee-selectie volgt nog een click op de lege canvas; die mag
+    // de zojuist gemaakte selectie niet wissen.
+    if (suppressNextLayerClick) {
+      suppressNextLayerClick = false;
+      return;
+    }
+
     const quickDeleteButton = event.target.closest("[data-quick-delete-node]");
     if (quickDeleteButton) {
       deleteNode(quickDeleteButton.dataset.quickDeleteNode);
@@ -67,7 +78,7 @@ export function createInteractionHandlers(deps) {
       } else if (actionButton.dataset.nodeAction === "toggle-input-pin") {
         toggleInputPinNode(node);
       }
-      render();
+      renderWorkspace();
       return;
     }
 
@@ -79,21 +90,40 @@ export function createInteractionHandlers(deps) {
 
     const nodeElement = event.target.closest("[data-node-id]");
     if (nodeElement) {
-      state.selectedNodeId = nodeElement.dataset.nodeId;
-      if (state.quickDeleteNodeId && state.quickDeleteNodeId !== nodeElement.dataset.nodeId) {
+      const nodeId = nodeElement.dataset.nodeId;
+      if (event.shiftKey) {
+        toggleSelectionNode(nodeId);
+      } else {
+        selectSingleNode(nodeId);
+      }
+      const selected = getCurrentWorkspace().nodes.find((item) => item.id === nodeId);
+      state.keyboardCaptureNodeId = selected && selected.type === "keyboard" ? nodeId : null;
+      if (state.quickDeleteNodeId && !getSelectedNodeIds().includes(state.quickDeleteNodeId)) {
         state.quickDeleteNodeId = null;
       }
-      render();
+      renderWorkspace();
       return;
     }
 
-    state.selectedNodeId = null;
-    state.quickDeleteNodeId = null;
-    render();
+    clearSelection();
+    state.keyboardCaptureNodeId = null;
+    renderWorkspace();
+  }
+
+  function getSelectedNodeIds() {
+    if (state.selectedNodeIds && state.selectedNodeIds.length) {
+      return state.selectedNodeIds;
+    }
+    return state.selectedNodeId ? [state.selectedNodeId] : [];
   }
 
   function handleNodeLayerPointerDown(event) {
     if (event.button !== 0) {
+      return;
+    }
+    // Shift+klik is selectie-toggelen (click-handler); geen drag starten en
+    // vooral de bestaande multi-selectie niet resetten.
+    if (event.shiftKey) {
       return;
     }
     if (
@@ -108,14 +138,26 @@ export function createInteractionHandlers(deps) {
       return;
     }
     const nodeId = surface.dataset.nodeId;
-    const node = getCurrentWorkspace().nodes.find((item) => item.id === nodeId);
+    const workspace = getCurrentWorkspace();
+    const node = workspace.nodes.find((item) => item.id === nodeId);
     if (!node) {
       return;
     }
     event.preventDefault();
     event.stopPropagation();
-    state.selectedNodeId = nodeId;
+
+    // Sleep je een node die deel is van een multi-selectie, verplaats dan de
+    // hele groep; anders wordt de selectie vervangen door deze ene node.
+    const selectedIds = getSelectedNodeIds();
+    const isGroupDrag = selectedIds.length > 1 && selectedIds.includes(nodeId);
+    if (!isGroupDrag) {
+      state.selectedNodeId = nodeId;
+      state.selectedNodeIds = [nodeId];
+    } else {
+      state.selectedNodeId = nodeId;
+    }
     state.quickDeleteNodeId = null;
+    state.keyboardCaptureNodeId = node.type === "keyboard" ? nodeId : null;
     pushUndo();
     state.dragging = {
       nodeId,
@@ -124,11 +166,72 @@ export function createInteractionHandlers(deps) {
       startClientY: event.clientY,
       startNodeX: node.x,
       startNodeY: node.y,
+      groupStarts: isGroupDrag
+        ? selectedIds
+            .map((id) => workspace.nodes.find((item) => item.id === id))
+            .filter(Boolean)
+            .map((item) => ({ nodeId: item.id, startX: item.x, startY: item.y }))
+        : null,
     };
     if (surface.setPointerCapture) {
       surface.setPointerCapture(event.pointerId);
     }
     startNodeLongPress(nodeId, event.pointerId, event.clientX, event.clientY);
+  }
+
+  let marqueeEl = null;
+  let suppressNextLayerClick = false;
+
+  function ensureMarqueeEl() {
+    if (!marqueeEl) {
+      marqueeEl = document.createElement("div");
+      marqueeEl.className = "selection-marquee";
+      marqueeEl.hidden = true;
+      document.body.appendChild(marqueeEl);
+    }
+    return marqueeEl;
+  }
+
+  function marqueeRect(marquee) {
+    const left = Math.min(marquee.startClientX, marquee.curClientX);
+    const top = Math.min(marquee.startClientY, marquee.curClientY);
+    const width = Math.abs(marquee.curClientX - marquee.startClientX);
+    const height = Math.abs(marquee.curClientY - marquee.startClientY);
+    return { left, top, width, height, right: left + width, bottom: top + height };
+  }
+
+  function updateMarqueeVisual(marquee) {
+    const el = ensureMarqueeEl();
+    const rect = marqueeRect(marquee);
+    el.hidden = false;
+    el.style.left = `${rect.left}px`;
+    el.style.top = `${rect.top}px`;
+    el.style.width = `${rect.width}px`;
+    el.style.height = `${rect.height}px`;
+  }
+
+  function finishMarquee(marquee) {
+    const rect = marqueeRect(marquee);
+    if (marqueeEl) {
+      marqueeEl.hidden = true;
+    }
+    const ids = [];
+    dom.nodeLayer.querySelectorAll("article[data-node-id]").forEach((element) => {
+      const nodeRect = element.getBoundingClientRect();
+      const overlaps =
+        nodeRect.left < rect.right &&
+        nodeRect.right > rect.left &&
+        nodeRect.top < rect.bottom &&
+        nodeRect.bottom > rect.top;
+      if (overlaps) {
+        ids.push(element.dataset.nodeId);
+      }
+    });
+    if (ids.length) {
+      setSelection(ids);
+      suppressNextLayerClick = true;
+    }
+    renderWorkspace();
   }
 
   function handleCanvasPointerDown(event) {
@@ -142,6 +245,19 @@ export function createInteractionHandlers(deps) {
     clearLongPress();
     const hadQuickDelete = Boolean(state.quickDeleteNodeId);
     state.quickDeleteNodeId = null;
+
+    if (event.shiftKey) {
+      state.marquee = {
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        curClientX: event.clientX,
+        curClientY: event.clientY,
+      };
+      updateMarqueeVisual(state.marquee);
+      return;
+    }
+
     state.panningCanvas = {
       pointerId: event.pointerId,
       startClientX: event.clientX,
@@ -150,7 +266,7 @@ export function createInteractionHandlers(deps) {
       startScrollTop: dom.canvas.scrollTop,
     };
     if (hadQuickDelete) {
-      render();
+      renderWorkspace();
     }
   }
 
@@ -163,6 +279,14 @@ export function createInteractionHandlers(deps) {
       if (distance > longPressMoveThreshold) {
         clearWireLongPress(event.pointerId);
       }
+    }
+
+    if (state.marquee && event.pointerId === state.marquee.pointerId) {
+      event.preventDefault();
+      state.marquee.curClientX = event.clientX;
+      state.marquee.curClientY = event.clientY;
+      updateMarqueeVisual(state.marquee);
+      return;
     }
 
     if (state.dragging && event.pointerId === state.dragging.pointerId) {
@@ -184,9 +308,21 @@ export function createInteractionHandlers(deps) {
         }
         clearLongPress(event.pointerId);
       }
-      node.x = Math.max(20, state.dragging.startNodeX + deltaX / state.zoom);
-      node.y = Math.max(20, state.dragging.startNodeY + deltaY / state.zoom);
-      syncDraggedNodePosition(node);
+      if (state.dragging.groupStarts) {
+        state.dragging.groupStarts.forEach((entry) => {
+          const groupNode = workspace.nodes.find((item) => item.id === entry.nodeId);
+          if (!groupNode) {
+            return;
+          }
+          groupNode.x = Math.max(20, entry.startX + deltaX / state.zoom);
+          groupNode.y = Math.max(20, entry.startY + deltaY / state.zoom);
+          syncDraggedNodePosition(groupNode);
+        });
+      } else {
+        node.x = Math.max(20, state.dragging.startNodeX + deltaX / state.zoom);
+        node.y = Math.max(20, state.dragging.startNodeY + deltaY / state.zoom);
+        syncDraggedNodePosition(node);
+      }
       canvasRenderers.renderWires(
         getCurrentWorkspace(),
         state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace())
@@ -206,6 +342,16 @@ export function createInteractionHandlers(deps) {
   function stopDragging(event) {
     clearWireLongPress(event ? event.pointerId : null);
 
+    if (state.marquee) {
+      if (event && event.pointerId != null && event.pointerId !== state.marquee.pointerId) {
+        return;
+      }
+      const marquee = state.marquee;
+      state.marquee = null;
+      finishMarquee(marquee);
+      return;
+    }
+
     if (state.dragging) {
       if (event && event.pointerId != null && event.pointerId !== state.dragging.pointerId) {
         return;
@@ -219,7 +365,7 @@ export function createInteractionHandlers(deps) {
       }
       clearLongPress(event ? event.pointerId : null);
       state.dragging = null;
-      render();
+      renderWorkspace();
       return;
     }
 
@@ -245,7 +391,7 @@ export function createInteractionHandlers(deps) {
         }
         state.quickDeleteWireId = wireId;
         state.longPressWire = null;
-        render();
+        renderWorkspace();
       }, longPressDelay),
     };
   }
@@ -284,7 +430,7 @@ export function createInteractionHandlers(deps) {
     }
     if (state.quickDeleteWireId) {
       state.quickDeleteWireId = null;
-      render();
+      renderWorkspace();
     }
   }
 

@@ -13,4 +13,7 @@ export const BUILTIN_PARTS = [
   { type: "output-pin", label: "Output", copy: "Publieke chipoutput" },
   { type: "clock", label: "Clock", copy: "1-bit klokbron" },
   { type: "register", label: "Register", copy: "Latched opslag" },
+  { type: "rom", label: "ROM", copy: "Programmageheugen" },
+  { type: "screen", label: "Screen", copy: "8×8 pixelraster" },
+  { type: "keyboard", label: "Keyboard", copy: "Toets → 16-bit code" },
 ];

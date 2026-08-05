@@ -1,4 +1,20 @@
 import { clampWidth, clampSplitWidth, normalizeBitString } from "../sim/bits.js";
+import { clamp } from "../lib/utils.js";
+
+const ROM_MAX_ADDRESS_WIDTH = 8;
+
+export function normalizeRomProgram(program) {
+  if (!Array.isArray(program)) {
+    return [];
+  }
+  return program.map((line) => normalizeBitString(String(line ?? ""), 16));
+}
+
+export function clampRomAddressWidth(value) {
+  const numeric = Number(value);
+  const base = Number.isFinite(numeric) ? numeric : 4;
+  return Math.round(clamp(base, 1, ROM_MAX_ADDRESS_WIDTH));
+}
 
 export function normalizeNode(node) {
   const normalized = {
@@ -40,6 +56,17 @@ export function normalizeNode(node) {
       normalized.config.resetValue,
       normalized.config.width
     );
+  } else if (normalized.type === "rom") {
+    normalized.config.label = normalized.config.label || "ROM";
+    normalized.config.addressWidth = clampRomAddressWidth(normalized.config.addressWidth);
+    normalized.config.program = normalizeRomProgram(normalized.config.program);
+  } else if (normalized.type === "screen") {
+    normalized.config.label = normalized.config.label || "Screen";
+    normalized.config.cols = 8;
+    normalized.config.rows = 8;
+  } else if (normalized.type === "keyboard") {
+    normalized.config.label = normalized.config.label || "Keyboard";
+    normalized.config.keyCode = normalizeBitString(normalized.config.keyCode, 16);
   } else if (normalized.type === "splitter" || normalized.type === "joiner") {
     normalized.config.label = normalized.config.label || (normalized.type === "splitter" ? "Split" : "Join");
     normalized.config.width = Math.max(2, clampWidth(normalized.config.width));
@@ -84,6 +111,19 @@ export function createNodeFactory(deps) {
         break;
       case "register":
         node.config = { label: "Register", width: 1, resetValue: "0" };
+        break;
+      case "rom":
+        node.config = {
+          label: "ROM",
+          addressWidth: 4,
+          program: ["0000000000000000", "0000000000000001", "0000000000000010"],
+        };
+        break;
+      case "screen":
+        node.config = { label: "Screen", cols: 8, rows: 8 };
+        break;
+      case "keyboard":
+        node.config = { label: "Keyboard", keyCode: "0000000000000000" };
         break;
       case "splitter":
         node.config = { label: "Split", width: 4, highWidth: 2 };

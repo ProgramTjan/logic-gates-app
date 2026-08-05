@@ -1,0 +1,462 @@
+import { markChallengeCompleted } from "../data/curriculum.js";
+
+export function createWorkspaceMutations(deps) {
+  const {
+    state,
+    CHALLENGES,
+    challengeVerifier,
+    chipDefinitionsService,
+    appModals,
+    allocateId,
+    createWorkspace,
+    createNode,
+    createChipInstance,
+    deepClone,
+    normalizeWorkspace,
+    getCurrentWorkspace,
+    getWorkspace,
+    getChipDefinition,
+    getChipSeries,
+    pushUndo,
+    setStatus,
+    renderFull,
+    renderWorkspace,
+    WORKSPACE_BASE_WIDTH,
+    WORKSPACE_BASE_HEIGHT,
+    clamp,
+    tutorial,
+  } = deps;
+
+  function getLatestChipDefinitionForSeries(seriesId) {
+    const series = getChipSeries(seriesId);
+    if (!series) {
+      return null;
+    }
+    const definitions = series.definitionIds
+      .map((definitionId) => getChipDefinition(definitionId))
+      .filter(Boolean)
+      .sort((left, right) => right.version - left.version);
+    return definitions[0] || null;
+  }
+
+  function countChipDependencies(circuit) {
+    return circuit.nodes.filter((node) => node.type === "chip-instance").length;
+  }
+
+  function getActiveWorkspaceChallenge() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace || !workspace.meta || !workspace.meta.challengeId) {
+      return null;
+    }
+    return CHALLENGES.find((item) => item.id === workspace.meta.challengeId) || null;
+  }
+
+  function getWorkspaceClusterAnchor(workspace) {
+    if (!workspace.nodes.length) {
+      return { x: 120, y: 110 };
+    }
+    const bounds = workspace.nodes.reduce(
+      (result, node) => ({
+        minX: Math.min(result.minX, node.x),
+        minY: Math.min(result.minY, node.y),
+        maxX: Math.max(result.maxX, node.x),
+        maxY: Math.max(result.maxY, node.y),
+      }),
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+    );
+    return {
+      x: Math.min(bounds.maxX + 110, WORKSPACE_BASE_WIDTH - 140),
+      y: Math.min(bounds.maxY + 70, WORKSPACE_BASE_HEIGHT - 110),
+    };
+  }
+
+  function getSuggestedNodePosition(workspace) {
+    const margin = 24;
+    const selectedNode = workspace.nodes.find((item) => item.id === state.selectedNodeId);
+    const anchor = selectedNode
+      ? { x: selectedNode.x + 110, y: selectedNode.y + 70 }
+      : getWorkspaceClusterAnchor(workspace);
+    const stagger = workspace.nodes.length % 4;
+    return {
+      x: clamp(anchor.x + stagger * 18, margin, WORKSPACE_BASE_WIDTH - 140),
+      y: clamp(anchor.y + stagger * 14, margin, WORKSPACE_BASE_HEIGHT - 110),
+    };
+  }
+
+  function addPartToWorkspace(partType, definitionId) {
+    const workspace = getCurrentWorkspace();
+    const position = getSuggestedNodePosition(workspace);
+    const node =
+      partType === "chip-instance"
+        ? createChipInstance(state.project, definitionId, position)
+        : createNode(state.project, partType, position);
+    pushUndo();
+    workspace.nodes.push(node);
+    state.selectedNodeId = node.id;
+    setStatus(`${node.config.label || node.type} toegevoegd aan ${workspace.name}.`);
+    renderWorkspace();
+  }
+
+  async function createWorkspaceFromPrompt() {
+    const suggestedName = `Workspace ${state.project.workspaces.length + 1}`;
+    const name = await appModals.showWorkspaceNameModal({
+      suggestedName,
+      lead: "Geef je nieuwe sheet een naam.",
+    });
+    if (!name) {
+      return;
+    }
+    const workspace = createWorkspace(state.project, name);
+    state.project.workspaces.push(workspace);
+    state.project.currentWorkspaceId = workspace.id;
+    state.selectedNodeId = null;
+    setStatus(`Workspace "${workspace.name}" aangemaakt.`);
+    renderFull();
+  }
+
+  function populateChallengeWorkspace(workspace, challenge) {
+    const template = challenge.template || { inputs: [], outputs: [] };
+    const inputStep = Math.max(90, Math.floor(420 / Math.max(1, template.inputs.length)));
+    const outputStep = Math.max(90, Math.floor(420 / Math.max(1, template.outputs.length)));
+
+    template.inputs.forEach((item, index) => {
+      const label = typeof item === "string" ? item : item.name;
+      const width = typeof item === "string" ? 1 : item.width || 1;
+      workspace.nodes.push(
+        chipDefinitionsService.createConfiguredNode(
+          state.project,
+          "input-pin",
+          { x: 120, y: 120 + index * inputStep },
+          { label, width, previewValue: "0".repeat(width) }
+        )
+      );
+    });
+
+    template.outputs.forEach((item, index) => {
+      const label = typeof item === "string" ? item : item.name;
+      const width = typeof item === "string" ? 1 : item.width || 1;
+      workspace.nodes.push(
+        chipDefinitionsService.createConfiguredNode(
+          state.project,
+          "output-pin",
+          { x: 760, y: 120 + index * outputStep },
+          { label, width }
+        )
+      );
+    });
+
+    if (Array.isArray(template.nodes)) {
+      template.nodes.forEach((spec) => {
+        workspace.nodes.push(
+          chipDefinitionsService.createConfiguredNode(
+            state.project,
+            spec.type,
+            { x: Number(spec.x) || 400, y: Number(spec.y) || 200 },
+            spec.config || {}
+          )
+        );
+      });
+    }
+  }
+
+  function openChallengeWorkspace(challengeId) {
+    const challenge = CHALLENGES.find((item) => item.id === challengeId);
+    if (!challenge) {
+      return;
+    }
+    const workspace = createWorkspace(state.project, `${challenge.title} Draft`, null, {
+      challengeId,
+    });
+    populateChallengeWorkspace(workspace, challenge);
+    state.project.workspaces.push(workspace);
+    state.project.currentWorkspaceId = workspace.id;
+    state.selectedNodeId = null;
+    state.selectedChallengeId = challengeId;
+    setStatus(`Challenge-sheet geopend voor ${challenge.title}.`);
+    if (typeof deps.stopClockRunner === "function") {
+      deps.stopClockRunner();
+    }
+    renderFull();
+    if (tutorial && typeof tutorial.maybeStart === "function") {
+      tutorial.maybeStart(challengeId);
+    }
+  }
+
+  function duplicateCurrentWorkspace() {
+    duplicateWorkspace(getCurrentWorkspace().id);
+  }
+
+  function duplicateWorkspace(workspaceId) {
+    const source = getWorkspace(workspaceId);
+    if (!source) {
+      return;
+    }
+    const name = `${source.name} Copy`;
+    const duplicate = createWorkspace(state.project, name, source);
+    state.project.workspaces.push(duplicate);
+    state.project.currentWorkspaceId = duplicate.id;
+    state.selectedNodeId = null;
+    setStatus(`Workspace "${duplicate.name}" aangemaakt.`);
+    renderFull();
+  }
+
+  function deleteWorkspace(workspaceId) {
+    if (state.project.workspaces.length === 1) {
+      return;
+    }
+    const workspace = getWorkspace(workspaceId);
+    if (!workspace) {
+      return;
+    }
+    if (!window.confirm(`Delete workspace "${workspace.name}"?`)) {
+      return;
+    }
+    state.project.workspaces = state.project.workspaces.filter((item) => item.id !== workspaceId);
+    if (state.project.currentWorkspaceId === workspaceId) {
+      state.project.currentWorkspaceId = state.project.workspaces[0].id;
+    }
+    state.selectedNodeId = null;
+    state.pendingConnection = null;
+    setStatus(`Workspace "${workspace.name}" verwijderd.`);
+    renderFull();
+  }
+
+  async function saveCurrentWorkspaceAsChip(options = {}) {
+    const workspace = getCurrentWorkspace();
+    const interfaceResult = chipDefinitionsService.extractChipInterface(workspace);
+    if (interfaceResult.errors.length) {
+      setStatus(interfaceResult.errors[0].message);
+      renderWorkspace();
+      return null;
+    }
+
+    const sourceSeries =
+      workspace.meta && workspace.meta.sourceChipSeriesId
+        ? getChipSeries(workspace.meta.sourceChipSeriesId)
+        : null;
+    const {
+      preferredName = "",
+      preferredDescription = "",
+      promptForName = true,
+      promptForDescription = true,
+    } = options;
+    const suggestedName =
+      preferredName ||
+      (sourceSeries ? sourceSeries.name : workspace.name.replace(/\s+copy$/i, "").trim()) ||
+      "Custom Chip";
+    const defaultDescription = preferredDescription || `Snapshot vanuit workspace "${workspace.name}"`;
+
+    let trimmedName = suggestedName.trim();
+    let description = defaultDescription;
+
+    if (promptForName || promptForDescription) {
+      const modalResult = await appModals.showChipSaveModal({
+        suggestedName: trimmedName,
+        suggestedDescription: description,
+        lead: `${interfaceResult.inputs.length} input(s), ${interfaceResult.outputs.length} output(s) — bevestig naam en beschrijving.`,
+      });
+      if (!modalResult) {
+        return null;
+      }
+      trimmedName = modalResult.name;
+      description = promptForDescription ? modalResult.description : defaultDescription;
+    }
+
+    if (!trimmedName) {
+      return null;
+    }
+
+    let series =
+      sourceSeries && sourceSeries.name.toLowerCase() === trimmedName.toLowerCase()
+        ? sourceSeries
+        : state.project.chipSeries.find((entry) => entry.name.toLowerCase() === trimmedName.toLowerCase());
+    if (!series) {
+      series = { id: allocateId(state.project, "chip-series"), name: trimmedName, definitionIds: [] };
+      state.project.chipSeries.push(series);
+    }
+
+    const version = series.definitionIds.length + 1;
+    const definition = {
+      id: allocateId(state.project, "chip-def"),
+      seriesId: series.id,
+      name: trimmedName,
+      version,
+      description,
+      inputs: interfaceResult.inputs,
+      outputs: interfaceResult.outputs,
+      createdAt: new Date().toISOString(),
+      circuitSnapshot: normalizeWorkspace({
+        id: `snapshot-${Date.now()}`,
+        name: `${trimmedName} Snapshot`,
+        nodes: deepClone(workspace.nodes),
+        wires: deepClone(workspace.wires),
+      }),
+    };
+
+    state.project.chipDefinitions.push(definition);
+    series.definitionIds.push(definition.id);
+    workspace.meta = {
+      ...workspace.meta,
+      sourceChipSeriesId: series.id,
+      sourceChipDefinitionId: definition.id,
+      sourceChipVersion: definition.version,
+      draftMode: "new-version",
+    };
+    setStatus(`Chip "${trimmedName} v${version}" opgeslagen in de bibliotheek.`);
+    renderFull();
+    return definition;
+  }
+
+  function formatSubmitStatus(challenge, result) {
+    if (result.done) {
+      return `Ingeleverd: ${challenge.title} is verified. ${result.summary}`;
+    }
+    let message = `Ingeleverd: ${challenge.title} needs work. ${result.summary}`;
+    if (result.failedCases && result.failedCases.length) {
+      const detail = result.failedCases
+        .slice(0, 3)
+        .map((item) => item.detail)
+        .join(" · ");
+      message += ` Mis: ${detail}`;
+      if (result.failedCases.length > 3) {
+        message += ` (+${result.failedCases.length - 3} meer)`;
+      }
+    }
+    return message;
+  }
+
+  function setSubmitFeedback(challengeId, ok, message) {
+    state.lastSubmitFeedback = { challengeId, ok, message };
+  }
+
+  async function submitChallenge(challengeId) {
+    const challenge = CHALLENGES.find((item) => item.id === challengeId);
+    const workspace = getCurrentWorkspace();
+    if (!challenge || !workspace) {
+      return;
+    }
+    if (!workspace.meta || workspace.meta.challengeId !== challengeId) {
+      const message = `Je werkt nu op sheet "${workspace.name}", niet op de challenge-sheet van ${challenge.title}. Klik op Start bij deze les en bouw (of kopieer) je circuit dáár — inleveren kan alleen vanaf de challenge-sheet.`;
+      setSubmitFeedback(challengeId, false, message);
+      setStatus(message);
+      renderFull();
+      return;
+    }
+
+    const interfaceResult = chipDefinitionsService.extractChipInterface(workspace);
+    if (interfaceResult.errors.length) {
+      const message = `Inleveren gestopt: ${interfaceResult.errors[0].message}`;
+      setSubmitFeedback(challengeId, false, message);
+      setStatus(message);
+      renderFull();
+      return;
+    }
+
+    const definition = await saveCurrentWorkspaceAsChip({
+      preferredName: challenge.names[0],
+      preferredDescription: `Challenge submission for ${challenge.title}`,
+      promptForName: false,
+      promptForDescription: false,
+    });
+    if (!definition) {
+      return;
+    }
+
+    const result = challengeVerifier.runChallengeVerification(challenge, definition);
+    if (result.done) {
+      state.project.learner = markChallengeCompleted(state.project.learner, challenge.id);
+      if (challenge.id === "computer" && typeof deps.showCompletionOverlay === "function") {
+        deps.showCompletionOverlay(true);
+      }
+    } else {
+      state.challengeDetailTab = "tests";
+    }
+    setSubmitFeedback(challengeId, result.done, formatSubmitStatus(challenge, result));
+    setStatus(formatSubmitStatus(challenge, result));
+    renderFull();
+  }
+
+  function cloneChipToWorkspace(definitionId) {
+    const definition = getChipDefinition(definitionId);
+    if (!definition) {
+      return;
+    }
+    const workspace = createWorkspace(
+      state.project,
+      `${definition.name} v${definition.version} Draft`,
+      definition.circuitSnapshot,
+      {
+        sourceChipDefinitionId: definition.id,
+        sourceChipSeriesId: definition.seriesId,
+        sourceChipVersion: definition.version,
+        draftMode: "clone",
+      }
+    );
+    state.project.workspaces.push(workspace);
+    state.project.currentWorkspaceId = workspace.id;
+    state.selectedNodeId = null;
+    setStatus(`Chip "${definition.name} v${definition.version}" gekloond naar een nieuwe workspace.`);
+    renderFull();
+  }
+
+  function editChipAsNewVersion(definitionId) {
+    const definition = getChipDefinition(definitionId);
+    if (!definition) {
+      return;
+    }
+    const workspace = createWorkspace(
+      state.project,
+      `${definition.name} v${definition.version + 1} Draft`,
+      definition.circuitSnapshot,
+      {
+        sourceChipDefinitionId: definition.id,
+        sourceChipSeriesId: definition.seriesId,
+        sourceChipVersion: definition.version,
+        draftMode: "new-version",
+      }
+    );
+    state.project.workspaces.push(workspace);
+    state.project.currentWorkspaceId = workspace.id;
+    state.selectedNodeId = null;
+    setStatus(`Draft geopend voor ${definition.name} v${definition.version + 1}.`);
+    renderFull();
+  }
+
+  function duplicateSelectedNode() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace) {
+      return;
+    }
+    const node = workspace.nodes.find((item) => item.id === state.selectedNodeId);
+    if (!node) {
+      return;
+    }
+    pushUndo();
+    const clone = deepClone(node);
+    clone.id = allocateId(state.project, "node");
+    clone.x = clamp((Number(node.x) || 0) + 28, 24, WORKSPACE_BASE_WIDTH - 140);
+    clone.y = clamp((Number(node.y) || 0) + 28, 24, WORKSPACE_BASE_HEIGHT - 110);
+    workspace.nodes.push(clone);
+    state.selectedNodeId = clone.id;
+    setStatus("Selectie gedupliceerd (Ctrl+D).");
+    renderWorkspace();
+  }
+
+  return {
+    addPartToWorkspace,
+    createWorkspaceFromPrompt,
+    openChallengeWorkspace,
+    getActiveWorkspaceChallenge,
+    duplicateCurrentWorkspace,
+    duplicateWorkspace,
+    deleteWorkspace,
+    saveCurrentWorkspaceAsChip,
+    submitChallenge,
+    cloneChipToWorkspace,
+    editChipAsNewVersion,
+    getLatestChipDefinitionForSeries,
+    countChipDependencies,
+    duplicateSelectedNode,
+    getSuggestedNodePosition,
+  };
+}

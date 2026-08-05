@@ -5,13 +5,18 @@ export function createRenderOrchestrator(deps) {
     canvasRenderers,
     inspectorRenderers,
     panelRenderers,
+    courseRenderers,
     getCurrentWorkspace,
     evaluateWorkspace,
     updateUndoRedoButtons,
     saveProject,
+    debouncedSaveProject,
     WORKSPACE_BASE_WIDTH,
     WORKSPACE_BASE_HEIGHT,
+    getAppView,
   } = deps;
+
+  const scheduleSave = debouncedSaveProject || saveProject;
 
   function applyWorkspaceZoom() {
     dom.workspaceStage.style.transform = `scale(${state.zoom})`;
@@ -20,6 +25,19 @@ export function createRenderOrchestrator(deps) {
     const percent = `${Math.round(state.zoom * 100)}%`;
     dom.zoomValue.textContent = percent;
     dom.zoomResetButton.textContent = percent;
+  }
+
+  function evaluateCurrentWorkspace() {
+    try {
+      state.lastEvaluation = evaluateWorkspace(getCurrentWorkspace());
+    } catch (error) {
+      console.error("Workspace evaluation failed.", error);
+      state.lastEvaluation = {
+        nodeSignals: {},
+        wireSignals: {},
+        errors: [{ message: "Kon deze sheet niet evalueren. Controleer opgeslagen projectdata." }],
+      };
+    }
   }
 
   function renderCanvas() {
@@ -37,29 +55,38 @@ export function createRenderOrchestrator(deps) {
     canvasRenderers.updateConnectionStatus();
   }
 
-  function render() {
+  function renderPanels() {
     panelRenderers.renderBuiltinPalette();
     panelRenderers.renderWorkspaceList(getCurrentWorkspace());
     panelRenderers.renderChipLibrary();
     panelRenderers.renderChallenges();
-
-    try {
-      state.lastEvaluation = evaluateWorkspace(getCurrentWorkspace());
-    } catch (error) {
-      console.error("Workspace evaluation failed.", error);
-      state.lastEvaluation = {
-        nodeSignals: {},
-        wireSignals: {},
-        errors: [{ message: "Kon deze sheet niet evalueren. Controleer opgeslagen projectdata." }],
-      };
+    if (courseRenderers && typeof courseRenderers.renderCourse === "function") {
+      if (!getAppView || getAppView() === "course") {
+        courseRenderers.renderCourse();
+      }
     }
+  }
 
+  function renderWorkspaceView({ evaluate = true, save = true } = {}) {
+    if (evaluate) {
+      evaluateCurrentWorkspace();
+    }
     renderCanvas();
     inspectorRenderers.renderInspector();
     inspectorRenderers.renderErrors();
     updateUndoRedoButtons();
-    saveProject();
+    if (save) {
+      scheduleSave();
+    }
+    if (deps.tutorial && typeof deps.tutorial.onStateChanged === "function") {
+      deps.tutorial.onStateChanged();
+    }
   }
 
-  return { render, renderCanvas, applyWorkspaceZoom };
+  function render() {
+    renderPanels();
+    renderWorkspaceView();
+  }
+
+  return { render, renderPanels, renderWorkspaceView, renderCanvas, applyWorkspaceZoom };
 }

@@ -1,3 +1,19 @@
 {
-  "type": "module"
+  "type": "module",
+  "name": "forge-logic",
+  "private": true,
+  "description": "Nand2Tetris-style logic gate sandbox — build gates, snapshot chips, complete challenges.",
+  "scripts": {
+    "test": "node scripts/verify.js",
+    "check": "node scripts/check-syntax.js",
+    "e2e": "playwright test",
+    "dev": "npx --yes serve . -l 3000",
+    "icons": "node scripts/generate-icons.js",
+    "build:sw": "node scripts/generate-sw-precache.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "playwright": "^1.62.1",
+    "sharp": "^0.35.3"
+  }
 }

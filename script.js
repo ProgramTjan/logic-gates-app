@@ -10,7 +10,7 @@ import {
   parseBits,
   zeroBits,
 } from "./src/sim/bits.js";
-import { clamp, deepClone } from "./src/lib/utils.js";
+import { clamp, deepClone, debounce } from "./src/lib/utils.js";
 import {
   createProject as createProjectState,
   loadProject as loadProjectState,
@@ -18,6 +18,8 @@ import {
   normalizeWorkspace as normalizeWorkspaceState,
   normalizeWorkspaceMeta as normalizeWorkspaceMetaState,
   saveProject as saveProjectState,
+  listBackups,
+  restoreBackup,
 } from "./src/state/project.js";
 import { BUILTIN_PARTS } from "./src/data/builtinParts.js";
 import { CHALLENGES } from "./src/data/challenges.js";
@@ -29,11 +31,33 @@ import { createInspectorRenderers } from "./src/ui/inspector.js";
 import { createWorkspaceActionHandlers } from "./src/ui/workspace-actions.js";
 import { createPanelRenderers } from "./src/ui/panels.js";
 import { createSimulationEngine } from "./src/sim/evaluate.js";
-import { normalizeNode, createNodeFactory } from "./src/model/nodes.js";
+import {
+  normalizeNode,
+  createNodeFactory,
+  clampRomAddressWidth,
+  normalizeRomProgram,
+} from "./src/model/nodes.js";
 import { createChipsFactory } from "./src/model/chips.js";
 import { createNodeSpecFactory } from "./src/model/nodespec.js";
 import { createRenderOrchestrator } from "./src/ui/render.js";
 import { createEventBinder } from "./src/ui/boot.js";
+import { createAppModals } from "./src/ui/app-modal.js";
+import { createTutorial } from "./src/ui/tutorial.js";
+import { createCourseRenderers } from "./src/ui/course.js";
+import { S } from "./src/data/strings.js";
+import { createUndoManager } from "./src/actions/undo.js";
+import { createCircuitMutations } from "./src/actions/circuit-mutations.js";
+import { createWorkspaceMutations } from "./src/actions/workspace-mutations.js";
+import { createRuntimeActions } from "./src/actions/runtime.js";
+import { createProjectIoActions } from "./src/actions/project-io.js";
+import { createInspectorHandlers } from "./src/actions/inspector.js";
+import { createKeyboardHandlers } from "./src/actions/keyboard.js";
+import { createSelectionClipboard } from "./src/actions/clipboard.js";
+import {
+  encodeProjectForUrlHash,
+  decodeProjectFromUrlHashPayload,
+  parseSharePayloadFromHash,
+} from "./src/lib/project-share.js";
 
 (function () {
   const WORKSPACE_BASE_WIDTH = 1800;
@@ -43,6 +67,7 @@ import { createEventBinder } from "./src/ui/boot.js";
   const ZOOM_STEP = 0.25;
   const LONG_PRESS_DELAY = 450;
   const LONG_PRESS_MOVE_THRESHOLD = 8;
+  const SAVE_DEBOUNCE_MS = 300;
 
   const dom = {
     builtinPalette: document.getElementById("builtin-palette"),
@@ -68,18 +93,29 @@ import { createEventBinder } from "./src/ui/boot.js";
     saveChipButton: document.getElementById("save-chip-button"),
     toggleClocksButton: document.getElementById("toggle-clocks-button"),
     stepRegistersButton: document.getElementById("step-registers-button"),
+    clockPlayButton: document.getElementById("clock-play-button"),
+    clockSpeedSelect: document.getElementById("clock-speed-select"),
     resetStateButton: document.getElementById("reset-state-button"),
     exportButton: document.getElementById("export-button"),
     importButton: document.getElementById("import-button"),
+    restoreBackupButton: document.getElementById("restore-backup-button"),
     zoomOutButton: document.getElementById("zoom-out-button"),
     zoomResetButton: document.getElementById("zoom-reset-button"),
     zoomInButton: document.getElementById("zoom-in-button"),
     zoomValue: document.getElementById("zoom-value"),
     undoButton: document.getElementById("undo-button"),
     redoButton: document.getElementById("redo-button"),
+    shareLinkButton: document.getElementById("share-link-button"),
+    sharePasteButton: document.getElementById("share-paste-button"),
+    onboardingOverlay: document.getElementById("onboarding-overlay"),
+    onboardingDismiss: document.getElementById("onboarding-dismiss"),
+    completionOverlay: document.getElementById("completion-overlay"),
+    completionDismiss: document.getElementById("completion-dismiss"),
+    completionSummary: document.getElementById("completion-summary"),
+    courseView: document.getElementById("course-view"),
+    workspaceFrame: document.querySelector(".workspace-frame"),
+    appViewTabs: document.querySelectorAll("[data-app-view]"),
   };
-
-  const UNDO_LIMIT = 50;
 
   const { createNode } = createNodeFactory({ allocateId });
   const { createWorkspace, createChipInstance } = createChipsFactory({
@@ -90,9 +126,13 @@ import { createEventBinder } from "./src/ui/boot.js";
     normalizeWorkspaceMeta,
   });
 
+  // Project wordt geladen ná challengeVerifier (nodig voor learner-migratie).
   const state = {
-    project: loadProject(),
+    project: null,
     selectedNodeId: null,
+    selectedNodeIds: [],
+    keyboardCaptureNodeId: null,
+    clipboard: null,
     quickDeleteNodeId: null,
     quickDeleteWireId: null,
     selectedChallengeId: null,
@@ -101,12 +141,18 @@ import { createEventBinder } from "./src/ui/boot.js";
     longPress: null,
     longPressWire: null,
     panningCanvas: null,
+    marquee: null,
     lastEvaluation: null,
     zoom: 1,
     undoStack: [],
     redoStack: [],
     inspectorUndoPushed: false,
+    appView: "workspace",
+    challengeDetailTab: "theorie",
+    lastSubmitFeedback: null,
+    openChipSeries: new Set(),
   };
+
   const chipDefinitionsService = createChipDefinitionsService({
     allocateId,
     createWorkspace,
@@ -133,6 +179,7 @@ import { createEventBinder } from "./src/ui/boot.js";
     deepClone,
     parseBits,
     formatBits,
+    getChipDefinition,
     evaluateCircuit: (circuit, externalInputs, path, recursionTrail) =>
       evaluateCircuit(circuit, externalInputs, path, recursionTrail),
     collectRegisterUpdates: (circuit, externalInputs, path, recursionTrail) =>
@@ -142,6 +189,177 @@ import { createEventBinder } from "./src/ui/boot.js";
       state.project.runtime.registerStates = next;
     },
   });
+
+  state.project = loadProject();
+
+  const appModals = createAppModals({ dom });
+
+  function setStatus(message) {
+    dom.statusLine.textContent = message;
+  }
+
+  const tutorial = createTutorial({
+    state,
+    getCurrentWorkspace,
+    setStatus,
+  });
+
+  let renderOrchestrator;
+
+  function render() {
+    renderOrchestrator.render();
+  }
+
+  function renderWorkspace(options) {
+    renderOrchestrator.renderWorkspaceView(options);
+  }
+
+  function renderFull() {
+    render();
+  }
+
+  const undoManager = createUndoManager({
+    state,
+    deepClone,
+    getCurrentWorkspace,
+    setStatus,
+    renderWorkspace,
+    dom,
+  });
+  const { pushUndo, undo, redo, updateUndoRedoButtons } = undoManager;
+
+  const circuitMutations = createCircuitMutations({
+    state,
+    getCurrentWorkspace,
+    getNodeSpec,
+    allocateId,
+    pushUndo,
+    setStatus,
+    renderWorkspace,
+  });
+  const {
+    deleteNode,
+    removeWire,
+    getNodeConnections,
+    handlePinClick,
+  } = circuitMutations;
+
+  const runtimeActions = createRuntimeActions({
+    state,
+    parseBits,
+    formatBits,
+    getCurrentWorkspace,
+    collectRegisterUpdates,
+    setStatus,
+    renderWorkspace,
+    saveProject,
+    onRunnerStateChange: syncClockRunnerUi,
+  });
+
+  function syncClockRunnerUi({ running, hz }) {
+    if (dom.clockPlayButton) {
+      dom.clockPlayButton.textContent = running ? S.pause : S.play;
+      dom.clockPlayButton.classList.toggle("is-running", running);
+    }
+    if (dom.clockSpeedSelect && String(dom.clockSpeedSelect.value) !== String(hz)) {
+      dom.clockSpeedSelect.value = String(hz);
+    }
+  }
+
+  const workspaceMutationDeps = {
+    state,
+    CHALLENGES,
+    challengeVerifier,
+    chipDefinitionsService,
+    appModals,
+    allocateId,
+    createWorkspace,
+    createNode,
+    createChipInstance,
+    deepClone,
+    normalizeWorkspace,
+    getCurrentWorkspace,
+    getWorkspace,
+    getChipDefinition,
+    getChipSeries,
+    pushUndo,
+    setStatus,
+    renderFull,
+    renderWorkspace,
+    WORKSPACE_BASE_WIDTH,
+    WORKSPACE_BASE_HEIGHT,
+    clamp,
+    tutorial,
+    stopClockRunner: () => runtimeActions.clockRunner.stop(),
+    showCompletionOverlay: null,
+  };
+  const workspaceMutations = createWorkspaceMutations(workspaceMutationDeps);
+
+  const selectionClipboard = createSelectionClipboard({
+    state,
+    getCurrentWorkspace,
+    allocateId,
+    deepClone,
+    pushUndo,
+    getSuggestedNodePosition: workspaceMutations.getSuggestedNodePosition,
+    clamp,
+    WORKSPACE_BASE_WIDTH,
+    WORKSPACE_BASE_HEIGHT,
+    setStatus,
+    renderWorkspace,
+  });
+
+  const projectIo = createProjectIoActions({
+    state,
+    dom,
+    normalizeProject,
+    saveProject,
+    setStatus,
+    render: renderFull,
+    encodeProjectForUrlHash,
+    decodeProjectFromUrlHashPayload,
+    parseSharePayloadFromHash,
+    stopClockRunner: () => runtimeActions.clockRunner.stop(),
+    listBackups,
+    restoreBackup,
+    getProjectStateDeps,
+    appModals,
+  });
+  workspaceMutationDeps.showCompletionOverlay = projectIo.showCompletionOverlay;
+
+  const inspectorHandlers = createInspectorHandlers({
+    state,
+    clampWidth,
+    clampSplitWidth,
+    normalizeBitString,
+    clampRomAddressWidth,
+    normalizeRomProgram,
+    getCurrentWorkspace,
+    pushUndo,
+    deleteNode,
+    removeWire,
+    renderWorkspace,
+  });
+
+  const keyboardHandlers = createKeyboardHandlers({
+    state,
+    getCurrentWorkspace,
+    pushUndo,
+    undo,
+    redo,
+    duplicateSelectedNode: workspaceMutations.duplicateSelectedNode,
+    deleteNode,
+    copySelection: selectionClipboard.copySelection,
+    pasteClipboard: selectionClipboard.pasteClipboard,
+    setSelection: selectionClipboard.setSelection,
+    setStatus,
+    renderWorkspace,
+    clamp,
+    normalizeBitString,
+    WORKSPACE_BASE_WIDTH,
+    WORKSPACE_BASE_HEIGHT,
+  });
+
   const canvasRenderers = createCanvasRenderers({
     dom,
     state,
@@ -154,23 +372,29 @@ import { createEventBinder } from "./src/ui/boot.js";
     escapeHtml,
     escapeAttribute,
   });
+
   const interactionHandlers = createInteractionHandlers({
     dom,
     state,
-    render: () => render(),
+    renderWorkspace,
     pushUndo,
     getCurrentWorkspace,
     deleteNode,
     removeWire,
-    toggleSwitchNode,
-    toggleClockNode,
-    toggleInputPinNode,
+    toggleSwitchNode: runtimeActions.toggleSwitchNode,
+    toggleClockNode: runtimeActions.toggleClockNode,
+    toggleInputPinNode: runtimeActions.toggleInputPinNode,
     handlePinClick,
     evaluateWorkspace,
     canvasRenderers,
     longPressDelay: LONG_PRESS_DELAY,
     longPressMoveThreshold: LONG_PRESS_MOVE_THRESHOLD,
+    selectSingleNode: selectionClipboard.selectSingleNode,
+    toggleSelectionNode: selectionClipboard.toggleSelectionNode,
+    clearSelection: selectionClipboard.clearSelection,
+    setSelection: selectionClipboard.setSelection,
   });
+
   const inspectorRenderers = createInspectorRenderers({
     dom,
     state,
@@ -181,73 +405,134 @@ import { createEventBinder } from "./src/ui/boot.js";
     escapeHtml,
     escapeAttribute,
   });
+
+  function setAppView(view) {
+    state.appView = view === "course" ? "course" : "workspace";
+    if (dom.courseView) {
+      dom.courseView.hidden = state.appView !== "course";
+    }
+    if (dom.workspaceFrame) {
+      dom.workspaceFrame.hidden = state.appView !== "workspace";
+    }
+    document.querySelectorAll(".app-view-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.appView === state.appView);
+    });
+    if (state.appView === "course" && courseRenderers) {
+      courseRenderers.renderCourse();
+    }
+    if (state.appView === "workspace") {
+      renderWorkspace();
+    }
+  }
+
+  let courseRenderers;
+
   const workspaceActions = createWorkspaceActionHandlers({
     dom,
     state,
     challenges: CHALLENGES,
-    render: () => render(),
+    challengeVerifier,
+    render: renderFull,
     renderChallenges: () => panelRenderers.renderChallenges(),
     getCurrentWorkspace,
-    getActiveWorkspaceChallenge,
+    getActiveWorkspaceChallenge: workspaceMutations.getActiveWorkspaceChallenge,
     setStatus,
-    addPartToWorkspace,
-    duplicateWorkspace,
-    deleteWorkspace,
-    editChipAsNewVersion,
-    cloneChipToWorkspace,
-    openChallengeWorkspace,
-    submitChallenge,
+    addPartToWorkspace: workspaceMutations.addPartToWorkspace,
+    duplicateWorkspace: workspaceMutations.duplicateWorkspace,
+    deleteWorkspace: workspaceMutations.deleteWorkspace,
+    editChipAsNewVersion: workspaceMutations.editChipAsNewVersion,
+    cloneChipToWorkspace: workspaceMutations.cloneChipToWorkspace,
+    openChallengeWorkspace: (id) => {
+      setAppView("workspace");
+      workspaceMutations.openChallengeWorkspace(id);
+    },
+    submitChallenge: workspaceMutations.submitChallenge,
+    showCompletionOverlay: projectIo.showCompletionOverlay,
+    stopClockRunner: () => runtimeActions.clockRunner.stop(),
   });
+
   const panelRenderers = createPanelRenderers({
     dom,
     state,
     BUILTIN_PARTS,
     CHALLENGES,
     getChipSeries,
-    getLatestChipDefinitionForSeries,
-    countChipDependencies,
+    getLatestChipDefinitionForSeries: workspaceMutations.getLatestChipDefinitionForSeries,
+    countChipDependencies: workspaceMutations.countChipDependencies,
     challengeVerifier,
     workspaceActions,
     escapeHtml,
   });
-  const renderOrchestrator = createRenderOrchestrator({
+
+  courseRenderers = createCourseRenderers({
+    dom,
+    state,
+    CHALLENGES,
+    escapeHtml,
+    getLearner: () => state.project.learner || { completedChallengeIds: [], badges: [] },
+    openChallengeWorkspace: (id) => {
+      setAppView("workspace");
+      workspaceMutations.openChallengeWorkspace(id);
+    },
+    setAppView,
+  });
+
+  renderOrchestrator = createRenderOrchestrator({
     dom,
     state,
     canvasRenderers,
     inspectorRenderers,
     panelRenderers,
+    courseRenderers,
     getCurrentWorkspace,
     evaluateWorkspace,
     updateUndoRedoButtons,
     saveProject,
+    debouncedSaveProject: debounce(saveProject, SAVE_DEBOUNCE_MS),
     WORKSPACE_BASE_WIDTH,
     WORKSPACE_BASE_HEIGHT,
+    tutorial,
+    getAppView: () => state.appView,
   });
+
   const eventBinder = createEventBinder({
     dom,
     workspaceActions,
     interactionHandlers,
+    courseRenderers,
+    setAppView,
     handlers: {
       undo,
       redo,
-      createWorkspaceFromPrompt,
-      duplicateCurrentWorkspace,
-      saveCurrentWorkspaceAsChip,
-      toggleWorkspaceClocks,
-      stepRegisters,
-      resetRuntimeState,
-      exportProject,
+      createWorkspaceFromPrompt: workspaceMutations.createWorkspaceFromPrompt,
+      duplicateCurrentWorkspace: workspaceMutations.duplicateCurrentWorkspace,
+      saveCurrentWorkspaceAsChip: () => workspaceMutations.saveCurrentWorkspaceAsChip(),
+      toggleWorkspaceClocks: runtimeActions.toggleWorkspaceClocks,
+      stepRegisters: runtimeActions.stepRegisters,
+      toggleClockPlay: () => runtimeActions.clockRunner.togglePlay(),
+      changeClockSpeed: () => {
+        const value = dom.clockSpeedSelect ? dom.clockSpeedSelect.value : "4";
+        runtimeActions.clockRunner.setSpeed(value === "max" ? "max" : Number(value));
+      },
+      resetRuntimeState: runtimeActions.resetRuntimeState,
+      exportProject: projectIo.exportProject,
       importClick: () => dom.importInput.click(),
-      importProjectFromFile,
+      importProjectFromFile: projectIo.importProjectFromFile,
+      restoreBackup: projectIo.restoreBackupFromUi,
+      copyShareLink: projectIo.copyShareLink,
+      importShareFromPrompt: projectIo.importShareFromPrompt,
+      dismissOnboarding: projectIo.dismissOnboarding,
+      dismissCompletionOverlay: projectIo.dismissCompletionOverlay,
       zoomOut: () => changeZoom(-ZOOM_STEP),
       zoomReset: () => setZoom(1),
       zoomIn: () => changeZoom(ZOOM_STEP),
-      inspectorFocusIn: handleInspectorFocusIn,
-      inspectorInput: handleInspectorInput,
-      inspectorClick: handleInspectorClick,
-      keydown: handleKeyboardShortcuts,
+      inspectorFocusIn: inspectorHandlers.handleInspectorFocusIn,
+      inspectorInput: inspectorHandlers.handleInspectorInput,
+      inspectorClick: inspectorHandlers.handleInspectorClick,
+      keydown: keyboardHandlers.handleKeyboardShortcuts,
     },
   });
+
   let appStarted = false;
 
   window.ForgeLogicApp = {
@@ -256,14 +541,20 @@ import { createEventBinder } from "./src/ui/boot.js";
         return;
       }
       appStarted = true;
-      initializeApp();
+      void initializeApp();
     },
   };
 
-  function initializeApp() {
+  async function initializeApp() {
     try {
+      await projectIo.tryLoadProjectFromShareHash();
+      const fresh =
+        !state.project.learner?.completedChallengeIds ||
+        state.project.learner.completedChallengeIds.length === 0;
+      setAppView(fresh ? "course" : "workspace");
       render();
-      bindEvents();
+      eventBinder.bindEvents();
+      projectIo.showOnboardingIfNeeded();
     } catch (error) {
       console.error("Forge Logic bootstrap failed, resetting project.", error);
       state.project = createProject();
@@ -274,73 +565,12 @@ import { createEventBinder } from "./src/ui/boot.js";
       state.longPress = null;
       state.panningCanvas = null;
       state.lastEvaluation = null;
+      setAppView("course");
       render();
-      bindEvents();
+      eventBinder.bindEvents();
+      projectIo.showOnboardingIfNeeded();
       setStatus("Project reset na laadfout. Je werkt nu in een schoon project.");
     }
-  }
-
-  // =============================================
-  // UNDO / REDO
-  // =============================================
-
-  function pushUndo() {
-    const workspace = getCurrentWorkspace();
-    if (!workspace) return;
-    state.undoStack.push({
-      workspaceId: workspace.id,
-      snapshot: deepClone(workspace),
-    });
-    if (state.undoStack.length > UNDO_LIMIT) {
-      state.undoStack.shift();
-    }
-    state.redoStack = [];
-    state.inspectorUndoPushed = false;
-  }
-
-  function undo() {
-    if (!state.undoStack.length) return;
-    const entry = state.undoStack.pop();
-    const workspace = state.project.workspaces.find((w) => w.id === entry.workspaceId);
-    if (!workspace) return;
-    state.redoStack.push({
-      workspaceId: workspace.id,
-      snapshot: deepClone(workspace),
-    });
-    Object.assign(workspace, entry.snapshot);
-    state.selectedNodeId = null;
-    state.pendingConnection = null;
-    state.quickDeleteNodeId = null;
-    state.inspectorUndoPushed = false;
-    setStatus("Ongedaan gemaakt.");
-    render();
-  }
-
-  function redo() {
-    if (!state.redoStack.length) return;
-    const entry = state.redoStack.pop();
-    const workspace = state.project.workspaces.find((w) => w.id === entry.workspaceId);
-    if (!workspace) return;
-    state.undoStack.push({
-      workspaceId: workspace.id,
-      snapshot: deepClone(workspace),
-    });
-    Object.assign(workspace, entry.snapshot);
-    state.selectedNodeId = null;
-    state.pendingConnection = null;
-    state.quickDeleteNodeId = null;
-    state.inspectorUndoPushed = false;
-    setStatus("Opnieuw uitgevoerd.");
-    render();
-  }
-
-  function updateUndoRedoButtons() {
-    dom.undoButton.disabled = state.undoStack.length === 0;
-    dom.redoButton.disabled = state.redoStack.length === 0;
-  }
-
-  function bindEvents() {
-    eventBinder.bindEvents();
   }
 
   function loadProject() {
@@ -348,7 +578,10 @@ import { createEventBinder } from "./src/ui/boot.js";
   }
 
   function saveProject() {
-    saveProjectState(state.project, localStorage);
+    const result = saveProjectState(state.project, localStorage);
+    if (result && result.ok === false && result.reason === "quota") {
+      setStatus("Opslaan mislukt — exporteer je project als backup");
+    }
   }
 
   function createProject() {
@@ -373,11 +606,13 @@ import { createEventBinder } from "./src/ui/boot.js";
       createNode,
       ensureStarterChips,
       normalizeNode,
+      evaluateChallengeResult: (challenge, definitions) =>
+        challengeVerifier.evaluateChallengeResult(challenge, definitions),
+      isStarterDefinition: (definition) => challengeVerifier.isStarterDefinition(definition),
     };
   }
 
   function ensureStarterChips(project) {
-    // Avoid touching chipDefinitionsService during initial state bootstrap.
     createChipDefinitionsService({
       allocateId,
       createWorkspace,
@@ -415,10 +650,6 @@ import { createEventBinder } from "./src/ui/boot.js";
     return nodeSpecService.getNodeSpec(node);
   }
 
-  function render() {
-    renderOrchestrator.render();
-  }
-
   function applyWorkspaceZoom() {
     renderOrchestrator.applyWorkspaceZoom();
   }
@@ -447,654 +678,8 @@ import { createEventBinder } from "./src/ui/boot.js";
     );
   }
 
-  function handleInspectorFocusIn(event) {
-    const input = event.target.closest("[data-config-key]");
-    if (!input) return;
-    if (!state.inspectorUndoPushed) {
-      pushUndo();
-      state.inspectorUndoPushed = true;
-    }
-  }
-
-  function handleInspectorInput(event) {
-    const input = event.target.closest("[data-config-key]");
-    if (!input) {
-      return;
-    }
-    const workspace = getCurrentWorkspace();
-    const node = workspace.nodes.find((item) => item.id === state.selectedNodeId);
-    if (!node) {
-      return;
-    }
-
-    const key = input.dataset.configKey;
-    node.config[key] = input.value;
-
-    if (key === "width") {
-      const width = clampWidth(input.value);
-      node.config.width = width;
-      if (node.type === "switch") {
-        node.config.value = normalizeBitString(node.config.value, width);
-      }
-      if (node.type === "input-pin") {
-        node.config.previewValue = normalizeBitString(node.config.previewValue, width);
-      }
-      if (node.type === "register") {
-        node.config.resetValue = normalizeBitString(node.config.resetValue, width);
-      }
-      if (node.type === "splitter" || node.type === "joiner") {
-        node.config.width = Math.max(2, width);
-        node.config.highWidth = clampSplitWidth(node.config.highWidth, node.config.width);
-      }
-    }
-
-    if (node.type === "switch" && key === "value") {
-      node.config.value = normalizeBitString(node.config.value, node.config.width);
-    }
-    if (node.type === "input-pin" && key === "previewValue") {
-      node.config.previewValue = normalizeBitString(node.config.previewValue, node.config.width);
-    }
-    if (node.type === "clock" && key === "value") {
-      node.config.value = normalizeBitString(node.config.value, 1);
-    }
-    if (node.type === "register" && key === "resetValue") {
-      node.config.resetValue = normalizeBitString(node.config.resetValue, node.config.width);
-    }
-    if ((node.type === "splitter" || node.type === "joiner") && key === "highWidth") {
-      node.config.highWidth = clampSplitWidth(node.config.highWidth, node.config.width);
-    }
-    if (node.type === "gate" && key === "gateType") {
-      node.config.label = node.config.gateType;
-    }
-
-    render();
-  }
-
-  function handleInspectorClick(event) {
-    const deleteButton = event.target.closest("[data-delete-node]");
-    if (deleteButton) {
-      deleteNode(deleteButton.dataset.deleteNode);
-      return;
-    }
-
-    const removeWireButton = event.target.closest("[data-remove-wire]");
-    if (removeWireButton) {
-      removeWire(removeWireButton.dataset.removeWire);
-    }
-  }
-
-  function handleKeyboardShortcuts(event) {
-    const tagName = document.activeElement ? document.activeElement.tagName : "";
-    const inInput = tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT";
-
-    const ctrl = event.ctrlKey || event.metaKey;
-
-    if (ctrl && event.key === "z" && !event.shiftKey) {
-      event.preventDefault();
-      undo();
-      return;
-    }
-
-    if (ctrl && (event.key === "y" || (event.key === "z" && event.shiftKey))) {
-      event.preventDefault();
-      redo();
-      return;
-    }
-
-    if (inInput) return;
-
-    if (event.key === "Delete" || event.key === "Backspace") {
-      if (state.selectedNodeId) {
-        deleteNode(state.selectedNodeId);
-      }
-    }
-  }
-
-  function addPartToWorkspace(partType, definitionId) {
-    const workspace = getCurrentWorkspace();
-    const position = getSuggestedNodePosition(workspace);
-    const node =
-      partType === "chip-instance"
-        ? createChipInstance(state.project, definitionId, position)
-        : createNode(state.project, partType, position);
-    pushUndo();
-    workspace.nodes.push(node);
-    state.selectedNodeId = node.id;
-    setStatus(`${node.config.label || node.type} toegevoegd aan ${workspace.name}.`);
-    render();
-  }
-
-  function getSuggestedNodePosition(workspace) {
-    const margin = 24;
-    const selectedNode = workspace.nodes.find((item) => item.id === state.selectedNodeId);
-    const anchor = selectedNode
-      ? { x: selectedNode.x + 110, y: selectedNode.y + 70 }
-      : getWorkspaceClusterAnchor(workspace);
-    const stagger = workspace.nodes.length % 4;
-    return {
-      x: clamp(anchor.x + stagger * 18, margin, WORKSPACE_BASE_WIDTH - 140),
-      y: clamp(anchor.y + stagger * 14, margin, WORKSPACE_BASE_HEIGHT - 110),
-    };
-  }
-
-  function getWorkspaceClusterAnchor(workspace) {
-    if (!workspace.nodes.length) {
-      return { x: 120, y: 110 };
-    }
-
-    const bounds = workspace.nodes.reduce(
-      (result, node) => ({
-        minX: Math.min(result.minX, node.x),
-        minY: Math.min(result.minY, node.y),
-        maxX: Math.max(result.maxX, node.x),
-        maxY: Math.max(result.maxY, node.y),
-      }),
-      {
-        minX: Infinity,
-        minY: Infinity,
-        maxX: -Infinity,
-        maxY: -Infinity,
-      }
-    );
-
-    return {
-      x: Math.min(bounds.maxX + 110, WORKSPACE_BASE_WIDTH - 140),
-      y: Math.min(bounds.maxY + 70, WORKSPACE_BASE_HEIGHT - 110),
-    };
-  }
-
-  function createWorkspaceFromPrompt() {
-    const name = window.prompt("Naam van de nieuwe workspace", `Workspace ${state.project.workspaces.length + 1}`);
-    if (!name) {
-      return;
-    }
-    const workspace = createWorkspace(state.project, name.trim() || "Workspace");
-    state.project.workspaces.push(workspace);
-    state.project.currentWorkspaceId = workspace.id;
-    state.selectedNodeId = null;
-    setStatus(`Workspace "${workspace.name}" aangemaakt.`);
-    render();
-  }
-
-  function openChallengeWorkspace(challengeId) {
-    const challenge = CHALLENGES.find((item) => item.id === challengeId);
-    if (!challenge) {
-      return;
-    }
-    const workspace = createWorkspace(state.project, `${challenge.title} Draft`, null, {
-      challengeId,
-    });
-    populateChallengeWorkspace(workspace, challenge);
-    state.project.workspaces.push(workspace);
-    state.project.currentWorkspaceId = workspace.id;
-    state.selectedNodeId = null;
-    state.selectedChallengeId = challengeId;
-    setStatus(`Challenge-sheet geopend voor ${challenge.title}.`);
-    render();
-  }
-
-  function getActiveWorkspaceChallenge() {
-    const workspace = getCurrentWorkspace();
-    if (!workspace || !workspace.meta || !workspace.meta.challengeId) {
-      return null;
-    }
-    return CHALLENGES.find((item) => item.id === workspace.meta.challengeId) || null;
-  }
-
-  function populateChallengeWorkspace(workspace, challenge) {
-    const template = challenge.template || { inputs: [], outputs: [] };
-    const inputStep = Math.max(90, Math.floor(420 / Math.max(1, template.inputs.length)));
-    const outputStep = Math.max(90, Math.floor(420 / Math.max(1, template.outputs.length)));
-
-    template.inputs.forEach((item, index) => {
-      const label = typeof item === "string" ? item : item.name;
-      const width = typeof item === "string" ? 1 : (item.width || 1);
-      workspace.nodes.push(
-        chipDefinitionsService.createConfiguredNode(
-          state.project,
-          "input-pin",
-          { x: 120, y: 120 + index * inputStep },
-          { label, width, previewValue: "0".repeat(width) }
-        )
-      );
-    });
-
-    template.outputs.forEach((item, index) => {
-      const label = typeof item === "string" ? item : item.name;
-      const width = typeof item === "string" ? 1 : (item.width || 1);
-      workspace.nodes.push(
-        chipDefinitionsService.createConfiguredNode(
-          state.project,
-          "output-pin",
-          { x: 760, y: 120 + index * outputStep },
-          { label, width }
-        )
-      );
-    });
-  }
-
-  function duplicateCurrentWorkspace() {
-    duplicateWorkspace(getCurrentWorkspace().id);
-  }
-
-  function duplicateWorkspace(workspaceId) {
-    const source = getWorkspace(workspaceId);
-    if (!source) {
-      return;
-    }
-    const name = `${source.name} Copy`;
-    const duplicate = createWorkspace(state.project, name, source);
-    state.project.workspaces.push(duplicate);
-    state.project.currentWorkspaceId = duplicate.id;
-    state.selectedNodeId = null;
-    setStatus(`Workspace "${duplicate.name}" aangemaakt.`);
-    render();
-  }
-
-  function deleteWorkspace(workspaceId) {
-    if (state.project.workspaces.length === 1) {
-      return;
-    }
-    const workspace = getWorkspace(workspaceId);
-    if (!workspace) {
-      return;
-    }
-    if (!window.confirm(`Delete workspace "${workspace.name}"?`)) {
-      return;
-    }
-    state.project.workspaces = state.project.workspaces.filter((item) => item.id !== workspaceId);
-    if (state.project.currentWorkspaceId === workspaceId) {
-      state.project.currentWorkspaceId = state.project.workspaces[0].id;
-    }
-    state.selectedNodeId = null;
-    state.pendingConnection = null;
-    setStatus(`Workspace "${workspace.name}" verwijderd.`);
-    render();
-  }
-
-  function saveCurrentWorkspaceAsChip(options = {}) {
-    const workspace = getCurrentWorkspace();
-    const interfaceResult = chipDefinitionsService.extractChipInterface(workspace);
-    if (interfaceResult.errors.length) {
-      setStatus(interfaceResult.errors[0].message);
-      render();
-      return null;
-    }
-
-    const sourceSeries =
-      workspace.meta && workspace.meta.sourceChipSeriesId
-        ? getChipSeries(workspace.meta.sourceChipSeriesId)
-        : null;
-    const {
-      preferredName = "",
-      preferredDescription = "",
-      promptForName = true,
-      promptForDescription = true,
-    } = options;
-    const suggestedName =
-      preferredName ||
-      (sourceSeries ? sourceSeries.name : workspace.name.replace(/\s+copy$/i, "").trim()) ||
-      "Custom Chip";
-    const chipName = promptForName ? window.prompt("Chip name", suggestedName) : suggestedName;
-    if (!chipName) {
-      return null;
-    }
-    const trimmedName = chipName.trim();
-    if (!trimmedName) {
-      return null;
-    }
-    const defaultDescription =
-      preferredDescription || `Snapshot vanuit workspace "${workspace.name}"`;
-    const description = promptForDescription
-      ? window.prompt("Beschrijving van deze chip", defaultDescription) || ""
-      : defaultDescription;
-
-    let series =
-      sourceSeries && sourceSeries.name.toLowerCase() === trimmedName.toLowerCase()
-        ? sourceSeries
-        : state.project.chipSeries.find((entry) => entry.name.toLowerCase() === trimmedName.toLowerCase());
-    if (!series) {
-      series = { id: allocateId(state.project, "chip-series"), name: trimmedName, definitionIds: [] };
-      state.project.chipSeries.push(series);
-    }
-
-    const version = series.definitionIds.length + 1;
-    const definition = {
-      id: allocateId(state.project, "chip-def"),
-      seriesId: series.id,
-      name: trimmedName,
-      version,
-      description,
-      inputs: interfaceResult.inputs,
-      outputs: interfaceResult.outputs,
-      createdAt: new Date().toISOString(),
-      circuitSnapshot: normalizeWorkspace({
-        id: `snapshot-${Date.now()}`,
-        name: `${trimmedName} Snapshot`,
-        nodes: deepClone(workspace.nodes),
-        wires: deepClone(workspace.wires),
-      }),
-    };
-
-    state.project.chipDefinitions.push(definition);
-    series.definitionIds.push(definition.id);
-    workspace.meta = {
-      ...workspace.meta,
-      sourceChipSeriesId: series.id,
-      sourceChipDefinitionId: definition.id,
-      sourceChipVersion: definition.version,
-      draftMode: "new-version",
-    };
-    setStatus(`Chip "${trimmedName} v${version}" opgeslagen in de bibliotheek.`);
-    render();
-    return definition;
-  }
-
-  function submitChallenge(challengeId) {
-    const challenge = CHALLENGES.find((item) => item.id === challengeId);
-    const workspace = getCurrentWorkspace();
-    if (!challenge || !workspace) {
-      return;
-    }
-    if (!workspace.meta || workspace.meta.challengeId !== challengeId) {
-      setStatus(`Open eerst de challenge-sheet voor ${challenge.title} en lever die daarna in.`);
-      render();
-      return;
-    }
-
-    const definition = saveCurrentWorkspaceAsChip({
-      preferredName: challenge.names[0],
-      preferredDescription: `Challenge submission for ${challenge.title}`,
-      promptForName: false,
-      promptForDescription: false,
-    });
-    if (!definition) {
-      return;
-    }
-
-    const result = challengeVerifier.runChallengeVerification(challenge, definition);
-    setStatus(
-      result.done
-        ? `Ingeleverd: ${challenge.title} is verified.`
-        : `Ingeleverd: ${challenge.title} needs work. ${result.summary}`
-    );
-    render();
-  }
-
-  function cloneChipToWorkspace(definitionId) {
-    const definition = getChipDefinition(definitionId);
-    if (!definition) {
-      return;
-    }
-    const workspace = createWorkspace(
-      state.project,
-      `${definition.name} v${definition.version} Draft`,
-      definition.circuitSnapshot,
-      {
-        sourceChipDefinitionId: definition.id,
-        sourceChipSeriesId: definition.seriesId,
-        sourceChipVersion: definition.version,
-        draftMode: "clone",
-      }
-    );
-    state.project.workspaces.push(workspace);
-    state.project.currentWorkspaceId = workspace.id;
-    state.selectedNodeId = null;
-    setStatus(`Chip "${definition.name} v${definition.version}" gekloond naar een nieuwe workspace.`);
-    render();
-  }
-
-  function editChipAsNewVersion(definitionId) {
-    const definition = getChipDefinition(definitionId);
-    if (!definition) {
-      return;
-    }
-    const workspace = createWorkspace(
-      state.project,
-      `${definition.name} v${definition.version + 1} Draft`,
-      definition.circuitSnapshot,
-      {
-        sourceChipDefinitionId: definition.id,
-        sourceChipSeriesId: definition.seriesId,
-        sourceChipVersion: definition.version,
-        draftMode: "new-version",
-      }
-    );
-    state.project.workspaces.push(workspace);
-    state.project.currentWorkspaceId = workspace.id;
-    state.selectedNodeId = null;
-    setStatus(`Draft geopend voor ${definition.name} v${definition.version + 1}.`);
-    render();
-  }
-
-  function getLatestChipDefinitionForSeries(seriesId) {
-    const series = getChipSeries(seriesId);
-    if (!series) {
-      return null;
-    }
-    const definitions = series.definitionIds
-      .map((definitionId) => getChipDefinition(definitionId))
-      .filter(Boolean)
-      .sort((left, right) => right.version - left.version);
-    return definitions[0] || null;
-  }
-
-  function toggleInputPinNode(node) {
-    node.config.previewValue = node.config.previewValue === "1" ? "0" : "1";
-    setStatus(`${node.config.label} is nu ${node.config.previewValue}.`);
-  }
-
-  function toggleSwitchNode(node) {
-    const current = parseBits(node.config.value, node.config.width);
-    const toggled = current.map((bit) => !bit);
-    node.config.value = formatBits(toggled, node.config.width);
-    setStatus(`${node.config.label} is nu ${node.config.value}.`);
-  }
-
-  function toggleClockNode(node) {
-    node.config.value = node.config.value === "1" ? "0" : "1";
-    setStatus(`${node.config.label} is nu ${node.config.value}.`);
-  }
-
-  function toggleWorkspaceClocks() {
-    const workspace = getCurrentWorkspace();
-    let toggled = 0;
-    workspace.nodes.forEach((node) => {
-      if (node.type === "clock") {
-        node.config.value = node.config.value === "1" ? "0" : "1";
-        toggled += 1;
-      }
-    });
-    setStatus(toggled ? `${toggled} clock node(s) omgezet.` : "Geen clock nodes in deze workspace.");
-    render();
-  }
-
-  function stepRegisters() {
-    const workspace = getCurrentWorkspace();
-    const updates = collectRegisterUpdates(
-      workspace,
-      {},
-      `workspace:${workspace.id}`,
-      new Set()
-    );
-    updates.forEach((update) => {
-      state.project.runtime.registerStates[update.key] = { bits: update.bits };
-    });
-    setStatus(updates.length ? `${updates.length} register(s) bijgewerkt.` : "Geen registers gevonden.");
-    render();
-  }
-
   function collectRegisterUpdates(circuit, externalInputs, path, recursionTrail) {
     return simulationEngine.collectRegisterUpdates(circuit, externalInputs, path, recursionTrail);
-  }
-
-  function resetRuntimeState() {
-    state.project.runtime.registerStates = {};
-    state.project.workspaces.forEach((workspace) => {
-      workspace.nodes.forEach((node) => {
-        if (node.type === "clock") {
-          node.config.value = "0";
-        }
-      });
-    });
-    setStatus("Runtime state gereset. Clocks staan weer op 0 en registers op hun resetwaarde.");
-    render();
-  }
-
-  function exportProject() {
-    const blob = new Blob([JSON.stringify(state.project, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "forge-logic-project.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
-    setStatus("Project geëxporteerd als JSON.");
-  }
-
-  function importProjectFromFile(event) {
-    const [file] = event.target.files || [];
-    if (!file) {
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const imported = normalizeProject(JSON.parse(reader.result));
-        state.project = imported;
-        state.selectedNodeId = null;
-        state.pendingConnection = null;
-        setStatus(`Project "${file.name}" geïmporteerd.`);
-        render();
-      } catch (error) {
-        console.error(error);
-        setStatus("Import mislukt: ongeldig JSON-projectbestand.");
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = "";
-  }
-
-  function handlePinClick(pinElement) {
-    const direction = pinElement.dataset.pinDirection;
-    const nodeId = pinElement.dataset.nodeId;
-    const pinKey = pinElement.dataset.pinKey;
-
-    if (direction === "output") {
-      state.pendingConnection = { nodeId, pinKey, direction };
-      render();
-      return;
-    }
-
-    if (direction === "input" && state.pendingConnection) {
-      const result = connectPins(
-        state.pendingConnection.nodeId,
-        state.pendingConnection.pinKey,
-        nodeId,
-        pinKey
-      );
-      state.pendingConnection = null;
-      if (result.ok) {
-        setStatus(result.message);
-      } else {
-        setStatus(result.message);
-      }
-      render();
-      return;
-    }
-
-    state.pendingConnection = null;
-    render();
-  }
-
-  function connectPins(fromNodeId, fromPin, toNodeId, toPin) {
-    const workspace = getCurrentWorkspace();
-    if (fromNodeId === toNodeId) {
-      return { ok: false, message: "Een node kan niet op zichzelf worden aangesloten." };
-    }
-
-    const sourceNode = workspace.nodes.find((node) => node.id === fromNodeId);
-    const targetNode = workspace.nodes.find((node) => node.id === toNodeId);
-    if (!sourceNode || !targetNode) {
-      return { ok: false, message: "Kon de nodes voor deze verbinding niet vinden." };
-    }
-
-    const sourcePin = getNodeSpec(sourceNode).outputs.find((pin) => pin.key === fromPin);
-    const targetPin = getNodeSpec(targetNode).inputs.find((pin) => pin.key === toPin);
-    if (!sourcePin || !targetPin) {
-      return { ok: false, message: "Ongeldige pinselectie." };
-    }
-
-    if (sourcePin.width !== targetPin.width) {
-      return {
-        ok: false,
-        message: `Bitbreedte mismatch: ${sourcePin.width}-bit kan niet naar ${targetPin.width}-bit.`,
-      };
-    }
-
-    const existing = workspace.wires.find((wire) => wire.toNodeId === toNodeId && wire.toPin === toPin);
-    if (existing) {
-      return { ok: false, message: "Deze input-pin heeft al een driver." };
-    }
-
-    pushUndo();
-    workspace.wires.push({
-      id: allocateId(state.project, "wire"),
-      fromNodeId,
-      fromPin,
-      toNodeId,
-      toPin,
-    });
-    return { ok: true, message: "Verbinding toegevoegd." };
-  }
-
-  function deleteNode(nodeId) {
-    const workspace = getCurrentWorkspace();
-    const node = workspace.nodes.find((item) => item.id === nodeId);
-    if (!node) {
-      return;
-    }
-    pushUndo();
-    workspace.nodes = workspace.nodes.filter((item) => item.id !== nodeId);
-    workspace.wires = workspace.wires.filter(
-      (wire) => wire.fromNodeId !== nodeId && wire.toNodeId !== nodeId
-    );
-    state.selectedNodeId = null;
-    if (state.quickDeleteNodeId === nodeId) {
-      state.quickDeleteNodeId = null;
-    }
-    state.pendingConnection = null;
-    setStatus(`Node "${node.config.label || node.type}" verwijderd.`);
-    render();
-  }
-
-  function removeWire(wireId) {
-    const workspace = getCurrentWorkspace();
-    pushUndo();
-    workspace.wires = workspace.wires.filter((wire) => wire.id !== wireId);
-    setStatus("Verbinding verwijderd.");
-    render();
-  }
-
-  function getNodeConnections(workspace, nodeId) {
-    return workspace.wires
-      .filter((wire) => wire.fromNodeId === nodeId || wire.toNodeId === nodeId)
-      .map((wire) => {
-        const source = workspace.nodes.find((node) => node.id === wire.fromNodeId);
-        const target = workspace.nodes.find((node) => node.id === wire.toNodeId);
-        return {
-          wireId: wire.id,
-          label: `${source ? source.config.label || source.type : wire.fromNodeId}.${wire.fromPin} → ${
-            target ? target.config.label || target.type : wire.toNodeId
-          }.${wire.toPin}`,
-        };
-      });
-  }
-
-  function countChipDependencies(circuit) {
-    return circuit.nodes.filter((node) => node.type === "chip-instance").length;
   }
 
   function evaluateWorkspace(workspace) {
@@ -1112,10 +697,6 @@ import { createEventBinder } from "./src/ui/boot.js";
   function getPinWidth(pins, key) {
     const pin = pins.find((item) => item.key === key);
     return pin ? pin.width : 1;
-  }
-
-  function setStatus(message) {
-    dom.statusLine.textContent = message;
   }
 
   function escapeHtml(value) {

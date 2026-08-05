@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#58a6ff" />
+    <meta name="description" content="Bouw logische poorten en chips, van NAND tot een werkende computer — lokaal in je browser." />
     <title>Forge Logic</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="stylesheet" href="./styles.css" />
     <script>
       // Apply saved theme before first paint to prevent flash
@@ -20,13 +24,17 @@
           <p class="eyebrow">Logic Sandbox</p>
           <h1>Forge Logic</h1>
           <p class="panel-copy">Bouw poorten, maak chips, gebruik ze opnieuw.</p>
+          <div class="app-view-tabs" role="tablist" aria-label="Hoofdweergave">
+            <button type="button" class="app-view-tab" data-app-view="course" role="tab">Cursus</button>
+            <button type="button" class="app-view-tab" data-app-view="workspace" role="tab">Werkplaats</button>
+          </div>
         </div>
 
         <section class="panel">
           <div class="panel-title-row">
             <h2>Sheets</h2>
             <button id="new-workspace-button" class="ghost-button" type="button">
-              New
+              Nieuw
             </button>
           </div>
           <div id="workspace-list" class="workspace-list"></div>
@@ -46,27 +54,46 @@
       <main class="main-panel">
         <header class="toolbar panel">
           <div class="toolbar-group">
-            <button id="undo-button" class="ghost-button" type="button" title="Ongedaan maken (Ctrl+Z)" disabled>↩ Undo</button>
-            <button id="redo-button" class="ghost-button" type="button" title="Opnieuw uitvoeren (Ctrl+Y)" disabled>↪ Redo</button>
+            <button id="undo-button" class="ghost-button" type="button" title="Ongedaan maken (Ctrl+Z)" disabled>↩ Ongedaan</button>
+            <button id="redo-button" class="ghost-button" type="button" title="Opnieuw uitvoeren (Ctrl+Y)" disabled>↪ Opnieuw</button>
           </div>
           <div class="toolbar-group">
             <button id="duplicate-workspace-button" type="button">
-              Duplicate Workspace
+              Dupliceer sheet
             </button>
             <button id="toggle-clocks-button" type="button">
-              Toggle Clocks
+              Toggle klokken
             </button>
             <button id="step-registers-button" type="button">
-              Step Registers
+              Stap registers
             </button>
+            <button id="clock-play-button" type="button" title="Play / pauze klok">
+              ▶ Play
+            </button>
+            <label class="clock-speed-label" for="clock-speed-select">Hz</label>
+            <select id="clock-speed-select" class="clock-speed-select" title="Kloksnelheid">
+              <option value="1">1</option>
+              <option value="4" selected>4</option>
+              <option value="16">16</option>
+              <option value="max">max</option>
+            </select>
             <button id="reset-state-button" type="button">Reset State</button>
           </div>
           <div class="toolbar-group">
             <button id="export-button" class="ghost-button" type="button">
-              Export
+              Exporteren
             </button>
             <button id="import-button" class="ghost-button" type="button">
-              Import
+              Importeren
+            </button>
+            <button id="restore-backup-button" class="ghost-button" type="button" title="Herstel een lokale back-up">
+              Herstel back-up
+            </button>
+            <button id="share-link-button" class="ghost-button" type="button" title="Kopieer URL met ingebed project">
+              Kopieer link
+            </button>
+            <button id="share-paste-button" class="ghost-button" type="button" title="Plak een eerder gekopieerde URL">
+              Importeer link
             </button>
           </div>
           <div class="theme-switcher" id="theme-switcher" title="Kies een thema">
@@ -76,18 +103,20 @@
           </div>
         </header>
 
+        <section id="course-view" class="course-view panel" hidden></section>
+
         <section class="workspace-frame panel">
           <div class="workspace-header">
             <div>
-              <p class="eyebrow">Current Sheet</p>
-              <h2 id="workspace-title">Main Workspace</h2>
+              <p class="eyebrow">Huidige sheet</p>
+              <h2 id="workspace-title">Hoofdsheet</h2>
             </div>
             <div class="workspace-header-right">
               <details class="parts-dropdown">
                 <summary class="ghost-button">Parts</summary>
                 <div class="parts-menu panel">
                   <div class="parts-menu-head">
-                    <span class="eyebrow">Quick Add</span>
+                    <span class="eyebrow">Snel toevoegen</span>
                     <h3>Parts</h3>
                   </div>
                   <div id="builtin-palette" class="palette-grid palette-grid-dropdown"></div>
@@ -122,10 +151,10 @@
       <aside class="sidebar right-panel">
         <section class="panel">
           <div class="panel-title-row">
-            <h2>Nand2Tetris Challenges</h2>
+            <h2>Lessen</h2>
             <div class="panel-title-actions">
-              <button id="challenge-start-button" type="button">Start Selected</button>
-              <button id="challenge-submit-button" class="ghost-button" type="button">Submit Current</button>
+              <button id="challenge-start-button" type="button">Start geselecteerd</button>
+              <button id="challenge-submit-button" class="ghost-button" type="button">Dien in</button>
             </div>
           </div>
           <div id="challenge-list" class="challenge-list">
@@ -155,6 +184,39 @@
           </p>
         </section>
       </aside>
+    </div>
+
+    <div id="onboarding-overlay" class="onboarding-overlay" hidden>
+      <div class="onboarding-card panel">
+        <h2>Welkom bij Forge Logic</h2>
+        <p class="onboarding-lead">Zo pak je het aan:</p>
+        <ol class="onboarding-steps">
+          <li>Open <strong>Parts</strong> en voeg poorten of chips toe.</li>
+          <li>Klik een <strong>output-pin</strong>, daarna een <strong>input-pin</strong> om te verbinden.</li>
+          <li>Gebruik <strong>Snapshot</strong> om een sheet als chip op te slaan.</li>
+          <li>Kies rechts een <strong>les</strong> → <em>Start</em> → bouw → <em>Dien in</em>.</li>
+        </ol>
+        <p class="onboarding-shortcuts">
+          Sneltoetsen: <kbd>Ctrl+Z</kbd> undo · <kbd>Ctrl+A</kbd> alles selecteren ·
+          <kbd>Shift+slepen</kbd> selectiekader · <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> kopiëren/plakken ·
+          <kbd>Ctrl+D</kbd> dupliceer · <kbd>Esc</kbd> stop met
+          verbinden · pijlen verplaatsen node.
+        </p>
+        <p class="onboarding-shortcuts">
+          Gebruik je de app op iPhone/iPad, exporteer af en toe je project als bestand
+          (Safari kan site-data van weinig gebruikte sites opruimen).
+        </p>
+        <button id="onboarding-dismiss" type="button" class="primary-button">Aan de slag</button>
+      </div>
+    </div>
+
+    <div id="completion-overlay" class="onboarding-overlay" hidden>
+      <div class="onboarding-card panel completion-card">
+        <h2>Je hebt een computer gebouwd</h2>
+        <p class="onboarding-lead">Van NAND tot machine — het leerpad is rond.</p>
+        <p id="completion-summary" class="onboarding-steps"></p>
+        <button id="completion-dismiss" type="button" class="primary-button">Sluiten</button>
+      </div>
     </div>
 
     <input id="import-input" type="file" accept="application/json" hidden />

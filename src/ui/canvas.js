@@ -14,7 +14,9 @@ export function createCanvasRenderers(deps) {
 
   function renderNode(node, signalState, invalid) {
     const spec = getNodeSpec(node);
-    const selected = node.id === state.selectedNodeId;
+    const selected =
+      node.id === state.selectedNodeId ||
+      (state.selectedNodeIds && state.selectedNodeIds.includes(node.id));
     const quickDeleteVisible = node.id === state.quickDeleteNodeId;
     const typeClass = `node-${node.type}`;
     const gateClass =
@@ -34,11 +36,22 @@ export function createCanvasRenderers(deps) {
             node.config.width
           )
         : "";
-    const body = renderNodeBody(node, spec, lampValue, registerText);
+    let screenBits = "";
+    if (node.type === "screen") {
+      const parts = [];
+      for (let row = 0; row < 8; row += 1) {
+        const rowState = state.project.runtime.registerStates[`${registerKey}:row${row}`];
+        parts.push(rowState ? formatBits(rowState.bits, 8) : "00000000");
+      }
+      screenBits = parts.join("");
+    }
+    const body = renderNodeBody(node, spec, lampValue, registerText, screenBits);
+    const listening =
+      node.type === "keyboard" && state.keyboardCaptureNodeId === node.id ? "keyboard-listening" : "";
 
     return `<article class="node ${typeClass} ${gateClass} ${selected ? "selected" : ""} ${
       invalid ? "invalid" : ""
-    }" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
+    } ${listening}" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
       ${
         quickDeleteVisible
           ? `<button class="node-quick-delete" type="button" data-quick-delete-node="${node.id}" aria-label="Delete ${escapeAttribute(
@@ -82,7 +95,7 @@ export function createCanvasRenderers(deps) {
     </article>`;
   }
 
-  function renderNodeBody(node, spec, lampValue, registerText) {
+  function renderNodeBody(node, spec, lampValue, registerText, screenBits = "") {
     const symbol = getNodeSymbol(node);
     if (node.type === "switch") {
       return `<div class="node-center"><div class="gate-face">
@@ -124,6 +137,35 @@ export function createCanvasRenderers(deps) {
         <span class="gate-symbol">${escapeHtml(symbol)}</span>
       </div>
       <div class="gate-meta"><span class="register-readout">${escapeHtml(registerText)}</span></div></div>`;
+    }
+    if (node.type === "rom") {
+      const count = Array.isArray(node.config.program) ? node.config.program.length : 0;
+      return `<div class="node-center"><div class="gate-face">
+        <span class="gate-symbol">${escapeHtml(symbol)}</span>
+      </div>
+      <div class="gate-meta"><span>ROM · ${escapeHtml(String(count))} instr</span></div></div>`;
+    }
+    if (node.type === "screen") {
+      const bits = String(screenBits || "0".repeat(64));
+      const cells = Array.from({ length: 64 }, (_, index) => {
+        const on = bits[index] === "1";
+        return `<span class="screen-pixel ${on ? "on" : ""}"></span>`;
+      }).join("");
+      return `<div class="node-center screen-face">
+        <div class="screen-grid" aria-hidden="true">${cells}</div>
+      </div>`;
+    }
+    if (node.type === "keyboard") {
+      const code = node.config.keyCode || "0000000000000000";
+      const decimal = parseInt(code, 2) || 0;
+      const listening = state.keyboardCaptureNodeId === node.id;
+      return `<div class="node-center"><div class="gate-face">
+        <span class="gate-symbol">${escapeHtml(symbol)}</span>
+      </div>
+      <div class="gate-meta">
+        <span>${escapeHtml(String(decimal))} · ${escapeHtml(code.slice(-8))}</span>
+        <span class="micro-copy">${listening ? "luistert…" : "klik = luister"}</span>
+      </div></div>`;
     }
     if (node.type === "splitter" || node.type === "joiner") {
       return `<div class="node-center"><div class="gate-face">
@@ -198,6 +240,15 @@ export function createCanvasRenderers(deps) {
     if (node.type === "register") {
       return "REG";
     }
+    if (node.type === "rom") {
+      return "ROM";
+    }
+    if (node.type === "screen") {
+      return "SCR";
+    }
+    if (node.type === "keyboard") {
+      return "KB";
+    }
     if (node.type === "splitter") {
       return "SPLIT";
     }
@@ -229,6 +280,15 @@ export function createCanvasRenderers(deps) {
     }
     if (node.type === "register") {
       return "D";
+    }
+    if (node.type === "rom") {
+      return "ROM";
+    }
+    if (node.type === "screen") {
+      return "▣";
+    }
+    if (node.type === "keyboard") {
+      return "KB";
     }
     if (node.type === "splitter") {
       return "/\\";

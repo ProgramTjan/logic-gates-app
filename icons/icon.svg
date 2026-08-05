@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Forge Logic">
+  <rect width="512" height="512" rx="96" fill="#0d1117"/>
+  <rect x="24" y="24" width="464" height="464" rx="80" fill="#161b27" stroke="#58a6ff" stroke-width="12"/>
+  <!-- Simplified NAND body -->
+  <path d="M150 140 H250 C340 140 400 190 400 256 C400 322 340 372 250 372 H150 Z" fill="#1c2d4a" stroke="#58a6ff" stroke-width="18" stroke-linejoin="round"/>
+  <circle cx="424" cy="256" r="28" fill="none" stroke="#58a6ff" stroke-width="18"/>
+  <!-- Input stubs -->
+  <line x1="80" y1="190" x2="150" y2="190" stroke="#58a6ff" stroke-width="18" stroke-linecap="round"/>
+  <line x1="80" y1="322" x2="150" y2="322" stroke="#58a6ff" stroke-width="18" stroke-linecap="round"/>
+  <!-- Output stub -->
+  <line x1="452" y1="256" x2="480" y2="256" stroke="#58a6ff" stroke-width="18" stroke-linecap="round"/>
+</svg>

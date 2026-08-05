@@ -88,6 +88,45 @@ export function createInspectorRenderers(deps) {
         </div>`;
     }
 
+    if (node.type === "rom") {
+      const program = Array.isArray(node.config.program) ? node.config.program : [];
+      const lineNumbers =
+        program.length > 0 ? program.map((_, index) => String(index)).join("\n") : "0";
+      return `${commonLabel}
+        <div class="field-group">
+          <label for="rom-address-width-input">Address width</label>
+          <input id="rom-address-width-input" type="number" min="1" max="8" step="1" data-config-key="addressWidth" value="${escapeAttribute(
+            String(node.config.addressWidth || 4)
+          )}" />
+        </div>
+        <div class="field-group">
+          <label for="rom-program-input">Programma (16-bit per regel = adres)</label>
+          <div class="rom-editor">
+            <pre class="rom-line-numbers" aria-hidden="true">${escapeHtml(lineNumbers)}</pre>
+            <textarea id="rom-program-input" rows="8" spellcheck="false" data-config-key="program">${escapeHtml(
+              program.join("\n")
+            )}</textarea>
+          </div>
+          <p class="micro-copy">Alleen 0/1; regels worden tot 16 bits gepadded.</p>
+        </div>`;
+    }
+
+    if (node.type === "screen") {
+      return `${commonLabel}
+        <p class="micro-copy">Vast 8×8 raster. Schrijf met WRITE=1 + CLK-tick: laagste 8 bits van IN naar rij ROW.</p>`;
+    }
+
+    if (node.type === "keyboard") {
+      return `${commonLabel}
+        <div class="field-group">
+          <label for="keyboard-code-input">Laatste toetscode (16-bit)</label>
+          <input id="keyboard-code-input" type="text" data-config-key="keyCode" value="${escapeAttribute(
+            node.config.keyCode || "0000000000000000"
+          )}" />
+        </div>
+        <p class="micro-copy">Klik de node om te luisteren; Esc stopt. OUT = deze code.</p>`;
+    }
+
     if (node.type === "splitter" || node.type === "joiner") {
       return `${commonLabel}
         ${renderWidthField(node)}

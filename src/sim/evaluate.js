@@ -12,8 +12,58 @@ export function createSimulationEngine(deps) {
     bitwiseBinary,
   } = deps;
 
+  /** When false, skip combo chip-instance memoization (for benchmarks). Default true. */
+  const enableComboCache = deps.enableComboCache !== false;
+
+  /** WeakMap<definition, boolean> — definitions are immutable snapshots. */
+  const combinationalMemo = new WeakMap();
+
   function makeRegisterStateKey(path, nodeId) {
     return `${path}/register:${nodeId}`;
+  }
+
+  function serializeChildInputs(childInputs) {
+    return Object.keys(childInputs || {})
+      .sort()
+      .map((key) => `${key}:${formatBits(childInputs[key])}`)
+      .join("|");
+  }
+
+  /**
+   * True iff the chip has no register/screen state (and no nested sequential chips).
+   * Safe to memoize evaluateCircuit results by inputs alone.
+   */
+  function isCombinationalDefinition(definition, visiting = new Set()) {
+    if (!definition) {
+      return false;
+    }
+    if (combinationalMemo.has(definition)) {
+      return combinationalMemo.get(definition);
+    }
+    if (visiting.has(definition.id)) {
+      return true;
+    }
+    visiting.add(definition.id);
+    let combo = true;
+    const nodes = definition.circuitSnapshot && definition.circuitSnapshot.nodes;
+    if (Array.isArray(nodes)) {
+      for (const node of nodes) {
+        if (node.type === "register" || node.type === "screen") {
+          combo = false;
+          break;
+        }
+        if (node.type === "chip-instance") {
+          const child = getChipDefinition(node.config.definitionId);
+          if (child && !isCombinationalDefinition(child, visiting)) {
+            combo = false;
+            break;
+          }
+        }
+      }
+    }
+    visiting.delete(definition.id);
+    combinationalMemo.set(definition, combo);
+    return combo;
   }
 
   function evaluateGate(gateType, inputs, width) {
@@ -61,7 +111,8 @@ export function createSimulationEngine(deps) {
     return evaluateCircuit(workspace, {}, `workspace:${workspace.id}`, new Set());
   }
 
-  function evaluateCircuit(circuit, externalInputs, path, recursionTrail) {
+  function evaluateCircuit(circuit, externalInputs, path, recursionTrail, comboCache) {
+    const sharedComboCache = comboCache || (enableComboCache ? new Map() : null);
     const nodeMap = new Map(circuit.nodes.map((node) => [node.id, node]));
     const incomingWireByPin = new Map();
     const errors = [];
@@ -192,6 +243,20 @@ export function createSimulationEngine(deps) {
         outputs.Q = stored
           ? ensureWidth(stored.bits, node.config.width)
           : parseBits(node.config.resetValue, node.config.width);
+      } else if (node.type === "rom") {
+        const addressWidth = Math.max(1, Math.min(8, Number(node.config.addressWidth) || 4));
+        const addrBits = ensureWidth(inputValues.ADDR || zeroBits(addressWidth), addressWidth);
+        let address = 0;
+        for (let i = 0; i < addressWidth; i += 1) {
+          address = (address << 1) | (addrBits[i] ? 1 : 0);
+        }
+        const program = Array.isArray(node.config.program) ? node.config.program : [];
+        const word = program[address] != null ? program[address] : "0".repeat(16);
+        outputs.OUT = parseBits(word, 16);
+      } else if (node.type === "screen") {
+        outputs = {};
+      } else if (node.type === "keyboard") {
+        outputs.OUT = parseBits(node.config.keyCode || "0".repeat(16), 16);
       } else if (node.type === "splitter") {
         const sourceBits = ensureWidth(inputValues.IN, node.config.width);
         outputs.HI = sourceBits.slice(0, node.config.highWidth);
@@ -219,19 +284,39 @@ export function createSimulationEngine(deps) {
           spec.inputs.forEach((pin) => {
             childInputs[pin.key] = ensureWidth(inputValues[pin.key], pin.width);
           });
-          const childEvaluation = evaluateCircuit(
-            definition.circuitSnapshot,
-            childInputs,
-            `${path}/${node.id}`,
-            new Set([...recursionTrail, definition.id])
-          );
-          childEvaluation.errors.forEach((error) => {
-            errors.push(error);
-          });
-          outputs = {};
-          spec.outputs.forEach((pin) => {
-            outputs[pin.key] = ensureWidth(childEvaluation.interfaceOutputs[pin.key], pin.width);
-          });
+          const canCache = sharedComboCache && isCombinationalDefinition(definition);
+          const cacheKey = canCache
+            ? `${definition.id}::${serializeChildInputs(childInputs)}`
+            : null;
+          if (cacheKey && sharedComboCache.has(cacheKey)) {
+            const cached = sharedComboCache.get(cacheKey);
+            outputs = {};
+            Object.keys(cached).forEach((key) => {
+              outputs[key] = Array.isArray(cached[key]) ? cached[key].slice() : cached[key];
+            });
+          } else {
+            const childEvaluation = evaluateCircuit(
+              definition.circuitSnapshot,
+              childInputs,
+              `${path}/${node.id}`,
+              new Set([...recursionTrail, definition.id]),
+              sharedComboCache
+            );
+            childEvaluation.errors.forEach((error) => {
+              errors.push(error);
+            });
+            outputs = {};
+            spec.outputs.forEach((pin) => {
+              outputs[pin.key] = ensureWidth(childEvaluation.interfaceOutputs[pin.key], pin.width);
+            });
+            if (cacheKey) {
+              const stored = {};
+              Object.keys(outputs).forEach((key) => {
+                stored[key] = Array.isArray(outputs[key]) ? outputs[key].slice() : outputs[key];
+              });
+              sharedComboCache.set(cacheKey, stored);
+            }
+          }
         }
       }
 
@@ -250,7 +335,9 @@ export function createSimulationEngine(deps) {
       const spec = getNodeSpec(node);
       if (node.type === "output-pin") {
         interfaceOutputs[node.id] = ensureWidth(
-          nodeSignals[node.id] && nodeSignals[node.id].inputs ? nodeSignals[node.id].inputs.IN : zeroBits(node.config.width),
+          nodeSignals[node.id] && nodeSignals[node.id].inputs
+            ? nodeSignals[node.id].inputs.IN
+            : zeroBits(node.config.width),
           node.config.width
         );
       }
@@ -261,7 +348,10 @@ export function createSimulationEngine(deps) {
       });
       spec.outputs.forEach((pin) => {
         if (!nodeSignals[node.id].outputs[pin.key]) {
-          nodeSignals[node.id].outputs[pin.key] = ensureWidth(resolveNodeOutputs(node.id)[pin.key], pin.width);
+          nodeSignals[node.id].outputs[pin.key] = ensureWidth(
+            resolveNodeOutputs(node.id)[pin.key],
+            pin.width
+          );
         }
       });
     });
@@ -305,6 +395,38 @@ export function createSimulationEngine(deps) {
         updates.push({ key: storedKey, bits: nextBits });
       }
 
+      if (node.type === "screen") {
+        const cols = 8;
+        const rows = 8;
+        const nodeInputs = evaluation.nodeSignals[node.id] ? evaluation.nodeSignals[node.id].inputs : {};
+        const baseKey = makeRegisterStateKey(path, node.id);
+        const clockHigh = bitsToBoolean(nodeInputs.CLK || zeroBits(1));
+        const writeHigh = bitsToBoolean(nodeInputs.WRITE || zeroBits(1));
+        let writeRow = -1;
+        let pixelRow = null;
+        if (clockHigh && writeHigh) {
+          const rowBits = ensureWidth(nodeInputs.ROW || zeroBits(3), 3);
+          writeRow = 0;
+          for (let i = 0; i < 3; i += 1) {
+            writeRow = (writeRow << 1) | (rowBits[i] ? 1 : 0);
+          }
+          writeRow = Math.min(rows - 1, Math.max(0, writeRow));
+          const inBits = ensureWidth(nodeInputs.IN || zeroBits(16), 16);
+          pixelRow = inBits.slice(8);
+        }
+        for (let row = 0; row < rows; row += 1) {
+          const storedKey = `${baseKey}:row${row}`;
+          const currentBits = registerStates[storedKey]
+            ? ensureWidth(registerStates[storedKey].bits, cols)
+            : zeroBits(cols);
+          const nextBits =
+            writeRow === row && pixelRow
+              ? pixelRow.map((bit) => Boolean(bit))
+              : currentBits.slice();
+          updates.push({ key: storedKey, bits: nextBits });
+        }
+      }
+
       if (node.type === "chip-instance") {
         const definition = getChipDefinition(node.config.definitionId);
         if (!definition || recursionTrail.has(definition.id)) {
@@ -330,5 +452,11 @@ export function createSimulationEngine(deps) {
     return updates;
   }
 
-  return { evaluateWorkspace, evaluateCircuit, collectRegisterUpdates, makeRegisterStateKey };
+  return {
+    evaluateWorkspace,
+    evaluateCircuit,
+    collectRegisterUpdates,
+    makeRegisterStateKey,
+    isCombinationalDefinition,
+  };
 }

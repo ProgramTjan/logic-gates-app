@@ -73,6 +73,37 @@ export function createNodeSpecFactory(deps) {
         outputs: [{ key: "Q", name: "Q", width: node.config.width }],
       };
     }
+    if (node.type === "rom") {
+      const addressWidth = Math.max(1, Math.min(8, Number(node.config.addressWidth) || 4));
+      const lines = Array.isArray(node.config.program) ? node.config.program.length : 0;
+      return {
+        title: node.config.label,
+        subtitle: `ROM • ADDR ${addressWidth}-bit → OUT 16-bit • ${lines} instr`,
+        inputs: [{ key: "ADDR", name: "ADDR", width: addressWidth }],
+        outputs: [{ key: "OUT", name: "OUT", width: 16 }],
+      };
+    }
+    if (node.type === "screen") {
+      return {
+        title: node.config.label,
+        subtitle: "Screen • IN[7:0]→rij, ROW(3), WRITE+CLK latched",
+        inputs: [
+          { key: "IN", name: "IN", width: 16 },
+          { key: "ROW", name: "ROW", width: 3 },
+          { key: "WRITE", name: "WRITE", width: 1 },
+          { key: "CLK", name: "CLK", width: 1 },
+        ],
+        outputs: [],
+      };
+    }
+    if (node.type === "keyboard") {
+      return {
+        title: node.config.label,
+        subtitle: "Keyboard • OUT=laatste toets (klik=luister, Esc=stop)",
+        inputs: [],
+        outputs: [{ key: "OUT", name: "OUT", width: 16 }],
+      };
+    }
     if (node.type === "splitter") {
       const lowWidth = node.config.width - node.config.highWidth;
       return {
