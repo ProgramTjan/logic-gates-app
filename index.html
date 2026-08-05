@@ -1,19 +1,21 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#58a6ff" />
-    <meta name="description" content="Bouw logische poorten en chips, van NAND tot een werkende computer — lokaal in je browser." />
+    <meta name="description" content="Build logic gates and chips, from NAND to a working computer — locally in your browser." />
     <title>Forge Logic</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="stylesheet" href="./styles.css" />
     <script>
-      // Apply saved theme before first paint to prevent flash
       (function () {
         var t = localStorage.getItem("lg-theme") || "dark";
         document.documentElement.setAttribute("data-theme", t);
+        var loc = localStorage.getItem("forge-logic-locale") || "en";
+        if (loc !== "en" && loc !== "nl") loc = "en";
+        document.documentElement.lang = loc;
       })();
     </script>
   </head>
@@ -21,20 +23,20 @@
     <div class="shell">
       <aside class="sidebar left-panel">
         <div class="panel brand-panel">
-          <p class="eyebrow">Logic Sandbox</p>
+          <p class="eyebrow" data-i18n="brandEyebrow">Logic Sandbox</p>
           <h1>Forge Logic</h1>
-          <p class="panel-copy">Bouw poorten, maak chips, gebruik ze opnieuw.</p>
-          <div class="app-view-tabs" role="tablist" aria-label="Hoofdweergave">
-            <button type="button" class="app-view-tab" data-app-view="course" role="tab">Cursus</button>
-            <button type="button" class="app-view-tab" data-app-view="workspace" role="tab">Werkplaats</button>
+          <p class="panel-copy" data-i18n="brandCopy">Build gates, make chips, reuse them.</p>
+          <div class="app-view-tabs" role="tablist" data-i18n-aria="mainViewAria" aria-label="Main view">
+            <button type="button" class="app-view-tab" data-app-view="course" role="tab" data-i18n="course">Course</button>
+            <button type="button" class="app-view-tab" data-app-view="workspace" role="tab" data-i18n="workshop">Workshop</button>
           </div>
         </div>
 
         <section class="panel">
           <div class="panel-title-row">
-            <h2>Sheets</h2>
-            <button id="new-workspace-button" class="ghost-button" type="button">
-              Nieuw
+            <h2 data-i18n="sheets">Sheets</h2>
+            <button id="new-workspace-button" class="ghost-button" type="button" data-i18n="newSheet">
+              New
             </button>
           </div>
           <div id="workspace-list" class="workspace-list"></div>
@@ -42,8 +44,8 @@
 
         <section class="panel">
           <div class="panel-title-row">
-            <h2>Chips</h2>
-            <button id="save-chip-button" class="ghost-button" type="button">
+            <h2 data-i18n="chips">Chips</h2>
+            <button id="save-chip-button" class="ghost-button" type="button" data-i18n="snapshot">
               Snapshot
             </button>
           </div>
@@ -54,49 +56,53 @@
       <main class="main-panel">
         <header class="toolbar panel">
           <div class="toolbar-group">
-            <button id="undo-button" class="ghost-button" type="button" title="Ongedaan maken (Ctrl+Z)" disabled>↩ Ongedaan</button>
-            <button id="redo-button" class="ghost-button" type="button" title="Opnieuw uitvoeren (Ctrl+Y)" disabled>↪ Opnieuw</button>
+            <button id="undo-button" class="ghost-button" type="button" data-i18n="undo" data-i18n-title="undoTitle" title="Undo (Ctrl+Z)" disabled>↩ Undo</button>
+            <button id="redo-button" class="ghost-button" type="button" data-i18n="redo" data-i18n-title="redoTitle" title="Redo (Ctrl+Y)" disabled>↪ Redo</button>
           </div>
           <div class="toolbar-group">
-            <button id="duplicate-workspace-button" type="button">
-              Dupliceer sheet
+            <button id="duplicate-workspace-button" type="button" data-i18n="duplicateWorkspace">
+              Duplicate sheet
             </button>
-            <button id="toggle-clocks-button" type="button">
-              Toggle klokken
+            <button id="toggle-clocks-button" type="button" data-i18n="toggleClocks">
+              Toggle clocks
             </button>
-            <button id="step-registers-button" type="button">
-              Stap registers
+            <button id="step-registers-button" type="button" data-i18n="stepRegisters">
+              Step registers
             </button>
-            <button id="clock-play-button" type="button" title="Play / pauze klok">
+            <button id="clock-play-button" type="button" data-i18n="play" data-i18n-title="playPauseTitle" title="Play / pause clock">
               ▶ Play
             </button>
             <label class="clock-speed-label" for="clock-speed-select">Hz</label>
-            <select id="clock-speed-select" class="clock-speed-select" title="Kloksnelheid">
+            <select id="clock-speed-select" class="clock-speed-select" data-i18n-title="clockSpeedTitle" title="Clock speed">
               <option value="1">1</option>
               <option value="4" selected>4</option>
               <option value="16">16</option>
               <option value="max">max</option>
             </select>
-            <button id="reset-state-button" type="button">Reset State</button>
+            <button id="reset-state-button" type="button" data-i18n="resetState">Reset State</button>
           </div>
           <div class="toolbar-group">
-            <button id="export-button" class="ghost-button" type="button">
-              Exporteren
+            <button id="export-button" class="ghost-button" type="button" data-i18n="export">
+              Export
             </button>
-            <button id="import-button" class="ghost-button" type="button">
-              Importeren
+            <button id="import-button" class="ghost-button" type="button" data-i18n="import">
+              Import
             </button>
-            <button id="restore-backup-button" class="ghost-button" type="button" title="Herstel een lokale back-up">
-              Herstel back-up
+            <button id="restore-backup-button" class="ghost-button" type="button" data-i18n="restoreBackup" data-i18n-title="restoreBackupTitle" title="Restore a local backup">
+              Restore backup
             </button>
-            <button id="share-link-button" class="ghost-button" type="button" title="Kopieer URL met ingebed project">
-              Kopieer link
+            <button id="share-link-button" class="ghost-button" type="button" data-i18n="copyLink" data-i18n-title="copyLinkTitle" title="Copy URL with embedded project">
+              Copy link
             </button>
-            <button id="share-paste-button" class="ghost-button" type="button" title="Plak een eerder gekopieerde URL">
-              Importeer link
+            <button id="share-paste-button" class="ghost-button" type="button" data-i18n="importLink" data-i18n-title="importLinkTitle" title="Paste a previously copied URL">
+              Import link
             </button>
           </div>
-          <div class="theme-switcher" id="theme-switcher" title="Kies een thema">
+          <div class="locale-switcher" id="locale-switcher" data-i18n-title="languageTitle" title="Language">
+            <button type="button" class="locale-btn active" data-set-locale="en">EN</button>
+            <button type="button" class="locale-btn" data-set-locale="nl">NL</button>
+          </div>
+          <div class="theme-switcher" id="theme-switcher" data-i18n-title="themeTitle" title="Choose a theme">
             <button class="theme-btn theme-btn-dark" data-theme="dark" type="button" title="Dark">●</button>
             <button class="theme-btn theme-btn-light" data-theme="light" type="button" title="Light">○</button>
             <button class="theme-btn theme-btn-neon" data-theme="neon" type="button" title="Neon">◉</button>
@@ -108,16 +114,16 @@
         <section class="workspace-frame panel">
           <div class="workspace-header">
             <div>
-              <p class="eyebrow">Huidige sheet</p>
-              <h2 id="workspace-title">Hoofdsheet</h2>
+              <p class="eyebrow" data-i18n="currentSheet">Current sheet</p>
+              <h2 id="workspace-title">Main</h2>
             </div>
             <div class="workspace-header-right">
               <details class="parts-dropdown">
-                <summary class="ghost-button">Parts</summary>
+                <summary class="ghost-button" data-i18n="parts">Parts</summary>
                 <div class="parts-menu panel">
                   <div class="parts-menu-head">
-                    <span class="eyebrow">Snel toevoegen</span>
-                    <h3>Parts</h3>
+                    <span class="eyebrow" data-i18n="quickAdd">Quick add</span>
+                    <h3 data-i18n="parts">Parts</h3>
                   </div>
                   <div id="builtin-palette" class="palette-grid palette-grid-dropdown"></div>
                 </div>
@@ -128,8 +134,8 @@
                 <button id="zoom-in-button" class="ghost-button" type="button">+</button>
                 <span id="zoom-value" class="zoom-value">100%</span>
               </div>
-              <p id="connection-status" class="connection-status">
-                Klik output, klik input.
+              <p id="connection-status" class="connection-status" data-i18n="connectionHint">
+                Click output, click input.
               </p>
             </div>
           </div>
@@ -140,9 +146,8 @@
                 <div id="node-layer" class="node-layer"></div>
               </div>
             </div>
-            <div id="empty-state" class="empty-state">
-              Open `Parts` en voeg componenten toe. Gebruik `Input` en `Output` om van deze
-              sheet een chip te maken.
+            <div id="empty-state" class="empty-state" data-i18n="emptyState">
+              Open Parts and add components. Use Input and Output to turn this sheet into a chip.
             </div>
           </div>
         </section>
@@ -151,36 +156,35 @@
       <aside class="sidebar right-panel">
         <section class="panel">
           <div class="panel-title-row">
-            <h2>Lessen</h2>
+            <h2 data-i18n="challenges">Lessons</h2>
             <div class="panel-title-actions">
-              <button id="challenge-start-button" type="button">Start geselecteerd</button>
-              <button id="challenge-submit-button" class="ghost-button" type="button">Dien in</button>
+              <button id="challenge-start-button" type="button" data-i18n="startSelected">Start selected</button>
+              <button id="challenge-submit-button" class="ghost-button" type="button" data-i18n="submitCurrent">Submit</button>
             </div>
           </div>
-          <div id="challenge-list" class="challenge-list">
-            Nog geen opdrachten geladen.
+          <div id="challenge-list" class="challenge-list" data-i18n="challengesEmpty">
+            No lessons loaded yet.
           </div>
         </section>
 
         <section class="panel">
-          <h2>Inspector</h2>
-          <div id="inspector" class="inspector empty">
-            Selecteer een node om de eigenschappen te bewerken.
+          <h2 data-i18n="inspector">Inspector</h2>
+          <div id="inspector" class="inspector empty" data-i18n="inspectorEmpty">
+            Select a node to edit its properties.
           </div>
         </section>
 
         <section class="panel">
-          <h2>Checks</h2>
-          <div id="error-list" class="error-list">
-            Geen fouten in de actieve workspace.
+          <h2 data-i18n="checks">Checks</h2>
+          <div id="error-list" class="error-list" data-i18n="checksEmpty">
+            No errors in the active workspace.
           </div>
         </section>
 
         <section class="panel">
-          <h2>Status</h2>
-          <p id="status-line" class="status-line">
-            Lokale opslag is actief. Projectwijzigingen worden automatisch
-            bewaard in deze browser.
+          <h2 data-i18n="status">Status</h2>
+          <p id="status-line" class="status-line" data-i18n="statusDefault">
+            Local storage is active. Project changes are saved automatically in this browser.
           </p>
         </section>
       </aside>
@@ -188,34 +192,32 @@
 
     <div id="onboarding-overlay" class="onboarding-overlay" hidden>
       <div class="onboarding-card panel">
-        <h2>Welkom bij Forge Logic</h2>
-        <p class="onboarding-lead">Zo pak je het aan:</p>
+        <h2 data-i18n="onboardingTitle">Welcome to Forge Logic</h2>
+        <p class="onboarding-lead" data-i18n="onboardingLead">How to get started:</p>
         <ol class="onboarding-steps">
-          <li>Open <strong>Parts</strong> en voeg poorten of chips toe.</li>
-          <li>Klik een <strong>output-pin</strong>, daarna een <strong>input-pin</strong> om te verbinden.</li>
-          <li>Gebruik <strong>Snapshot</strong> om een sheet als chip op te slaan.</li>
-          <li>Kies rechts een <strong>les</strong> → <em>Start</em> → bouw → <em>Dien in</em>.</li>
+          <li data-i18n-html="onboardingStep1">Open <strong>Parts</strong> and add gates or chips.</li>
+          <li data-i18n-html="onboardingStep2">Click an <strong>output pin</strong>, then an <strong>input pin</strong> to connect.</li>
+          <li data-i18n-html="onboardingStep3">Use <strong>Snapshot</strong> to save a sheet as a chip.</li>
+          <li data-i18n-html="onboardingStep4">Pick a <strong>lesson</strong> on the right → <em>Start</em> → build → <em>Submit</em>.</li>
         </ol>
-        <p class="onboarding-shortcuts">
-          Sneltoetsen: <kbd>Ctrl+Z</kbd> undo · <kbd>Ctrl+A</kbd> alles selecteren ·
-          <kbd>Shift+slepen</kbd> selectiekader · <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> kopiëren/plakken ·
-          <kbd>Ctrl+D</kbd> dupliceer · <kbd>Esc</kbd> stop met
-          verbinden · pijlen verplaatsen node.
+        <p class="onboarding-shortcuts" data-i18n-html="onboardingShortcuts">
+          Shortcuts: <kbd>Ctrl+Z</kbd> undo · <kbd>Ctrl+A</kbd> select all ·
+          <kbd>Shift+drag</kbd> marquee · <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> copy/paste ·
+          <kbd>Ctrl+D</kbd> duplicate · <kbd>Esc</kbd> stop connecting · arrows move node.
         </p>
-        <p class="onboarding-shortcuts">
-          Gebruik je de app op iPhone/iPad, exporteer af en toe je project als bestand
-          (Safari kan site-data van weinig gebruikte sites opruimen).
+        <p class="onboarding-shortcuts" data-i18n="onboardingIos">
+          On iPhone/iPad, export your project as a file now and then (Safari may clear site data for rarely used sites).
         </p>
-        <button id="onboarding-dismiss" type="button" class="primary-button">Aan de slag</button>
+        <button id="onboarding-dismiss" type="button" class="primary-button" data-i18n="onboardingDismiss">Get started</button>
       </div>
     </div>
 
     <div id="completion-overlay" class="onboarding-overlay" hidden>
       <div class="onboarding-card panel completion-card">
-        <h2>Je hebt een computer gebouwd</h2>
-        <p class="onboarding-lead">Van NAND tot machine — het leerpad is rond.</p>
+        <h2 data-i18n="completionTitle">You built a computer</h2>
+        <p class="onboarding-lead" data-i18n="completionLead">From NAND to machine — the learning path is complete.</p>
         <p id="completion-summary" class="onboarding-steps"></p>
-        <button id="completion-dismiss" type="button" class="primary-button">Sluiten</button>
+        <button id="completion-dismiss" type="button" class="primary-button" data-i18n="completionDismiss">Close</button>
       </div>
     </div>
 
@@ -234,7 +236,6 @@
           });
         }
 
-        // Mark current active button
         applyTheme(document.documentElement.getAttribute("data-theme") || "dark");
 
         switcher.addEventListener("click", function (e) {

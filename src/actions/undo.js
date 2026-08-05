@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export function createUndoManager(deps) {
   const { state, deepClone, getCurrentWorkspace, setStatus, renderWorkspace, dom, limit = 50 } = deps;
 
@@ -29,7 +31,7 @@ export function createUndoManager(deps) {
     state.pendingConnection = null;
     state.quickDeleteNodeId = null;
     state.inspectorUndoPushed = false;
-    setStatus("Ongedaan gemaakt.");
+    setStatus(t("status.undo"));
     renderWorkspace();
   }
 
@@ -47,7 +49,7 @@ export function createUndoManager(deps) {
     state.pendingConnection = null;
     state.quickDeleteNodeId = null;
     state.inspectorUndoPushed = false;
-    setStatus("Opnieuw uitgevoerd.");
+    setStatus(t("status.redo"));
     renderWorkspace();
   }
 

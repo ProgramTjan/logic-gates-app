@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export function createSelectionClipboard(deps) {
   const {
     state,
@@ -49,7 +51,7 @@ export function createSelectionClipboard(deps) {
     const workspace = getCurrentWorkspace();
     const ids = new Set(getSelectedNodeIds());
     if (!ids.size) {
-      setStatus("Selecteer eerst een of meer nodes om te kopiëren.");
+      setStatus(t("status.needSelectCopy"));
       return;
     }
     const nodes = workspace.nodes.filter((node) => ids.has(node.id));
@@ -65,12 +67,12 @@ export function createSelectionClipboard(deps) {
         .filter((wire) => ids.has(wire.fromNodeId) && ids.has(wire.toNodeId))
         .map((wire) => deepClone(wire)),
     };
-    setStatus(`${nodes.length} node(s) gekopieerd (Ctrl+V om te plakken).`);
+    setStatus(t("status.copied", { n: nodes.length }));
   }
 
   function pasteClipboard() {
     if (!state.clipboard || !state.clipboard.nodes.length) {
-      setStatus("Niets om te plakken. Kopieer eerst met Ctrl+C.");
+      setStatus(t("status.nothingPaste"));
       return;
     }
     const workspace = getCurrentWorkspace();
@@ -102,7 +104,7 @@ export function createSelectionClipboard(deps) {
     });
 
     setSelection(newIds);
-    setStatus(`${newIds.length} node(s) geplakt.`);
+    setStatus(t("status.pasted", { n: newIds.length }));
     renderWorkspace();
   }
 

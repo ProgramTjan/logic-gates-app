@@ -394,3 +394,18 @@
 - Onboarding + README: tip om op iPhone/iPad af en toe te exporteren (Safari site-data)
 
 **Resultaat:** groen — `npm run check` + `npm test` + `npm run e2e`
+
+---
+
+## 2026-08-05 — i18n: EN default + NL switch
+
+**Uitgevoerd:**
+- `src/i18n/`: `t` / `setLocale` / `applyStaticI18n`, dictionaries `en.js` + `nl.js`, key `forge-logic-locale` (default `en`)
+- `index.html`: `data-i18n*` + EN/NL toggle; early `html lang` from localStorage
+- Challenge prose in `src/data/locales/challenges-en.js` + `challenges-nl.js`; `localizeChallenge` / `localizeCurriculumModule`
+- UI/actions/tutorial/modals/inspector/canvas gemigreerd naar `t()`
+- Fixtures §18; E2E asserts op EN (+ locale smoke EN→NL); manifest `lang: en`
+
+**Aanname:** chip-/poortnamen blijven Engels; project-JSON bevat geen locale (apparaatvoorkeur zoals thema).
+
+**Resultaat:** groen — `npm run check` + `npm test` (141) + `npm run e2e` (15, incl. locale smoke)

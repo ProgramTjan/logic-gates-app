@@ -1,8 +1,8 @@
 {
-  "name": "Forge Logic — bouw een computer vanaf NAND",
+  "name": "Forge Logic — build a computer from NAND",
   "short_name": "Forge Logic",
-  "description": "Bouw logische poorten en chips, van NAND tot een werkende computer — lokaal in je browser.",
-  "lang": "nl",
+  "description": "Build logic gates and chips, from NAND to a working computer — locally in your browser.",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -94,7 +94,7 @@ test.describe("XOR met NAND repro", () => {
     await page.locator(`[data-submit-challenge="${challengeId}"]`).click();
 
     await expect(page.locator(".challenge-detail-card .challenge-status")).toContainText(
-      /Gehaald|Verified/,
+      /Passed|Gehaald|Verified/,
       { timeout: 15_000 }
     );
     await expect(page.locator(".challenge-detail-card .submit-feedback.ok")).toBeVisible();
@@ -126,6 +126,6 @@ test.describe("XOR met NAND repro", () => {
 
     const feedback = page.locator(".challenge-detail-card .submit-feedback.bad");
     await expect(feedback).toBeVisible();
-    await expect(feedback).toContainText(/challenge-sheet/);
+    await expect(feedback).toContainText(/challenge.?sheet/i);
   });
 });

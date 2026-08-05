@@ -1308,6 +1308,49 @@ const pin1 = { config: { label: "A", width: 1, previewValue: "0" } };
 runtimeActions.toggleInputPinNode(pin1);
 assert("toggle 1-bit: 0 → 1", pin1.config.previewValue === "1");
 
+// ── 18. i18n — locale + localizeChallenge ───────────────────────────────────
+console.log("\n[18] i18n — locale + localizeChallenge");
+
+const {
+  t,
+  setLocale,
+  getLocale,
+  DEFAULT_LOCALE,
+  LOCALE_STORAGE_KEY,
+  readStoredLocale,
+} = await import("../src/i18n/index.js");
+const { localizeChallenge } = await import("../src/i18n/challenges.js");
+const memStore = {
+  data: {},
+  getItem(k) {
+    return this.data[k] ?? null;
+  },
+  setItem(k, v) {
+    this.data[k] = String(v);
+  },
+};
+
+setLocale("en", { storage: memStore });
+assert("default locale en", getLocale() === "en");
+assert("t(course) EN", t("course") === "Course");
+assert("t interpolate", t("courseLessonsCount", { n: 5 }) === "5 lessons");
+setLocale("nl", { storage: memStore });
+assert("locale nl", getLocale() === "nl");
+assert("t(course) NL", t("course") === "Cursus");
+assert("persist key", memStore.getItem(LOCALE_STORAGE_KEY) === "nl");
+assert("readStoredLocale", readStoredLocale(memStore) === "nl");
+assert("fallback unknown key", t("___missing___") === "___missing___");
+assert("DEFAULT_LOCALE is en", DEFAULT_LOCALE === "en");
+
+const nand = REAL_CHALLENGES.find((c) => c.id === "nand");
+setLocale("en", { storage: memStore, persist: false });
+const nandEn = localizeChallenge(nand, "en");
+assert("nand EN description", /own NAND chip/i.test(nandEn.description));
+setLocale("nl", { storage: memStore, persist: false });
+const nandNl = localizeChallenge(nand, "nl");
+assert("nand NL description", /eigen NAND-chip/i.test(nandNl.description));
+setLocale("en", { storage: memStore });
+
 console.log("\n" + "-".repeat(44));
 console.log("Totaal: " + passed + " geslaagd, " + failed + " mislukt");
 if (failed > 0) {

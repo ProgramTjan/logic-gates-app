@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export function createCanvasRenderers(deps) {
   const {
     dom,
@@ -54,9 +56,9 @@ export function createCanvasRenderers(deps) {
     } ${listening}" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
       ${
         quickDeleteVisible
-          ? `<button class="node-quick-delete" type="button" data-quick-delete-node="${node.id}" aria-label="Delete ${escapeAttribute(
-              spec.title
-            )}">x</button>`
+          ? `<button class="node-quick-delete" type="button" data-quick-delete-node="${node.id}" aria-label="${escapeAttribute(
+              t("deleteAria")
+            )} ${escapeAttribute(spec.title)}">x</button>`
           : ""
       }
       <div class="node-shell" data-drag-surface="true" data-node-id="${node.id}">
@@ -103,7 +105,9 @@ export function createCanvasRenderers(deps) {
       </div>
       <div class="gate-meta">
         <span>${escapeHtml(node.config.value)}</span>
-        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-switch" data-node-id="${node.id}">toggle</button>
+        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-switch" data-node-id="${node.id}">${escapeHtml(
+          t("toggle")
+        )}</button>
       </div></div>`;
     }
     if (node.type === "input-pin") {
@@ -113,7 +117,9 @@ export function createCanvasRenderers(deps) {
       </div>
       <div class="gate-meta">
         <span>${escapeHtml(node.config.previewValue)}</span>
-        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-input-pin" data-node-id="${node.id}">toggle</button>
+        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-input-pin" data-node-id="${node.id}">${escapeHtml(
+          t("toggle")
+        )}</button>
       </div></div>`;
     }
     if (node.type === "clock") {
@@ -122,7 +128,9 @@ export function createCanvasRenderers(deps) {
       </div>
       <div class="gate-meta">
         <span>${escapeHtml(node.config.value)}</span>
-        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-clock" data-node-id="${node.id}">toggle</button>
+        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-clock" data-node-id="${node.id}">${escapeHtml(
+          t("toggle")
+        )}</button>
       </div></div>`;
     }
     if (node.type === "lamp") {
@@ -164,7 +172,7 @@ export function createCanvasRenderers(deps) {
       </div>
       <div class="gate-meta">
         <span>${escapeHtml(String(decimal))} · ${escapeHtml(code.slice(-8))}</span>
-        <span class="micro-copy">${listening ? "luistert…" : "klik = luister"}</span>
+        <span class="micro-copy">${listening ? escapeHtml(t("keyboardListening")) : escapeHtml(t("keyboardClickListen"))}</span>
       </div></div>`;
     }
     if (node.type === "splitter" || node.type === "joiner") {
@@ -371,14 +379,14 @@ export function createCanvasRenderers(deps) {
       return;
     }
     if (!state.pendingConnection) {
-      dom.connectionStatus.textContent = "Klik output, klik input.";
+      dom.connectionStatus.textContent = t("connectionHint");
       return;
     }
     const workspace = getCurrentWorkspace();
     const sourceNode = workspace.nodes.find((node) => node.id === state.pendingConnection.nodeId);
     dom.connectionStatus.textContent = sourceNode
-      ? `Verbind ${sourceNode.config.label || sourceNode.type}.${state.pendingConnection.pinKey} met een input.`
-      : "Klik op een input-pin om te verbinden.";
+      ? `${sourceNode.config.label || sourceNode.type}.${state.pendingConnection.pinKey} → …`
+      : t("connectionHint");
   }
 
   return {

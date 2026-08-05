@@ -1,6 +1,8 @@
 # Forge Logic
 
-Bouw logische poorten, maak herbruikbare chips en werk Nand2Tetris-challenges af — lokaal in de browser, zonder backend.
+Build logic gates, make reusable chips, and work through Nand2Tetris-style challenges — locally in the browser, no backend.
+
+**Language:** UI and lessons default to **English**. Switch to **Dutch (NL)** with the EN/NL control in the toolbar (saved in `localStorage` as `forge-logic-locale`).
 
 ## Publieke app
 

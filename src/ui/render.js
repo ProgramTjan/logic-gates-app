@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export function createRenderOrchestrator(deps) {
   const {
     dom,
@@ -35,7 +37,7 @@ export function createRenderOrchestrator(deps) {
       state.lastEvaluation = {
         nodeSignals: {},
         wireSignals: {},
-        errors: [{ message: "Kon deze sheet niet evalueren. Controleer opgeslagen projectdata." }],
+        errors: [{ message: t("status.evalFailed", { message: error.message || String(error) }) }],
       };
     }
   }

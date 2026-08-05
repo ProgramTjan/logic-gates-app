@@ -1,4 +1,6 @@
 import { markChallengeCompleted } from "../data/curriculum.js";
+import { t } from "../i18n/index.js";
+import { localizeChallenge } from "../i18n/challenges.js";
 
 export function createWorkspaceMutations(deps) {
   const {
@@ -93,7 +95,12 @@ export function createWorkspaceMutations(deps) {
     pushUndo();
     workspace.nodes.push(node);
     state.selectedNodeId = node.id;
-    setStatus(`${node.config.label || node.type} toegevoegd aan ${workspace.name}.`);
+    setStatus(
+      t("status.partAdded", {
+        label: node.config.label || node.type,
+        workspace: workspace.name,
+      })
+    );
     renderWorkspace();
   }
 
@@ -101,7 +108,7 @@ export function createWorkspaceMutations(deps) {
     const suggestedName = `Workspace ${state.project.workspaces.length + 1}`;
     const name = await appModals.showWorkspaceNameModal({
       suggestedName,
-      lead: "Geef je nieuwe sheet een naam.",
+      lead: t("workspaceModalLead"),
     });
     if (!name) {
       return;
@@ -110,7 +117,7 @@ export function createWorkspaceMutations(deps) {
     state.project.workspaces.push(workspace);
     state.project.currentWorkspaceId = workspace.id;
     state.selectedNodeId = null;
-    setStatus(`Workspace "${workspace.name}" aangemaakt.`);
+    setStatus(t("status.workspaceCreated", { name: workspace.name }));
     renderFull();
   }
 
@@ -172,7 +179,9 @@ export function createWorkspaceMutations(deps) {
     state.project.currentWorkspaceId = workspace.id;
     state.selectedNodeId = null;
     state.selectedChallengeId = challengeId;
-    setStatus(`Challenge-sheet geopend voor ${challenge.title}.`);
+    setStatus(
+      t("status.workspaceOpened", { name: localizeChallenge(challenge).title })
+    );
     if (typeof deps.stopClockRunner === "function") {
       deps.stopClockRunner();
     }
@@ -196,7 +205,7 @@ export function createWorkspaceMutations(deps) {
     state.project.workspaces.push(duplicate);
     state.project.currentWorkspaceId = duplicate.id;
     state.selectedNodeId = null;
-    setStatus(`Workspace "${duplicate.name}" aangemaakt.`);
+    setStatus(t("status.workspaceCreated", { name: duplicate.name }));
     renderFull();
   }
 
@@ -217,7 +226,7 @@ export function createWorkspaceMutations(deps) {
     }
     state.selectedNodeId = null;
     state.pendingConnection = null;
-    setStatus(`Workspace "${workspace.name}" verwijderd.`);
+    setStatus(t("status.workspaceDeleted", { name: workspace.name }));
     renderFull();
   }
 
@@ -243,8 +252,9 @@ export function createWorkspaceMutations(deps) {
     const suggestedName =
       preferredName ||
       (sourceSeries ? sourceSeries.name : workspace.name.replace(/\s+copy$/i, "").trim()) ||
-      "Custom Chip";
-    const defaultDescription = preferredDescription || `Snapshot vanuit workspace "${workspace.name}"`;
+      t("customChip");
+    const defaultDescription =
+      preferredDescription || t("snapshotFromWorkspace", { name: workspace.name });
 
     let trimmedName = suggestedName.trim();
     let description = defaultDescription;
@@ -253,7 +263,10 @@ export function createWorkspaceMutations(deps) {
       const modalResult = await appModals.showChipSaveModal({
         suggestedName: trimmedName,
         suggestedDescription: description,
-        lead: `${interfaceResult.inputs.length} input(s), ${interfaceResult.outputs.length} output(s) — bevestig naam en beschrijving.`,
+        lead: t("chipModalLead", {
+          inputs: interfaceResult.inputs.length,
+          outputs: interfaceResult.outputs.length,
+        }),
       });
       if (!modalResult) {
         return null;
@@ -302,24 +315,25 @@ export function createWorkspaceMutations(deps) {
       sourceChipVersion: definition.version,
       draftMode: "new-version",
     };
-    setStatus(`Chip "${trimmedName} v${version}" opgeslagen in de bibliotheek.`);
+    setStatus(t("status.chipSaved", { name: trimmedName, version }));
     renderFull();
     return definition;
   }
 
   function formatSubmitStatus(challenge, result) {
+    const title = localizeChallenge(challenge).title;
     if (result.done) {
-      return `Ingeleverd: ${challenge.title} is verified. ${result.summary}`;
+      return t("status.submitOk", { title, summary: result.summary });
     }
-    let message = `Ingeleverd: ${challenge.title} needs work. ${result.summary}`;
+    let message = t("status.submitNeedsWork", { title, summary: result.summary });
     if (result.failedCases && result.failedCases.length) {
       const detail = result.failedCases
         .slice(0, 3)
         .map((item) => item.detail)
         .join(" · ");
-      message += ` Mis: ${detail}`;
+      message += t("status.submitMiss", { detail });
       if (result.failedCases.length > 3) {
-        message += ` (+${result.failedCases.length - 3} meer)`;
+        message += t("status.submitMore", { n: result.failedCases.length - 3 });
       }
     }
     return message;
@@ -336,7 +350,10 @@ export function createWorkspaceMutations(deps) {
       return;
     }
     if (!workspace.meta || workspace.meta.challengeId !== challengeId) {
-      const message = `Je werkt nu op sheet "${workspace.name}", niet op de challenge-sheet van ${challenge.title}. Klik op Start bij deze les en bouw (of kopieer) je circuit dáár — inleveren kan alleen vanaf de challenge-sheet.`;
+      const message = t("status.submitWrongSheet", {
+        sheet: workspace.name,
+        title: localizeChallenge(challenge).title,
+      });
       setSubmitFeedback(challengeId, false, message);
       setStatus(message);
       renderFull();
@@ -345,7 +362,9 @@ export function createWorkspaceMutations(deps) {
 
     const interfaceResult = chipDefinitionsService.extractChipInterface(workspace);
     if (interfaceResult.errors.length) {
-      const message = `Inleveren gestopt: ${interfaceResult.errors[0].message}`;
+      const message = t("status.submitInterface", {
+        message: interfaceResult.errors[0].message,
+      });
       setSubmitFeedback(challengeId, false, message);
       setStatus(message);
       renderFull();
@@ -354,7 +373,9 @@ export function createWorkspaceMutations(deps) {
 
     const definition = await saveCurrentWorkspaceAsChip({
       preferredName: challenge.names[0],
-      preferredDescription: `Challenge submission for ${challenge.title}`,
+      preferredDescription: t("challengeSubmission", {
+        title: localizeChallenge(challenge).title,
+      }),
       promptForName: false,
       promptForDescription: false,
     });
@@ -395,7 +416,9 @@ export function createWorkspaceMutations(deps) {
     state.project.workspaces.push(workspace);
     state.project.currentWorkspaceId = workspace.id;
     state.selectedNodeId = null;
-    setStatus(`Chip "${definition.name} v${definition.version}" gekloond naar een nieuwe workspace.`);
+    setStatus(
+      t("status.chipCloned", { name: definition.name, version: definition.version })
+    );
     renderFull();
   }
 
@@ -418,7 +441,9 @@ export function createWorkspaceMutations(deps) {
     state.project.workspaces.push(workspace);
     state.project.currentWorkspaceId = workspace.id;
     state.selectedNodeId = null;
-    setStatus(`Draft geopend voor ${definition.name} v${definition.version + 1}.`);
+    setStatus(
+      t("status.draftOpened", { name: definition.name, version: definition.version + 1 })
+    );
     renderFull();
   }
 
@@ -438,7 +463,7 @@ export function createWorkspaceMutations(deps) {
     clone.y = clamp((Number(node.y) || 0) + 28, 24, WORKSPACE_BASE_HEIGHT - 110);
     workspace.nodes.push(clone);
     state.selectedNodeId = clone.id;
-    setStatus("Selectie gedupliceerd (Ctrl+D).");
+    setStatus(t("status.pasted", { n: 1 }));
     renderWorkspace();
   }
 

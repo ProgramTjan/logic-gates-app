@@ -1,3 +1,6 @@
+import { t, getLocale } from "../i18n/index.js";
+import { CHALLENGES } from "../data/challenges.js";
+
 export function createProjectIoActions(deps) {
   const {
     state,
@@ -40,10 +43,10 @@ export function createProjectIoActions(deps) {
       state.selectedNodeId = null;
       state.pendingConnection = null;
       history.replaceState(null, "", `${location.pathname}${location.search}`);
-      setStatus("Project geladen via gedeelde link.");
+      setStatus(t("status.importOk"));
     } catch (error) {
       console.error(error);
-      setStatus("Laden via link mislukt (corrupt of te groot).");
+      setStatus(t("status.importFailed"));
       history.replaceState(null, "", `${location.pathname}${location.search}`);
     }
   }
@@ -53,10 +56,10 @@ export function createProjectIoActions(deps) {
       const payload = await encodeProjectForUrlHash(state.project);
       const url = `${location.origin}${location.pathname}#${payload}`;
       await navigator.clipboard.writeText(url);
-      setStatus("Projectlink gekopieerd naar klembord.");
+      setStatus(t("status.shareCopied"));
     } catch (error) {
       console.error(error);
-      setStatus("Kon projectlink niet maken of kopiëren.");
+      setStatus(t("status.shareFailed"));
     }
   }
 
@@ -71,7 +74,7 @@ export function createProjectIoActions(deps) {
     const trimmed = text.trim();
     const hashPart = trimmed.includes("#") ? trimmed.split("#").pop() : trimmed;
     if (!hashPart || !hashPart.startsWith("p=")) {
-      setStatus("Geen geldige project-hash (verwacht p=...).");
+      setStatus(t("status.importFailed"));
       return;
     }
     try {
@@ -81,11 +84,11 @@ export function createProjectIoActions(deps) {
       state.selectedNodeId = null;
       state.pendingConnection = null;
       saveProject();
-      setStatus("Project uit link geïmporteerd.");
+      setStatus(t("status.importOk"));
       render();
     } catch (error) {
       console.error(error);
-      setStatus("Import uit link mislukt.");
+      setStatus(t("status.importFailed"));
     }
   }
 
@@ -99,7 +102,7 @@ export function createProjectIoActions(deps) {
     anchor.download = "forge-logic-project.json";
     anchor.click();
     URL.revokeObjectURL(url);
-    setStatus("Project geëxporteerd als JSON.");
+    setStatus(t("status.exportOk"));
   }
 
   function importProjectFromFile(event) {
@@ -115,11 +118,11 @@ export function createProjectIoActions(deps) {
         state.project = imported;
         state.selectedNodeId = null;
         state.pendingConnection = null;
-        setStatus(`Project "${file.name}" geïmporteerd.`);
+        setStatus(t("status.importOk"));
         render();
       } catch (error) {
         console.error(error);
-        setStatus("Import mislukt: ongeldig JSON-projectbestand.");
+        setStatus(t("status.importFailed"));
       }
     };
     reader.readAsText(file);
@@ -129,39 +132,42 @@ export function createProjectIoActions(deps) {
   async function restoreBackupFromUi() {
     const backups = typeof listBackups === "function" ? listBackups(localStorage) : [];
     if (!backups.length) {
-      setStatus("Geen back-ups gevonden.");
+      setStatus(t("status.restoreMissing"));
       return;
     }
     if (!appModals || typeof appModals.showFormModal !== "function") {
-      setStatus("Herstel-dialoog niet beschikbaar.");
+      setStatus(t("status.restoreNoModal"));
       return;
     }
 
     const formatStamp = (iso) => {
       if (!iso) {
-        return "onbekend tijdstip";
+        return "—";
       }
       try {
-        return new Date(iso).toLocaleString("nl-NL");
+        return new Date(iso).toLocaleString(getLocale() === "nl" ? "nl-NL" : "en-US");
       } catch {
         return iso;
       }
     };
 
     const choice = await appModals.showFormModal({
-      title: "Herstel back-up",
-      lead: "Kies een lokale back-up. Je huidige project in deze browser wordt overschreven.",
-      confirmLabel: "Herstellen",
+      title: t("restoreModalTitle"),
+      lead: t("restoreModalLead"),
+      confirmLabel: t("restoreConfirm"),
       fields: [
         {
           id: "slot",
-          label: "Back-up",
+          label: t("restoreBackup"),
           type: "select",
           required: true,
-          requiredMessage: "Kies een back-up.",
+          requiredMessage: t("fieldRequired", { label: t("restoreBackup") }),
           options: backups.map((backup) => ({
             value: String(backup.slot),
-            label: `#${backup.slot} — ${formatStamp(backup.savedAt)} — ${backup.workspaceCount} sheet(s)`,
+            label: t("restoreSlotLabel", {
+              when: `#${backup.slot} — ${formatStamp(backup.savedAt)}`,
+              sheets: backup.workspaceCount,
+            }),
           })),
         },
       ],
@@ -174,25 +180,25 @@ export function createProjectIoActions(deps) {
     const depsForRestore =
       typeof getProjectStateDeps === "function" ? getProjectStateDeps() : null;
     if (!depsForRestore || typeof restoreBackup !== "function") {
-      setStatus("Herstellen mislukt (interne fout).");
+      setStatus(t("status.restoreFailed"));
       return;
     }
 
     try {
       const restored = restoreBackup(localStorage, slot, depsForRestore);
       if (!restored) {
-        setStatus("Herstellen mislukt: back-up ontbreekt of is corrupt.");
+        setStatus(t("status.restoreMissing"));
         return;
       }
       haltRunner();
       state.project = restored;
       state.selectedNodeId = null;
       state.pendingConnection = null;
-      setStatus(`Back-up #${slot} hersteld.`);
+      setStatus(t("status.restoreOk"));
       render();
     } catch (error) {
       console.error(error);
-      setStatus("Herstellen mislukt.");
+      setStatus(t("status.restoreFailed"));
     }
   }
 
@@ -226,11 +232,11 @@ export function createProjectIoActions(deps) {
     if (!force && learner.completionOverlayDismissed) {
       return;
     }
-    const chipCount = (state.project.chipDefinitions || []).filter(
-      (definition) => !(definition.description || "").startsWith("Starter ")
-    ).length;
     if (deps.dom.completionSummary) {
-      deps.dom.completionSummary.textContent = `${completed.length} lessen afgerond · ${chipCount} eigen chips in je bibliotheek.`;
+      deps.dom.completionSummary.textContent = t("status.completionSummary", {
+        done: completed.length,
+        total: CHALLENGES.length,
+      });
     }
     if (deps.dom.completionOverlay) {
       deps.dom.completionOverlay.hidden = false;

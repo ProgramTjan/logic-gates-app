@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export function createRuntimeActions(deps) {
   const {
     state,
@@ -20,19 +22,19 @@ export function createRuntimeActions(deps) {
     const current = parseBits(node.config.previewValue, width);
     const toggled = current.map((bit) => !bit);
     node.config.previewValue = formatBits(toggled, width);
-    setStatus(`${node.config.label} is nu ${node.config.previewValue}.`);
+    setStatus(t("status.pinValue", { label: node.config.label, value: node.config.previewValue }));
   }
 
   function toggleSwitchNode(node) {
     const current = parseBits(node.config.value, node.config.width);
     const toggled = current.map((bit) => !bit);
     node.config.value = formatBits(toggled, node.config.width);
-    setStatus(`${node.config.label} is nu ${node.config.value}.`);
+    setStatus(t("status.pinValue", { label: node.config.label, value: node.config.value }));
   }
 
   function toggleClockNode(node) {
     node.config.value = node.config.value === "1" ? "0" : "1";
-    setStatus(`${node.config.label} is nu ${node.config.value}.`);
+    setStatus(t("status.pinValue", { label: node.config.label, value: node.config.value }));
   }
 
   function toggleWorkspaceClocks() {
@@ -44,7 +46,7 @@ export function createRuntimeActions(deps) {
         toggled += 1;
       }
     });
-    setStatus(toggled ? `${toggled} clock node(s) omgezet.` : "Geen clock nodes in deze workspace.");
+    setStatus(toggled ? t("status.clocksToggled", { n: toggled }) : t("status.noClocks"));
     renderWorkspace();
   }
 
@@ -59,7 +61,7 @@ export function createRuntimeActions(deps) {
   function stepRegisters() {
     const workspace = getCurrentWorkspace();
     const count = applyRegisterStep(workspace);
-    setStatus(count ? `${count} register(s) bijgewerkt.` : "Geen registers gevonden.");
+    setStatus(count ? t("status.registersUpdated", { n: count }) : t("status.noRegisters"));
     renderWorkspace();
   }
 
@@ -145,8 +147,8 @@ export function createRuntimeActions(deps) {
     scheduleRunner();
     setStatus(
       runnerHz === "max"
-        ? "Klok draait (max / per frame)."
-        : `Klok draait op ${runnerHz} Hz.`
+        ? t("status.clockRunningMax")
+        : t("status.clockRunningHz", { hz: runnerHz })
     );
     updateRunnerUi();
   }
@@ -161,7 +163,7 @@ export function createRuntimeActions(deps) {
     if (typeof saveProject === "function") {
       saveProject();
     }
-    setStatus("Klok gepauzeerd.");
+    setStatus(t("status.clockPaused"));
     updateRunnerUi();
     renderWorkspace({ save: false });
   }
@@ -174,7 +176,9 @@ export function createRuntimeActions(deps) {
     runnerHz = hz === "max" ? "max" : Number(hz) || 4;
     if (running) {
       scheduleRunner();
-      setStatus(runnerHz === "max" ? "Kloksnelheid: max." : `Kloksnelheid: ${runnerHz} Hz.`);
+      setStatus(
+        runnerHz === "max" ? t("status.clockSpeedMax") : t("status.clockSpeedHz", { hz: runnerHz })
+      );
     }
     updateRunnerUi();
   }
@@ -207,7 +211,7 @@ export function createRuntimeActions(deps) {
         }
       });
     });
-    setStatus("Runtime state gereset. Clocks staan weer op 0 en registers op hun resetwaarde.");
+    setStatus(t("status.runtimeReset"));
     renderWorkspace();
   }
 

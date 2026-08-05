@@ -1,7 +1,15 @@
 export function createEventBinder(deps) {
-  const { dom, handlers, workspaceActions, interactionHandlers, courseRenderers, setAppView } = deps;
+  const { dom, handlers, workspaceActions, interactionHandlers, courseRenderers, setAppView, changeLocale } =
+    deps;
 
   function bindEvents() {
+    document.querySelectorAll("[data-set-locale]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (typeof changeLocale === "function") {
+          changeLocale(btn.dataset.setLocale);
+        }
+      });
+    });
     dom.undoButton.addEventListener("click", handlers.undo);
     dom.redoButton.addEventListener("click", handlers.redo);
     if (dom.shareLinkButton) {

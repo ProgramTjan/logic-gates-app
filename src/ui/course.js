@@ -1,5 +1,6 @@
 import { CURRICULUM, getOrderedLessonIds, isLessonUnlocked } from "../data/curriculum.js";
-import { S } from "../data/strings.js";
+import { S, t } from "../i18n/index.js";
+import { localizeChallenge, localizeCurriculumModule } from "../i18n/challenges.js";
 
 export function createCourseRenderers(deps) {
   const {
@@ -46,10 +47,12 @@ export function createCourseRenderers(deps) {
     }
     const learner = getLearner();
     const nextId = getNextOpenLessonId(learner);
-    const nextTitle = nextId ? challengesById.get(nextId)?.title || nextId : null;
+    const nextChallenge = nextId ? challengesById.get(nextId) : null;
+    const nextTitle = nextChallenge ? localizeChallenge(nextChallenge).title : null;
     const badges = Array.isArray(learner.badges) ? learner.badges : [];
 
     const modulesHtml = CURRICULUM.map((module) => {
+      const localizedModule = localizeCurriculumModule(module);
       const { done, total, ratio } = moduleProgress(module, learner);
       const hasBadge = badges.includes(module.id);
       const firstOpenInModule = module.lessonIds.find(
@@ -62,15 +65,15 @@ export function createCourseRenderers(deps) {
         ${renderProgressRing(ratio)}
         <div class="course-module-body">
           <div class="course-module-head">
-            <h3>${escapeHtml(module.title)}</h3>
+            <h3>${escapeHtml(localizedModule.title)}</h3>
             ${hasBadge ? `<span class="course-badge" title="${escapeHtml(S.badgeEarned)}">★</span>` : ""}
           </div>
-          <p class="course-module-copy">${escapeHtml(module.description)}</p>
-          <p class="course-module-meta">${done}/${total} lessen</p>
+          <p class="course-module-copy">${escapeHtml(localizedModule.description)}</p>
+          <p class="course-module-meta">${escapeHtml(t("courseLessonsCount", { n: `${done}/${total}` }))}</p>
           <button type="button" class="primary-button course-module-start" data-course-start="${escapeHtml(
             startId
           )}" ${startId ? "" : "disabled"}>
-            ${done === total ? "Bekijk" : done > 0 ? S.continue : S.start}
+            ${done === total ? t("courseView") : done > 0 ? S.continue : S.start}
           </button>
         </div>
       </article>`;
@@ -79,7 +82,7 @@ export function createCourseRenderers(deps) {
     dom.courseView.innerHTML = `
       <div class="course-hero">
         <p class="eyebrow">${escapeHtml(S.course)}</p>
-        <h2>Je leerpad</h2>
+        <h2>${escapeHtml(S.course)}</h2>
         <p class="course-lead">${escapeHtml(S.courseLead)}</p>
         <div class="course-hero-actions">
           <button type="button" class="primary-button" data-course-continue ${nextId ? "" : "disabled"}>

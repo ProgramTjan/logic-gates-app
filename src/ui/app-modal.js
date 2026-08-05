@@ -1,8 +1,13 @@
+import { t } from "../i18n/index.js";
+
 export function createAppModals(deps) {
   const { dom } = deps;
 
   function ensureOverlay() {
     if (dom.appModalOverlay) {
+      if (dom.appModalCancel) {
+        dom.appModalCancel.textContent = t("cancel");
+      }
       return;
     }
     const overlay = document.createElement("div");
@@ -16,7 +21,7 @@ export function createAppModals(deps) {
         <div id="app-modal-fields"></div>
         <p class="app-modal-error" id="app-modal-error" hidden></p>
         <div class="app-modal-actions">
-          <button type="button" class="ghost-button" id="app-modal-cancel">Annuleren</button>
+          <button type="button" class="ghost-button" id="app-modal-cancel">${t("cancel")}</button>
           <button type="button" class="primary-button" id="app-modal-confirm"></button>
         </div>
       </div>
@@ -34,14 +39,15 @@ export function createAppModals(deps) {
   function showFormModal({
     title,
     lead = "",
-    confirmLabel = "Opslaan",
+    confirmLabel,
     fields = [],
   }) {
     ensureOverlay();
     return new Promise((resolve) => {
+      dom.appModalCancel.textContent = t("cancel");
       dom.appModalTitle.textContent = title;
       dom.appModalLead.textContent = lead;
-      dom.appModalConfirm.textContent = confirmLabel;
+      dom.appModalConfirm.textContent = confirmLabel || t("save");
       dom.appModalError.hidden = true;
       dom.appModalError.textContent = "";
 
@@ -99,7 +105,8 @@ export function createAppModals(deps) {
         const values = readValues();
         for (const field of fields) {
           if (field.required && !values[field.id]) {
-            dom.appModalError.textContent = field.requiredMessage || `Vul ${field.label} in.`;
+            dom.appModalError.textContent =
+              field.requiredMessage || t("fieldRequired", { label: field.label });
             dom.appModalError.hidden = false;
             const el = dom.appModalFields.querySelector(`#app-modal-field-${field.id}`);
             if (el) el.focus();
@@ -142,20 +149,20 @@ export function createAppModals(deps) {
 
   function showChipSaveModal({ suggestedName, suggestedDescription, lead = "" }) {
     return showFormModal({
-      title: "Chip snapshot",
-      lead,
-      confirmLabel: "Opslaan",
+      title: t("chipModalTitle"),
+      lead: lead || t("chipModalLead", { inputs: "?", outputs: "?" }),
+      confirmLabel: t("save"),
       fields: [
         {
           id: "name",
-          label: "Chipnaam",
+          label: t("chipName"),
           value: suggestedName,
           required: true,
-          requiredMessage: "Voer een chipnaam in.",
+          requiredMessage: t("chipNameRequired"),
         },
         {
           id: "description",
-          label: "Beschrijving",
+          label: t("chipDescription"),
           type: "textarea",
           value: suggestedDescription,
         },
@@ -170,16 +177,16 @@ export function createAppModals(deps) {
 
   function showWorkspaceNameModal({ suggestedName, lead = "" }) {
     return showFormModal({
-      title: "Nieuwe workspace",
-      lead,
-      confirmLabel: "Aanmaken",
+      title: t("workspaceModalTitle"),
+      lead: lead || t("workspaceModalLead"),
+      confirmLabel: t("create"),
       fields: [
         {
           id: "name",
-          label: "Workspace naam",
+          label: t("workspaceName"),
           value: suggestedName,
           required: true,
-          requiredMessage: "Voer een workspace naam in.",
+          requiredMessage: t("workspaceNameRequired"),
         },
       ],
     }).then((result) => {

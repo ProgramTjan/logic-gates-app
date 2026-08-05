@@ -68,7 +68,7 @@ test.describe("NAND leerflow", () => {
 
     await page.locator('[data-submit-challenge="nand"]').click();
 
-    await expect(page.locator(".challenge-detail-card .challenge-status")).toContainText(/Gehaald|Verified/, {
+    await expect(page.locator(".challenge-detail-card .challenge-status")).toContainText(/Passed|Gehaald|Verified/, {
       timeout: 15_000,
     });
 

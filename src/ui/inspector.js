@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export function createInspectorRenderers(deps) {
   const {
     dom,
@@ -12,7 +14,7 @@ export function createInspectorRenderers(deps) {
 
   function renderWidthField(node) {
     return `<div class="field-group">
-      <label for="node-width-input">Bit width</label>
+      <label for="node-width-input">${escapeHtml(t("bitWidth"))}</label>
       <input id="node-width-input" type="number" min="1" max="16" step="1" data-config-key="width" value="${escapeAttribute(
         String(node.config.width || 1)
       )}" />
@@ -21,7 +23,7 @@ export function createInspectorRenderers(deps) {
 
   function renderInspectorFields(node) {
     const commonLabel = `<div class="field-group">
-      <label for="node-label-input">Label</label>
+      <label for="node-label-input">${escapeHtml(t("label"))}</label>
       <input id="node-label-input" type="text" data-config-key="label" value="${escapeAttribute(node.config.label || "")}" />
     </div>`;
 
@@ -29,7 +31,7 @@ export function createInspectorRenderers(deps) {
       return `${commonLabel}
         ${renderWidthField(node)}
         <div class="field-group">
-          <label for="node-value-input">Bit value</label>
+          <label for="node-value-input">${escapeHtml(t("bitValue"))}</label>
           <input id="node-value-input" type="text" data-config-key="value" value="${escapeAttribute(node.config.value)}" />
         </div>`;
     }
@@ -41,7 +43,7 @@ export function createInspectorRenderers(deps) {
     if (node.type === "gate") {
       return `${commonLabel}
         <div class="field-group">
-          <label for="gate-type-select">Gate type</label>
+          <label for="gate-type-select">${escapeHtml(t("gateType"))}</label>
           <select id="gate-type-select" data-config-key="gateType">
             ${["NOT", "AND", "OR", "XOR", "NAND", "NOR"]
               .map(
@@ -58,7 +60,7 @@ export function createInspectorRenderers(deps) {
       return `${commonLabel}
         ${renderWidthField(node)}
         <div class="field-group">
-          <label for="preview-value-input">Preview value</label>
+          <label for="preview-value-input">${escapeHtml(t("previewValue"))}</label>
           <input id="preview-value-input" type="text" data-config-key="previewValue" value="${escapeAttribute(
             node.config.previewValue
           )}" />
@@ -72,7 +74,7 @@ export function createInspectorRenderers(deps) {
     if (node.type === "clock") {
       return `${commonLabel}
         <div class="field-group">
-          <label for="clock-level-input">Clock level</label>
+          <label for="clock-level-input">${escapeHtml(t("clockLevel"))}</label>
           <input id="clock-level-input" type="text" data-config-key="value" value="${escapeAttribute(node.config.value)}" />
         </div>`;
     }
@@ -81,7 +83,7 @@ export function createInspectorRenderers(deps) {
       return `${commonLabel}
         ${renderWidthField(node)}
         <div class="field-group">
-          <label for="reset-value-input">Reset value</label>
+          <label for="reset-value-input">${escapeHtml(t("resetValue"))}</label>
           <input id="reset-value-input" type="text" data-config-key="resetValue" value="${escapeAttribute(
             node.config.resetValue
           )}" />
@@ -94,44 +96,44 @@ export function createInspectorRenderers(deps) {
         program.length > 0 ? program.map((_, index) => String(index)).join("\n") : "0";
       return `${commonLabel}
         <div class="field-group">
-          <label for="rom-address-width-input">Address width</label>
+          <label for="rom-address-width-input">${escapeHtml(t("addressWidth"))}</label>
           <input id="rom-address-width-input" type="number" min="1" max="8" step="1" data-config-key="addressWidth" value="${escapeAttribute(
             String(node.config.addressWidth || 4)
           )}" />
         </div>
         <div class="field-group">
-          <label for="rom-program-input">Programma (16-bit per regel = adres)</label>
+          <label for="rom-program-input">${escapeHtml(t("romProgram"))}</label>
           <div class="rom-editor">
             <pre class="rom-line-numbers" aria-hidden="true">${escapeHtml(lineNumbers)}</pre>
             <textarea id="rom-program-input" rows="8" spellcheck="false" data-config-key="program">${escapeHtml(
               program.join("\n")
             )}</textarea>
           </div>
-          <p class="micro-copy">Alleen 0/1; regels worden tot 16 bits gepadded.</p>
+          <p class="micro-copy">${escapeHtml(t("romHelp"))}</p>
         </div>`;
     }
 
     if (node.type === "screen") {
       return `${commonLabel}
-        <p class="micro-copy">Vast 8×8 raster. Schrijf met WRITE=1 + CLK-tick: laagste 8 bits van IN naar rij ROW.</p>`;
+        <p class="micro-copy">${escapeHtml(t("screenHelp"))}</p>`;
     }
 
     if (node.type === "keyboard") {
       return `${commonLabel}
         <div class="field-group">
-          <label for="keyboard-code-input">Laatste toetscode (16-bit)</label>
+          <label for="keyboard-code-input">${escapeHtml(t("bitValue"))}</label>
           <input id="keyboard-code-input" type="text" data-config-key="keyCode" value="${escapeAttribute(
             node.config.keyCode || "0000000000000000"
           )}" />
         </div>
-        <p class="micro-copy">Klik de node om te luisteren; Esc stopt. OUT = deze code.</p>`;
+        <p class="micro-copy">${escapeHtml(t("keyboardHelp"))}</p>`;
     }
 
     if (node.type === "splitter" || node.type === "joiner") {
       return `${commonLabel}
         ${renderWidthField(node)}
         <div class="field-group">
-          <label for="split-width-input">High segment width</label>
+          <label for="split-width-input">${escapeHtml(t("highSegmentWidth"))}</label>
           <input id="split-width-input" type="number" min="1" max="${escapeAttribute(
             String(Math.max(1, node.config.width - 1))
           )}" step="1" data-config-key="highWidth" value="${escapeAttribute(String(node.config.highWidth))}" />
@@ -142,9 +144,9 @@ export function createInspectorRenderers(deps) {
       const definition = getChipDefinition(node.config.definitionId);
       return `${commonLabel}
         <div class="field-group">
-          <label>Definition</label>
+          <label>${escapeHtml(t("definition"))}</label>
           <div class="micro-copy">${escapeHtml(
-            definition ? `${definition.name} v${definition.version}` : "Missing chip definition"
+            definition ? `${definition.name} v${definition.version}` : t("missingChipDef")
           )}</div>
         </div>`;
     }
@@ -157,7 +159,7 @@ export function createInspectorRenderers(deps) {
     const node = workspace.nodes.find((item) => item.id === state.selectedNodeId);
     if (!node) {
       dom.inspector.className = "inspector empty";
-      dom.inspector.innerHTML = "Selecteer een node om de eigenschappen te bewerken.";
+      dom.inspector.innerHTML = escapeHtml(t("inspectorEmpty"));
       return;
     }
 
@@ -171,22 +173,24 @@ export function createInspectorRenderers(deps) {
       </div>
       ${renderInspectorFields(node)}
       <div class="inspector-section">
-        <h3>Connections</h3>
+        <h3>${escapeHtml(t("connections"))}</h3>
         ${
           connections.length
             ? connections
                 .map(
                   (connection) => `<div class="connection-chip">
                     <span>${escapeHtml(connection.label)}</span>
-                    <button class="ghost-button" type="button" data-remove-wire="${connection.wireId}">Remove</button>
+                    <button class="ghost-button" type="button" data-remove-wire="${connection.wireId}">${escapeHtml(
+                      t("remove")
+                    )}</button>
                   </div>`
                 )
                 .join("")
-            : '<p class="micro-copy">Nog geen verbindingen voor deze node.</p>'
+            : `<p class="micro-copy">—</p>`
         }
       </div>
       <div class="inspector-section">
-        <button type="button" data-delete-node="${node.id}">Delete Node</button>
+        <button type="button" data-delete-node="${node.id}">${escapeHtml(t("deleteNode"))}</button>
       </div>
     `;
   }
@@ -194,7 +198,7 @@ export function createInspectorRenderers(deps) {
   function renderErrors() {
     const errors = state.lastEvaluation ? state.lastEvaluation.errors : [];
     if (!errors.length) {
-      dom.errorList.innerHTML = "Geen fouten in de actieve workspace.";
+      dom.errorList.innerHTML = escapeHtml(t("checksEmpty"));
       return;
     }
     dom.errorList.innerHTML = errors

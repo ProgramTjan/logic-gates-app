@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export function createKeyboardHandlers(deps) {
   const {
     state,
@@ -75,8 +77,8 @@ export function createKeyboardHandlers(deps) {
       setSelection(ids);
       setStatus(
         ids.length
-          ? `${ids.length} node(s) geselecteerd (Ctrl+C om te kopiëren).`
-          : "Geen nodes op deze sheet."
+          ? t("status.selectedAll", { n: ids.length })
+          : t("status.noNodes")
       );
       renderWorkspace();
       return;

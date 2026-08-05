@@ -1,5 +1,6 @@
 import { isLessonUnlocked, createDefaultLearner, recordQuizAnswer } from "../data/curriculum.js";
-import { S } from "../data/strings.js";
+import { S, t } from "../i18n/index.js";
+import { localizeChallenge } from "../i18n/challenges.js";
 
 export function createWorkspaceActionHandlers(deps) {
   const {
@@ -68,7 +69,7 @@ export function createWorkspaceActionHandlers(deps) {
       state.project.currentWorkspaceId = openButton.dataset.openWorkspace;
       state.selectedNodeId = null;
       state.pendingConnection = null;
-      setStatus(`Workspace "${getCurrentWorkspace().name}" geopend.`);
+      setStatus(t("status.workspaceOpened", { name: getCurrentWorkspace().name }));
       render();
       return;
     }
@@ -128,12 +129,12 @@ export function createWorkspaceActionHandlers(deps) {
         !(learner.completedChallengeIds || []).includes(challenge.id)
     );
     if (!next) {
-      setStatus("Alle beschikbare lessen zijn afgerond.");
+      setStatus(t("status.allLessonsDone"));
       renderChallenges();
       return;
     }
     state.selectedChallengeId = next.id;
-    setStatus(`Les geselecteerd: ${next.title}.`);
+    setStatus(t("status.lessonSelected", { title: localizeChallenge(next).title }));
     renderChallenges();
   }
 
@@ -181,7 +182,7 @@ export function createWorkspaceActionHandlers(deps) {
     const openButton = event.target.closest("[data-open-challenge]");
     if (openButton) {
       if (openButton.disabled || !isChallengeUnlocked(openButton.dataset.openChallenge)) {
-        setStatus("Deze les is nog vergrendeld. Rond eerst de vorige les af, of zet vrije modus aan.");
+        setStatus(t("status.lessonLocked"));
         return;
       }
       openChallengeWorkspace(openButton.dataset.openChallenge);
@@ -191,7 +192,7 @@ export function createWorkspaceActionHandlers(deps) {
     const submitButton = event.target.closest("[data-submit-challenge]");
     if (submitButton) {
       if (submitButton.disabled || !isChallengeUnlocked(submitButton.dataset.submitChallenge)) {
-        setStatus("Deze les is nog vergrendeld. Submit is pas mogelijk na unlock.");
+        setStatus(t("status.submitLocked"));
         return;
       }
       submitChallenge(submitButton.dataset.submitChallenge);
@@ -223,10 +224,11 @@ export function createWorkspaceActionHandlers(deps) {
       return;
     }
     const unlocked = isChallengeUnlocked(selectedChallenge.id);
+    const title = localizeChallenge(selectedChallenge).title;
     dom.challengeStartButton.disabled = !unlocked;
     dom.challengeStartButton.textContent = unlocked
-      ? `${S.start} ${selectedChallenge.title}`
-      : `${S.locked}: ${selectedChallenge.title}`;
+      ? `${S.start} ${title}`
+      : `${S.locked}: ${title}`;
   }
 
   function updateChallengeSubmitButton() {
@@ -248,7 +250,7 @@ export function createWorkspaceActionHandlers(deps) {
       return;
     }
     if (!isChallengeUnlocked(state.selectedChallengeId)) {
-      setStatus("Deze les is nog vergrendeld. Rond eerst de vorige les af, of zet vrije modus aan.");
+      setStatus(t("status.lessonLocked"));
       renderChallenges();
       return;
     }
@@ -261,14 +263,14 @@ export function createWorkspaceActionHandlers(deps) {
       const fallbackChallenge = challenges.find((item) => item.id === state.selectedChallengeId);
       setStatus(
         fallbackChallenge
-          ? `Open eerst de actieve sheet voor ${fallbackChallenge.title} en lever die daarna in.`
-          : "Open eerst een challenge-sheet om hem in te leveren."
+          ? t("status.openSheetFirst", { title: localizeChallenge(fallbackChallenge).title })
+          : t("status.openChallengeFirst")
       );
       render();
       return;
     }
     if (!isChallengeUnlocked(challenge.id)) {
-      setStatus("Deze les is nog vergrendeld. Submit is pas mogelijk na unlock.");
+      setStatus(t("status.submitLocked"));
       return;
     }
     submitChallenge(challenge.id);
@@ -281,11 +283,7 @@ export function createWorkspaceActionHandlers(deps) {
     }
     const learner = getLearner();
     learner.unlockedAll = Boolean(freeModeToggle.checked);
-    setStatus(
-      learner.unlockedAll
-        ? "Vrije modus aan — alle lessen zijn startbaar."
-        : "Vrije modus uit — leerpad-gating hersteld."
-    );
+    setStatus(learner.unlockedAll ? t("status.freeModeOn") : t("status.freeModeOff"));
     renderChallenges();
   }
 

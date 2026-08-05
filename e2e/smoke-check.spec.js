@@ -27,9 +27,9 @@ test.describe("Leerapp smoke", () => {
     await expect(page.locator("#course-view")).toBeVisible();
   });
 
-  test("cursus 'Ga verder' opent les 1 met tutorial", async ({ page }) => {
+  test("cursus Continue opent les 1 met tutorial", async ({ page }) => {
     const continueBtn = page
-      .locator("#course-view button", { hasText: /Ga verder|Start/ })
+      .locator("#course-view button", { hasText: /Continue|Ga verder|Start/ })
       .first();
     await continueBtn.click();
     await expect(page.locator(".workspace-frame")).toBeVisible();
@@ -72,12 +72,13 @@ test.describe("Leerapp smoke", () => {
     await expect(playButton).not.toHaveClass(/is-running/);
   });
 
-  test("leskaart heeft tabbladen Theorie/Hints/Tests", async ({ page }) => {
+  test("leskaart heeft tabbladen Theory/Hints/Tests", async ({ page }) => {
     await page.locator('.app-view-tab[data-app-view="workspace"]').click();
     await page.locator('[data-select-challenge="nand"]').click();
 
     const tabs = page.locator(".challenge-detail-card .challenge-tab");
     await expect(tabs).toHaveCount(3);
+    await expect(tabs.nth(0)).toContainText(/Theory|Theorie/);
 
     await page.locator('[data-challenge-tab="hints"]').click();
     await expect(page.locator(".challenge-detail-card .challenge-hints")).toBeVisible();
@@ -87,6 +88,15 @@ test.describe("Leerapp smoke", () => {
 
     await page.locator('[data-challenge-tab="theorie"]').click();
     await expect(page.locator(".challenge-detail-card .theory-body")).toBeVisible();
+  });
+
+  test("taalschakelaar EN→NL verandert chrome-tekst", async ({ page }) => {
+    await expect(page.locator('.app-view-tab[data-app-view="course"]')).toContainText("Course");
+    await page.locator('[data-set-locale="nl"]').click();
+    await expect(page.locator('.app-view-tab[data-app-view="course"]')).toContainText("Cursus");
+    await expect(page.locator('.app-view-tab[data-app-view="workspace"]')).toContainText("Werkplaats");
+    await page.locator('[data-set-locale="en"]').click();
+    await expect(page.locator('.app-view-tab[data-app-view="course"]')).toContainText("Course");
   });
 
   test("ROM-node inspector accepteert programma", async ({ page }) => {

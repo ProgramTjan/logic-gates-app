@@ -1,13 +1,19 @@
 /**
- * Guided walkthrough voor les 1 (NAND).
- * Alleen UI + state-observatie — geen sim-modules.
+ * Guided walkthrough for lesson 1 (NAND).
+ * UI + state observation only — no sim modules.
  */
+
+import { t } from "../i18n/index.js";
 
 const NAND_LESSON_ID = "nand";
 
 function ensureOverlay() {
   let root = document.getElementById("tutorial-root");
   if (root) {
+    const skip = root.querySelector("[data-tutorial-skip]");
+    if (skip) {
+      skip.textContent = t("tutorialSkip");
+    }
     return root;
   }
   root = document.createElement("div");
@@ -20,7 +26,9 @@ function ensureOverlay() {
       <p class="tutorial-coach-text" data-tutorial-text></p>
       <div class="tutorial-coach-actions">
         <span class="tutorial-step-indicator" data-tutorial-step></span>
-        <button type="button" class="ghost-button tutorial-skip" data-tutorial-skip>Overslaan</button>
+        <button type="button" class="ghost-button tutorial-skip" data-tutorial-skip>${t(
+          "tutorialSkip"
+        )}</button>
       </div>
     </div>
   `;
@@ -62,7 +70,7 @@ export function createTutorial(deps) {
   const steps = [
     {
       id: "place-nand",
-      text: "Open Parts en plaats een NAND-gate op het canvas.",
+      textKey: "tutorialPlaceNand",
       getTarget() {
         const dropdown = document.querySelector(".parts-dropdown");
         const nandBtn = document.querySelector('[data-part-type="gate-nand"]');
@@ -77,7 +85,7 @@ export function createTutorial(deps) {
     },
     {
       id: "wire-a",
-      text: "Verbind Input A met de NAND-gate: klik eerst de output-pin van A, daarna een input-pin van de gate.",
+      textKey: "tutorialWireA",
       getTarget() {
         const workspace = getCurrentWorkspace();
         const inputA = findInputPin(workspace, "A");
@@ -98,7 +106,7 @@ export function createTutorial(deps) {
     },
     {
       id: "wire-out",
-      text: "Verbind de NAND-gate met OUT: klik de gate-output, daarna de input-pin van OUT.",
+      textKey: "tutorialWireOut",
       getTarget() {
         const workspace = getCurrentWorkspace();
         const nand = findNandGate(workspace);
@@ -119,7 +127,7 @@ export function createTutorial(deps) {
     },
     {
       id: "toggle-a",
-      text: "Toggle Input A en kijk hoe het lampje / de signalen veranderen.",
+      textKey: "tutorialToggleA",
       getTarget() {
         const workspace = getCurrentWorkspace();
         const inputA = findInputPin(workspace, "A");
@@ -139,7 +147,7 @@ export function createTutorial(deps) {
     },
     {
       id: "submit",
-      text: "Klik Submit om je NAND-chip te laten controleren. (Tip: verbind ook Input B voor een volledige oplossing.)",
+      textKey: "tutorialSubmit",
       getTarget() {
         return (
           document.querySelector('[data-submit-challenge="nand"]') ||
@@ -245,11 +253,15 @@ export function createTutorial(deps) {
     root.hidden = false;
     const textEl = root.querySelector("[data-tutorial-text]");
     const stepEl = root.querySelector("[data-tutorial-step]");
+    const skipEl = root.querySelector("[data-tutorial-skip]");
     if (textEl) {
-      textEl.textContent = step.text;
+      textEl.textContent = t(step.textKey);
     }
     if (stepEl) {
-      stepEl.textContent = `Stap ${stepIndex + 1}/${steps.length}`;
+      stepEl.textContent = t("tutorialStep", { n: stepIndex + 1, total: steps.length });
+    }
+    if (skipEl) {
+      skipEl.textContent = t("tutorialSkip");
     }
     positionCoach(step.getTarget());
   }
@@ -268,7 +280,7 @@ export function createTutorial(deps) {
     if (stepIndex >= steps.length) {
       stop();
       if (typeof setStatus === "function") {
-        setStatus("Walkthrough voltooid — goed gedaan!");
+        setStatus(t("tutorialDone"));
       }
       return;
     }
@@ -321,7 +333,7 @@ export function createTutorial(deps) {
     learner.tutorialDismissed = true;
     stop();
     if (typeof setStatus === "function") {
-      setStatus("Walkthrough overgeslagen.");
+      setStatus(t("tutorialSkipped"));
     }
   }
 

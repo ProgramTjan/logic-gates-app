@@ -44,7 +44,7 @@ import { createEventBinder } from "./src/ui/boot.js";
 import { createAppModals } from "./src/ui/app-modal.js";
 import { createTutorial } from "./src/ui/tutorial.js";
 import { createCourseRenderers } from "./src/ui/course.js";
-import { S } from "./src/data/strings.js";
+import { S, t, initLocale, setLocale, applyStaticI18n } from "./src/i18n/index.js";
 import { createUndoManager } from "./src/actions/undo.js";
 import { createCircuitMutations } from "./src/actions/circuit-mutations.js";
 import { createWorkspaceMutations } from "./src/actions/workspace-mutations.js";
@@ -501,6 +501,7 @@ import {
     interactionHandlers,
     courseRenderers,
     setAppView,
+    changeLocale,
     handlers: {
       undo,
       redo,
@@ -545,8 +546,20 @@ import {
     },
   };
 
+  function changeLocale(code) {
+    setLocale(code);
+    applyStaticI18n();
+    syncClockRunnerUi({
+      running: runtimeActions.clockRunner.isRunning(),
+      hz: runtimeActions.clockRunner.getSpeed(),
+    });
+    renderFull();
+  }
+
   async function initializeApp() {
     try {
+      initLocale();
+      applyStaticI18n();
       await projectIo.tryLoadProjectFromShareHash();
       const fresh =
         !state.project.learner?.completedChallengeIds ||
@@ -569,7 +582,7 @@ import {
       render();
       eventBinder.bindEvents();
       projectIo.showOnboardingIfNeeded();
-      setStatus("Project reset na laadfout. Je werkt nu in een schoon project.");
+      setStatus(t("status.projectReset"));
     }
   }
 
@@ -580,7 +593,7 @@ import {
   function saveProject() {
     const result = saveProjectState(state.project, localStorage);
     if (result && result.ok === false && result.reason === "quota") {
-      setStatus("Opslaan mislukt — exporteer je project als backup");
+      setStatus(t("status.quota"));
     }
   }
 

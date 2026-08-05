@@ -1,3 +1,5 @@
+import { t } from "../i18n/index.js";
+
 export function createCircuitMutations(deps) {
   const {
     state,
@@ -47,7 +49,9 @@ export function createCircuitMutations(deps) {
       toNodeId,
       toPin,
     });
-    return { ok: true, message: "Verbinding toegevoegd." };
+    const fromLabel = `${sourceNode.config.label || sourceNode.type}.${fromPin}`;
+    const toLabel = `${targetNode.config.label || targetNode.type}.${toPin}`;
+    return { ok: true, message: t("status.wireConnected", { from: fromLabel, to: toLabel }) };
   }
 
   function deleteNode(nodeId) {
@@ -67,7 +71,7 @@ export function createCircuitMutations(deps) {
       state.quickDeleteNodeId = null;
     }
     state.pendingConnection = null;
-    setStatus(`Node "${node.config.label || node.type}" verwijderd.`);
+    setStatus(t("status.nodeDeleted"));
     renderWorkspace();
   }
 
@@ -75,7 +79,7 @@ export function createCircuitMutations(deps) {
     const workspace = getCurrentWorkspace();
     pushUndo();
     workspace.wires = workspace.wires.filter((wire) => wire.id !== wireId);
-    setStatus("Verbinding verwijderd.");
+    setStatus(t("status.wireRemoved"));
     renderWorkspace();
   }
 

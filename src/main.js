@@ -53,6 +53,12 @@ function registerServiceWorker() {
 function notifyUpdateAvailable() {
   const statusLine = document.getElementById("status-line");
   if (statusLine) {
-    statusLine.textContent = "Nieuwe versie beschikbaar — ververs de pagina.";
+    import("./i18n/index.js")
+      .then(({ t }) => {
+        statusLine.textContent = t("status.updateAvailable");
+      })
+      .catch(() => {
+        statusLine.textContent = "New version available — refresh the page.";
+      });
   }
 }
