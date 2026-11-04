@@ -1351,6 +1351,39 @@ const nandNl = localizeChallenge(nand, "nl");
 assert("nand NL description", /eigen NAND-chip/i.test(nandNl.description));
 setLocale("en", { storage: memStore });
 
+// ─── Lesson palette (UX fase B) ───────────────────────────────────────────
+console.log("\nSectie: lesson palette");
+import { getLessonPartTypes, getPartsUnlockedBy } from "../src/model/lesson-palette.js";
+
+const lpNot = REAL_CHALLENGES.find((c) => c.id === "not");
+const lpAnd = REAL_CHALLENGES.find((c) => c.id === "and");
+const lpXorNand = REAL_CHALLENGES.find((c) => c.id === "xor-nand-only");
+const lpRam = REAL_CHALLENGES.find((c) => c.verification === "sequential-script");
+const lpWide = REAL_CHALLENGES.find((c) =>
+  [...(c.template?.inputs || []), ...(c.template?.outputs || [])].some((p) => typeof p === "object" && p.width > 1)
+);
+
+const fresh = getLessonPartTypes(lpNot, { completedChallengeIds: ["nand"] });
+assert("palette: NOT-les biedt NAND", fresh.available.includes("gate-nand"));
+assert("palette: NOT-les biedt geen NOT", !fresh.available.includes("gate-not"));
+assert("palette: AND nog vergrendeld", fresh.locked.some((l) => l.type === "gate-and"));
+assert("palette: geen schakelaar/lamp in les", !fresh.available.includes("switch") && !fresh.available.includes("lamp"));
+assert("palette: geen klok in combinatorische les", !fresh.available.includes("clock"));
+
+const afterNot = getLessonPartTypes(lpAnd, { completedChallengeIds: ["nand", "not"] });
+assert("palette: NOT vrij na les NOT", afterNot.available.includes("gate-not"));
+assert("palette: AND-les biedt geen AND", !afterNot.available.includes("gate-and"));
+
+const xn = getLessonPartTypes(lpXorNand, { completedChallengeIds: ["nand", "not", "and", "or", "xor"] });
+assert("palette: alleen-NAND-les toont geen AND/OR", !xn.available.includes("gate-and") && !xn.available.includes("gate-or"));
+assert("palette: alleen-NAND-les biedt NAND", xn.available.includes("gate-nand"));
+
+assert("palette: sequentiële les biedt klok+register", getLessonPartTypes(lpRam, {}).available.includes("register"));
+assert("palette: brede les biedt splitter/joiner", getLessonPartTypes(lpWide, {}).available.includes("splitter"));
+assert("palette: vrije modus biedt alle poorten", getLessonPartTypes(lpNot, { unlockedAll: true }).available.includes("gate-and"));
+assert("palette: computer-les biedt ROM", getLessonPartTypes(REAL_CHALLENGES.find((c) => c.id === "computer"), {}).available.includes("rom"));
+assert("palette: les OR ontgrendelt OR en NOR", getPartsUnlockedBy("or").includes("gate-or") && getPartsUnlockedBy("or").includes("gate-nor"));
+
 console.log("\n" + "-".repeat(44));
 console.log("Totaal: " + passed + " geslaagd, " + failed + " mislukt");
 if (failed > 0) {

@@ -64,24 +64,34 @@ Inhoudelijk is de app ver (40 lessen, unlock-gating, quiz, walkthrough les 1, kl
 ---
 
 ### Bevindingen tijdens fase A (meenemen in latere fases)
-- Nieuwe onderdelen landen op een vaste positie, soms buiten beeld als het canvas gescrold is → **B.2**: plaats nieuwe onderdelen in het zichtbare deel van het canvas.
+- ~~Nieuwe onderdelen landen op een vaste positie, soms buiten beeld~~ → opgelost in B.2.
 - Elke "Controleer" maakt een nieuwe chipversie; de chipbibliotheek groeit snel → **E**: alleen een nieuwe versie bij een gewijzigde schakeling.
 - NL-strings in EN-modus: `Nog geen eigen oplossing opgeslagen`, `functionele tests geslaagd` (verificatiesamenvatting) → **E**.
 
 ---
 
-## FASE B — Lesmodus als stappenflow
+## FASE B — Lesmodus als stappenflow ✅ gedaan 2026-11-04
 
 ### Stap B.1: Lespaneel in stappen
 Vervang tabs (Theorie/Hints/Tests) door een verticale flow: **Doel → Snap het (theorie, kort) → Bouw → Controleer → Begrepen? (quiz) → Volgende les**. Eén primaire knop per stap. Theorie inklapbaar na de eerste keer. Na geslaagd: "Volgende les →" + "Terug naar overzicht".
 
 ### Stap B.2: Gefilterd onderdelenpalet
-Challenge-schema krijgt `palette: string[]` (part-types + toegestane chips). Lesson-view toont alleen die onderdelen; default afgeleid uit `gateConstraint` + eerder voltooide chips. Sandbox toont alles.
+Lesson-view toont alleen relevante onderdelen; sandbox toont alles. Uitgewerkt in `src/model/lesson-palette.js` (pure functie, getest in `scripts/verify.js`):
+- Altijd: Input, Output, NAND (tenzij `gateConstraint` anders zegt).
+- Ingebouwde poorten komen vrij zodra je de les hebt afgerond die ze bouwt (NOT na "not", AND na "and", OR/NOR na "or", XOR na "xor"); de poort die je in de les zelf bouwt nooit. Vrije modus biedt alles. Nog niet beschikbare poorten staan als "Leer je later" in het palet.
+- Splitter/Joiner bij brede pins, Clock/Register bij sequentiële lessen, plus node-types uit `template.nodes` (ROM/Screen in de computer-les).
+- Chips: alleen je eigen chips; starter-chips (NAND/Half/Full Adder) alleen in Vrij bouwen.
+- Nieuwe onderdelen landen op een vrije plek binnen het zichtbare canvas.
 
 ### Stap B.3: Live controle
 "Controleer" toont de testtabel inline (groen/rood per rij) in de Controleer-stap; geen aparte Tests-tab. Bij falen: eerste falende rij uitgelicht + bijbehorende hint.
 
-**Acceptatie:** les 1–3 doorlopen zonder ooit de pagina te scrollen op 1440×900; geen tabs meer.
+**Acceptatie:** les 1–3 doorlopen zonder ooit de pagina te scrollen op 1440×900 (lespaneel scrollt intern); geen tabs meer.
+
+### Bevindingen tijdens fase B (meenemen in latere fases)
+- Inspector-kaart is op staande tablet te groot en bedekt het canvas → **D**: compacte/inklapbare inspector op smalle schermen.
+- NL-beschrijvingen van onderdelen in EN-modus ("Publieke chipinput" e.d. in `builtinParts.js`) → **E**.
+- Starter-chips zijn in een les-sheet nog wel via oude sheets/plakken bruikbaar en tellen dan mee in de verificatie → **E** (verificatie laten weigeren).
 
 ---
 

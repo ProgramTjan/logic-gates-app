@@ -1,5 +1,28 @@
 /** Dutch UI dictionary. */
 export default {
+  // Lesson flow (UX fase B)
+  stepGoal: "Doel",
+  stepTheory: "Snap het",
+  stepBuild: "Bouw",
+  stepCheck: "Controleer",
+  stepQuiz: "Begrepen?",
+  stepNext: "Verder",
+  theoryRead: "Lees de uitleg",
+  theoryHide: "Verberg de uitleg",
+  buildInstruction: "Je inputs en outputs staan al op het canvas. Voeg onderdelen toe via Parts en verbind ze.",
+  hintShow: "Toon een hint ({n}/{total})",
+  liveColNow: "Nu",
+  livePassing: "{passed} van {total} rijen kloppen — bouw verder.",
+  liveAllPass: "Alle rijen kloppen. Klik op Controleer mijn schakeling om de les af te ronden.",
+  liveNeedsInterface: "Verbind je schakeling met de output-pins om live resultaten te zien.",
+  liveSequential: "Deze les wordt over meerdere klokticks gecontroleerd — test hem met Controleer mijn schakeling.",
+  nextLocked: "Haal de controle om verder te gaan.",
+  backToOverview: "Terug naar overzicht",
+  unlockedParts: "Nieuw in je onderdelen: {parts}",
+  paletteForLesson: "Voor deze les",
+  paletteLater: "Leer je later:",
+  paletteLockedTitle: "Beschikbaar na de les “{title}”",
+  paletteSandboxNote: "In Vrij bouwen zijn alle onderdelen beschikbaar.",
   // App shell (UX fase A)
   navLessons: "Lessen",
   navSandbox: "Vrij bouwen",
