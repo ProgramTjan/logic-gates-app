@@ -427,3 +427,19 @@
 **Aannames:** "les 0" bestaat nog niet; tot fase C geldt de eerste les van het curriculum als ontgrendelvoorwaarde. Simulatie/verificatie niet aangeraakt.
 
 **Resultaat:** groen — `npm test` 141/141, `npm run check` OK, e2e 15/15; geen horizontale overflow op 390/820/1180/1440px.
+
+---
+
+## 2026-11-04 — UX fase B: lespaneel als stappenflow
+
+**Uitgevoerd:**
+- `src/ui/panels.js`: tabs (Theory/Hints/Tests) vervangen door verticale stappen Doel → Snap het → Bouw → Controleer → Begrepen? → Verder, met status per stap (✓ / huidig / komt nog). Theorie inklapbaar (open tot de les af is, keuze onthouden), hintladder (één hint per klik), interface-regel (`A, B → OUT`), "Nieuw in je onderdelen" na afronden, "Opnieuw beginnen" als subtiele link.
+- Live controle: voor combinatorische lessen wordt de huidige sheet als tijdelijke chip doorgerekend (zonder opslaan) en toont een testtabel met ✓/✗ per rij; eerste foute rij uitgelicht. Pas zichtbaar als alle outputs verbonden zijn. Debounced ververst bij elke wijziging op het canvas.
+- `src/model/lesson-palette.js` (nieuw): onderdelen per les; poorten komen vrij na de les die ze bouwt. Starter-chips verborgen in lessen.
+- `src/actions/workspace-mutations.js`: nieuwe onderdelen op een vrije plek binnen het zichtbare canvas.
+- Truth-probe-tabel (op basis van opgeslagen chip) vervangen door de live controle.
+- Tests: 14 nieuwe unit-tests (palet), e2e-test voor stappen/hints/palet/live controle.
+
+**Aannames:** poort-ontgrendeling is een UX-filter, geen verificatie-eis; vrije modus biedt alle poorten.
+
+**Resultaat:** groen — `npm test` 155/155, `npm run check` OK, e2e 15/15.

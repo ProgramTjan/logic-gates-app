@@ -3144,3 +3144,281 @@ h2 {
     justify-content: flex-end;
   }
 }
+
+/* =============================================
+   LESSON FLOW — vertical steps (UX fase B)
+   ============================================= */
+
+.lesson-flow .challenge-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lesson-flow .challenge-head h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.lesson-flow > .challenge-copy {
+  margin: 0.35rem 0 0.8rem;
+}
+
+.lesson-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.lesson-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr);
+  gap: 0.65rem;
+  padding-bottom: 1rem;
+}
+
+/* Connector line between step markers. */
+.lesson-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: calc(0.85rem - 1px);
+  top: 1.8rem;
+  bottom: 0.15rem;
+  width: 2px;
+  background: var(--panel-border);
+}
+
+.lesson-step-marker {
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--ghost-bg);
+  border: 1px solid var(--panel-border);
+}
+
+.lesson-step.is-done .lesson-step-marker {
+  color: var(--signal-high);
+  background: color-mix(in srgb, var(--signal-high) 16%, transparent);
+  border-color: color-mix(in srgb, var(--signal-high) 45%, transparent);
+}
+
+.lesson-step.is-current .lesson-step-marker {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.lesson-step-title {
+  margin: 0.25rem 0 0.4rem;
+  font-size: 0.92rem;
+}
+
+.lesson-step:not(.is-current):not(.is-done) .lesson-step-title {
+  color: var(--muted);
+}
+
+.lesson-step-copy,
+.lesson-goal-text {
+  margin: 0 0 0.45rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.lesson-step-copy.muted {
+  color: var(--muted);
+}
+
+.lesson-interface {
+  margin: 0 0 0.55rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.lesson-interface span {
+  color: var(--ink);
+}
+
+.lesson-theory > summary {
+  cursor: pointer;
+  font-size: 0.84rem;
+  color: var(--accent);
+}
+
+.lesson-theory .theory-body {
+  margin-top: 0.45rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.hint-list {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.hint-list li + li {
+  margin-top: 0.25rem;
+}
+
+.hint-button {
+  font-size: 0.82rem;
+  padding: 0.35rem 0.65rem;
+}
+
+/* Live check */
+.live-check {
+  margin-bottom: 0.55rem;
+}
+
+.live-check-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.live-check-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.83rem;
+  margin-bottom: 0.45rem;
+}
+
+.live-check-summary.ok {
+  color: var(--signal-high);
+}
+
+.live-check-meter {
+  flex: none;
+  width: 2.6rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--signal-high) calc(var(--ratio, 0) * 100%), transparent 0),
+    var(--ghost-bg);
+}
+
+.live-check-table-wrap {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+}
+
+.live-check-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+
+.live-check-table th,
+.live-check-table td {
+  text-align: left;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.live-check-table th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.live-check-table .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+}
+
+.live-check-table tr.ok .live-mark {
+  color: var(--signal-high);
+}
+
+.live-check-table tr.bad .live-mark {
+  color: var(--warning);
+}
+
+.live-check-table tr.first-fail {
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.lesson-check-button {
+  margin-top: 0.15rem;
+}
+
+.lesson-unlocked-parts {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--signal-high);
+}
+
+.lesson-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.lesson-next-actions .ghost-button {
+  flex: 1;
+}
+
+.lesson-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.2rem;
+}
+
+.link-button {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 0.2rem 0.3rem;
+  font-size: 0.8rem;
+}
+
+.link-button:hover:not(:disabled) {
+  background: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.lesson-panel .submit-feedback {
+  margin: 0 0 0.5rem;
+}
+
+/* Parts palette: what you learn later */
+.palette-later {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.palette-later-part {
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px dashed var(--panel-border);
+}
+
+.palette-sandbox-note {
+  grid-column: 1 / -1;
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}

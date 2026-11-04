@@ -162,6 +162,8 @@ import {
     renderedWorkspaceId: null,
     canvasScroll: {},
     sheetListSignature: "",
+    hintsShown: {},
+    theoryOpen: {},
     lessonPanelCollapsed: false,
     challengeDetailTab: "theorie",
     lastSubmitFeedback: null,
@@ -322,6 +324,12 @@ import {
     tutorial,
     stopClockRunner: () => runtimeActions.clockRunner.stop(),
     showCompletionOverlay: null,
+    getVisibleStageRect: () => ({
+      x: dom.canvas.scrollLeft / state.zoom,
+      y: dom.canvas.scrollTop / state.zoom,
+      width: dom.canvas.clientWidth / state.zoom,
+      height: dom.canvas.clientHeight / state.zoom,
+    }),
   };
   const workspaceMutations = createWorkspaceMutations(workspaceMutationDeps);
 
@@ -547,6 +555,7 @@ import {
     state.selectedChallengeId = challengeId;
     state.lastSubmitFeedback = null;
     state.lessonPanelCollapsed = false;
+    dom.challengeList.scrollTop = 0;
     const existing = fresh ? null : findLatestLessonWorkspace(challengeId);
     if (existing) {
       state.project.currentWorkspaceId = existing.id;
@@ -561,6 +570,7 @@ import {
       state.appView = "lesson";
       workspaceMutations.openChallengeWorkspace(challengeId);
     }
+    dom.challengeList.scrollTop = 0;
     window.scrollTo(0, 0);
   }
 
@@ -619,6 +629,9 @@ import {
     if (!workspace) {
       return;
     }
+    if (state.appView === "lesson") {
+      scheduleLiveCheck();
+    }
     if (state.appView === "sandbox") {
       const signature = state.project.workspaces
         .map((item) => `${item.id}:${item.nodes.length}:${item.wires.length}:${item.name}`)
@@ -649,6 +662,40 @@ import {
       dom.checksCard.hidden = !errors || errors.length === 0;
     }
   }
+
+  /** Transient chip definition of the current sheet, for live testing without saving. */
+  function buildLiveDefinition() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace) {
+      return null;
+    }
+    const iface = chipDefinitionsService.extractChipInterface(workspace);
+    if (iface.errors.length) {
+      return { error: iface.errors[0].message };
+    }
+    // Only show live results once every output pin is actually driven by the circuit.
+    const outputIds = workspace.nodes.filter((node) => node.type === "output-pin").map((node) => node.id);
+    const allOutputsWired = outputIds.every((id) => workspace.wires.some((wire) => wire.toNodeId === id));
+    if (!allOutputsWired) {
+      return { error: "outputs-unwired" };
+    }
+    return {
+      definition: {
+        id: `live-${workspace.id}`,
+        name: workspace.name,
+        version: 0,
+        inputs: iface.inputs,
+        outputs: iface.outputs,
+        circuitSnapshot: { id: `live-${workspace.id}`, name: workspace.name, nodes: workspace.nodes, wires: workspace.wires, meta: {} },
+      },
+    };
+  }
+
+  const scheduleLiveCheck = debounce(() => {
+    if (state.appView === "lesson") {
+      panelRenderers.refreshLiveCheck();
+    }
+  }, 200);
 
   function toggleLessonPanel() {
     state.lessonPanelCollapsed = !state.lessonPanelCollapsed;
@@ -689,6 +736,7 @@ import {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    buildLiveDefinition,
     getActiveChallengeId: () => {
       const challenge = workspaceMutations.getActiveWorkspaceChallenge();
       return challenge ? challenge.id : null;
@@ -835,6 +883,14 @@ import {
           setAppView(navButton.dataset.nav);
           return;
         }
+        const hintButton = event.target.closest("[data-reveal-hint]");
+        if (hintButton) {
+          event.stopImmediatePropagation();
+          const id = hintButton.dataset.revealHint;
+          state.hintsShown[id] = (state.hintsShown[id] || 0) + 1;
+          panelRenderers.renderChallenges();
+          return;
+        }
         const nextButton = event.target.closest("[data-next-lesson]");
         if (nextButton) {
           event.stopImmediatePropagation();
@@ -846,6 +902,20 @@ import {
     if (dom.lessonPanelHandle) {
       dom.lessonPanelHandle.addEventListener("click", toggleLessonPanel);
     }
+    dom.challengeList.addEventListener(
+      "toggle",
+      (event) => {
+        const details = event.target;
+        if (details && details.dataset && details.dataset.theoryToggle) {
+          state.theoryOpen[details.dataset.theoryToggle] = details.open;
+          const summary = details.querySelector("summary");
+          if (summary) {
+            summary.textContent = details.open ? t("theoryHide") : t("theoryRead");
+          }
+        }
+      },
+      true
+    );
     dom.canvas.addEventListener(
       "scroll",
       () => {

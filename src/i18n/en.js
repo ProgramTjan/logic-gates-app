@@ -1,5 +1,28 @@
 /** English UI dictionary (default). */
 export default {
+  // Lesson flow (UX fase B)
+  stepGoal: "Goal",
+  stepTheory: "Understand it",
+  stepBuild: "Build",
+  stepCheck: "Check",
+  stepQuiz: "Did it click?",
+  stepNext: "Next",
+  theoryRead: "Read the explanation",
+  theoryHide: "Hide the explanation",
+  buildInstruction: "Your inputs and outputs are already on the canvas. Add parts via Parts and wire them up.",
+  hintShow: "Show a hint ({n}/{total})",
+  liveColNow: "Now",
+  livePassing: "{passed} of {total} rows correct — keep building.",
+  liveAllPass: "Every row matches. Click Check my circuit to complete the lesson.",
+  liveNeedsInterface: "Connect your circuit to the output pins to see live results.",
+  liveSequential: "This lesson is checked over several clock ticks — use Check my circuit to test it.",
+  nextLocked: "Pass the check to continue.",
+  backToOverview: "Back to overview",
+  unlockedParts: "New in your parts: {parts}",
+  paletteForLesson: "For this lesson",
+  paletteLater: "Learn later:",
+  paletteLockedTitle: "Available after the lesson “{title}”",
+  paletteSandboxNote: "Every part is available in Free build.",
   // App shell (UX fase A)
   navLessons: "Lessons",
   navSandbox: "Free build",
