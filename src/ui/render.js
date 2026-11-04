@@ -80,6 +80,9 @@ export function createRenderOrchestrator(deps) {
     if (save) {
       scheduleSave();
     }
+    if (typeof deps.onWorkspaceRendered === "function") {
+      deps.onWorkspaceRendered();
+    }
     if (deps.tutorial && typeof deps.tutorial.onStateChanged === "function") {
       deps.tutorial.onStateChanged();
     }

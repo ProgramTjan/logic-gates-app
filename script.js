@@ -45,6 +45,8 @@ import { createAppModals } from "./src/ui/app-modal.js";
 import { createTutorial } from "./src/ui/tutorial.js";
 import { createCourseRenderers } from "./src/ui/course.js";
 import { S, t, initLocale, setLocale, applyStaticI18n } from "./src/i18n/index.js";
+import { localizeChallenge } from "./src/i18n/challenges.js";
+import { getOrderedLessonIds } from "./src/data/curriculum.js";
 import { createUndoManager } from "./src/actions/undo.js";
 import { createCircuitMutations } from "./src/actions/circuit-mutations.js";
 import { createWorkspaceMutations } from "./src/actions/workspace-mutations.js";
@@ -89,7 +91,7 @@ import {
     canvas: document.getElementById("workspace-canvas"),
     importInput: document.getElementById("import-input"),
     newWorkspaceButton: document.getElementById("new-workspace-button"),
-    duplicateWorkspaceButton: document.getElementById("duplicate-workspace-button"),
+    duplicateWorkspaceButton: null,
     saveChipButton: document.getElementById("save-chip-button"),
     toggleClocksButton: document.getElementById("toggle-clocks-button"),
     stepRegistersButton: document.getElementById("step-registers-button"),
@@ -114,7 +116,15 @@ import {
     completionSummary: document.getElementById("completion-summary"),
     courseView: document.getElementById("course-view"),
     workspaceFrame: document.querySelector(".workspace-frame"),
-    appViewTabs: document.querySelectorAll("[data-app-view]"),
+    app: document.getElementById("app"),
+    lessonPanel: document.getElementById("lesson-panel"),
+    lessonPanelHandle: document.getElementById("lesson-panel-handle"),
+    lessonPanelHandleLabel: document.getElementById("lesson-panel-handle-label"),
+    navSandbox: document.getElementById("nav-sandbox"),
+    settingsMenu: document.getElementById("settings-menu"),
+    simControls: document.getElementById("sim-controls"),
+    inspectorCard: document.getElementById("inspector-card"),
+    checksCard: document.getElementById("checks-card"),
   };
 
   const { createNode } = createNodeFactory({ allocateId });
@@ -147,7 +157,12 @@ import {
     undoStack: [],
     redoStack: [],
     inspectorUndoPushed: false,
-    appView: "workspace",
+    appView: "home",
+    lastSandboxWorkspaceId: null,
+    renderedWorkspaceId: null,
+    canvasScroll: {},
+    sheetListSignature: "",
+    lessonPanelCollapsed: false,
     challengeDetailTab: "theorie",
     lastSubmitFeedback: null,
     openChipSeries: new Set(),
@@ -207,7 +222,22 @@ import {
   let renderOrchestrator;
 
   function render() {
+    reconcileViewWithWorkspace();
     renderOrchestrator.render();
+    updateViewChrome();
+    restoreCanvasScrollOnSheetSwitch();
+  }
+
+  /** Each sheet keeps its own scroll position; a sheet seen for the first time starts top-left. */
+  function restoreCanvasScrollOnSheetSwitch() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace || workspace.id === state.renderedWorkspaceId) {
+      return;
+    }
+    state.renderedWorkspaceId = workspace.id;
+    const saved = state.canvasScroll[workspace.id] || { left: 0, top: 0 };
+    dom.canvas.scrollLeft = saved.left;
+    dom.canvas.scrollTop = saved.top;
   }
 
   function renderWorkspace(options) {
@@ -406,23 +436,223 @@ import {
     escapeAttribute,
   });
 
+  // ---------------------------------------------------------------------------
+  // App views: home (learning path) · lesson (one lesson + canvas) · sandbox (free build)
+  // ---------------------------------------------------------------------------
+  const APP_VIEWS = ["home", "lesson", "sandbox"];
+  const CLOCKED_NODE_TYPES = new Set(["clock", "register", "rom", "screen", "keyboard"]);
+
+  function isLessonWorkspace(workspace) {
+    return Boolean(workspace && workspace.meta && workspace.meta.challengeId);
+  }
+
+  function isSandboxUnlocked() {
+    const learner = state.project.learner || {};
+    if (learner.unlockedAll) {
+      return true;
+    }
+    const firstLessonId = getOrderedLessonIds()[0];
+    return (learner.completedChallengeIds || []).includes(firstLessonId);
+  }
+
+  function ensureSandboxWorkspace() {
+    const current = getCurrentWorkspace();
+    if (current && !isLessonWorkspace(current)) {
+      state.lastSandboxWorkspaceId = current.id;
+      return;
+    }
+    const remembered = state.lastSandboxWorkspaceId ? getWorkspace(state.lastSandboxWorkspaceId) : null;
+    let target =
+      remembered && !isLessonWorkspace(remembered)
+        ? remembered
+        : state.project.workspaces.find((workspace) => !isLessonWorkspace(workspace));
+    if (!target) {
+      target = createWorkspace(state.project, "Main Workspace");
+      state.project.workspaces.unshift(target);
+    }
+    state.project.currentWorkspaceId = target.id;
+    state.lastSandboxWorkspaceId = target.id;
+    state.selectedNodeId = null;
+    state.selectedNodeIds = [];
+  }
+
+  /** Keeps the view consistent after actions that swap the workspace (delete, import, undo). */
+  function reconcileViewWithWorkspace() {
+    if (!state.project) {
+      return;
+    }
+    if (state.appView === "sandbox") {
+      ensureSandboxWorkspace();
+    } else if (state.appView === "lesson" && !isLessonWorkspace(getCurrentWorkspace())) {
+      state.appView = "home";
+    }
+  }
+
   function setAppView(view) {
-    state.appView = view === "course" ? "course" : "workspace";
+    let next = view === "course" ? "home" : view === "workspace" ? "sandbox" : view;
+    if (!APP_VIEWS.includes(next)) {
+      next = "home";
+    }
+    let explainSandboxLock = false;
+    if (next === "sandbox" && !isSandboxUnlocked()) {
+      setStatus(t("sandboxLockedStatus"));
+      next = "home";
+      explainSandboxLock = true;
+    }
+    if (next === "lesson" && !isLessonWorkspace(getCurrentWorkspace())) {
+      next = "home";
+    }
+    if (next !== state.appView) {
+      runtimeActions.clockRunner.stop();
+    }
+    state.appView = next;
+    if (next === "sandbox") {
+      ensureSandboxWorkspace();
+    }
+    if (next !== "lesson" && typeof tutorial.stop === "function") {
+      tutorial.stop();
+    }
+    if (dom.settingsMenu) {
+      dom.settingsMenu.open = false;
+    }
+    render();
+    if (explainSandboxLock) {
+      const card = dom.courseView && dom.courseView.querySelector(".course-sandbox-card");
+      if (card) {
+        card.classList.remove("attention");
+        void card.offsetWidth;
+        card.classList.add("attention");
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function findLatestLessonWorkspace(challengeId) {
+    const drafts = state.project.workspaces.filter(
+      (workspace) => workspace.meta && workspace.meta.challengeId === challengeId
+    );
+    return drafts.length ? drafts[drafts.length - 1] : null;
+  }
+
+  /** Opens a lesson; resumes its most recent sheet unless `fresh` is requested. */
+  function openLesson(challengeId, { fresh = false } = {}) {
+    const challenge = CHALLENGES.find((item) => item.id === challengeId);
+    if (!challenge || !panelRenderers.isChallengeUnlocked(challenge)) {
+      setStatus(t("status.lessonLocked"));
+      return;
+    }
+    runtimeActions.clockRunner.stop();
+    state.selectedChallengeId = challengeId;
+    state.lastSubmitFeedback = null;
+    state.lessonPanelCollapsed = false;
+    const existing = fresh ? null : findLatestLessonWorkspace(challengeId);
+    if (existing) {
+      state.project.currentWorkspaceId = existing.id;
+      state.selectedNodeId = null;
+      state.selectedNodeIds = [];
+      state.appView = "lesson";
+      render();
+      if (tutorial && typeof tutorial.maybeStart === "function") {
+        tutorial.maybeStart(challengeId);
+      }
+    } else {
+      state.appView = "lesson";
+      workspaceMutations.openChallengeWorkspace(challengeId);
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function nodesNeedClock(nodes, seenDefinitions) {
+    for (const node of nodes || []) {
+      if (CLOCKED_NODE_TYPES.has(node.type)) {
+        return true;
+      }
+      if (node.type === "chip-instance") {
+        const definitionId = node.config && node.config.definitionId;
+        if (definitionId && !seenDefinitions.has(definitionId)) {
+          seenDefinitions.add(definitionId);
+          const definition = getChipDefinition(definitionId);
+          const snapshotNodes = definition && definition.circuitSnapshot ? definition.circuitSnapshot.nodes : [];
+          if (nodesNeedClock(snapshotNodes, seenDefinitions)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Shows only the chrome that matters for the current view and sheet. */
+  function updateViewChrome() {
+    const view = state.appView;
+    if (dom.app) {
+      dom.app.dataset.view = view;
+      dom.app.classList.toggle("lesson-panel-collapsed", view === "lesson" && state.lessonPanelCollapsed);
+    }
     if (dom.courseView) {
-      dom.courseView.hidden = state.appView !== "course";
+      dom.courseView.hidden = view !== "home";
     }
-    if (dom.workspaceFrame) {
-      dom.workspaceFrame.hidden = state.appView !== "workspace";
-    }
-    document.querySelectorAll(".app-view-tab").forEach((tab) => {
-      tab.classList.toggle("active", tab.dataset.appView === state.appView);
+    document.querySelectorAll(".appbar-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.nav === view);
     });
-    if (state.appView === "course" && courseRenderers) {
-      courseRenderers.renderCourse();
+    const sandboxUnlocked = isSandboxUnlocked();
+    if (dom.navSandbox) {
+      dom.navSandbox.classList.toggle("locked", !sandboxUnlocked);
+      dom.navSandbox.setAttribute("aria-disabled", sandboxUnlocked ? "false" : "true");
+      dom.navSandbox.title = sandboxUnlocked ? "" : t("sandboxLockedStatus");
     }
-    if (state.appView === "workspace") {
-      renderWorkspace();
+    if (dom.lessonPanelHandle) {
+      const challenge = workspaceMutations.getActiveWorkspaceChallenge();
+      if (dom.lessonPanelHandleLabel) {
+        dom.lessonPanelHandleLabel.textContent = challenge ? localizeChallenge(challenge).title : "";
+      }
+      dom.lessonPanelHandle.setAttribute("aria-expanded", state.lessonPanelCollapsed ? "false" : "true");
+      dom.lessonPanelHandle.title = state.lessonPanelCollapsed ? t("lessonPanelShow") : t("lessonPanelHide");
     }
+    updateWorkspaceChrome();
+  }
+
+  function updateWorkspaceChrome() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace) {
+      return;
+    }
+    if (state.appView === "sandbox") {
+      const signature = state.project.workspaces
+        .map((item) => `${item.id}:${item.nodes.length}:${item.wires.length}:${item.name}`)
+        .join("|") + `@${workspace.id}`;
+      if (signature !== state.sheetListSignature) {
+        state.sheetListSignature = signature;
+        panelRenderers.renderWorkspaceList(workspace);
+      }
+    }
+    const challenge = workspaceMutations.getActiveWorkspaceChallenge();
+    const sequentialLesson = Boolean(
+      challenge && String(challenge.verification || "").startsWith("sequential")
+    );
+    const showSim =
+      state.appView !== "home" && (sequentialLesson || nodesNeedClock(workspace.nodes, new Set()));
+    if (dom.simControls && dom.simControls.hidden === showSim) {
+      dom.simControls.hidden = !showSim;
+      if (!showSim) {
+        runtimeActions.clockRunner.stop();
+      }
+    }
+    if (dom.inspectorCard) {
+      const hasSelection = workspace.nodes.some((node) => node.id === state.selectedNodeId);
+      dom.inspectorCard.hidden = !hasSelection;
+    }
+    if (dom.checksCard) {
+      const errors = state.lastEvaluation ? state.lastEvaluation.errors : [];
+      dom.checksCard.hidden = !errors || errors.length === 0;
+    }
+  }
+
+  function toggleLessonPanel() {
+    state.lessonPanelCollapsed = !state.lessonPanelCollapsed;
+    updateViewChrome();
   }
 
   let courseRenderers;
@@ -442,10 +672,7 @@ import {
     deleteWorkspace: workspaceMutations.deleteWorkspace,
     editChipAsNewVersion: workspaceMutations.editChipAsNewVersion,
     cloneChipToWorkspace: workspaceMutations.cloneChipToWorkspace,
-    openChallengeWorkspace: (id) => {
-      setAppView("workspace");
-      workspaceMutations.openChallengeWorkspace(id);
-    },
+    openChallengeWorkspace: (id) => openLesson(id, { fresh: true }),
     submitChallenge: workspaceMutations.submitChallenge,
     showCompletionOverlay: projectIo.showCompletionOverlay,
     stopClockRunner: () => runtimeActions.clockRunner.stop(),
@@ -462,19 +689,22 @@ import {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    getActiveChallengeId: () => {
+      const challenge = workspaceMutations.getActiveWorkspaceChallenge();
+      return challenge ? challenge.id : null;
+    },
   });
 
   courseRenderers = createCourseRenderers({
     dom,
-    state,
     CHALLENGES,
     escapeHtml,
     getLearner: () => state.project.learner || { completedChallengeIds: [], badges: [] },
-    openChallengeWorkspace: (id) => {
-      setAppView("workspace");
-      workspaceMutations.openChallengeWorkspace(id);
-    },
+    openLesson,
     setAppView,
+    isSandboxUnlocked,
+    setStatus,
+    renderAll: () => render(),
   });
 
   renderOrchestrator = createRenderOrchestrator({
@@ -492,7 +722,8 @@ import {
     WORKSPACE_BASE_WIDTH,
     WORKSPACE_BASE_HEIGHT,
     tutorial,
-    getAppView: () => state.appView,
+    getAppView: () => (state.appView === "home" ? "course" : state.appView),
+    onWorkspaceRendered: () => updateWorkspaceChrome(),
   });
 
   const eventBinder = createEventBinder({
@@ -560,13 +791,12 @@ import {
     try {
       initLocale();
       applyStaticI18n();
+      const openedFromShareLink = Boolean(parseSharePayloadFromHash(location.hash));
       await projectIo.tryLoadProjectFromShareHash();
-      const fresh =
-        !state.project.learner?.completedChallengeIds ||
-        state.project.learner.completedChallengeIds.length === 0;
-      setAppView(fresh ? "course" : "workspace");
+      state.appView = openedFromShareLink && isSandboxUnlocked() ? "sandbox" : "home";
       render();
       eventBinder.bindEvents();
+      bindShellEvents();
       projectIo.showOnboardingIfNeeded();
     } catch (error) {
       console.error("Forge Logic bootstrap failed, resetting project.", error);
@@ -578,12 +808,66 @@ import {
       state.longPress = null;
       state.panningCanvas = null;
       state.lastEvaluation = null;
-      setAppView("course");
+      state.appView = "home";
       render();
       eventBinder.bindEvents();
+      bindShellEvents();
       projectIo.showOnboardingIfNeeded();
       setStatus(t("status.projectReset"));
     }
+  }
+
+  function bindShellEvents() {
+    document.querySelectorAll(".appbar [data-nav]").forEach((button) => {
+      button.addEventListener("click", () => setAppView(button.dataset.nav));
+    });
+    if (dom.courseView) {
+      dom.courseView.addEventListener("change", courseRenderers.handleCourseChange);
+      dom.courseView.addEventListener("toggle", courseRenderers.handleCourseToggle, true);
+    }
+    // Lesson panel: navigation that the legacy challenge handler doesn't know about.
+    dom.challengeList.addEventListener(
+      "click",
+      (event) => {
+        const navButton = event.target.closest("[data-nav]");
+        if (navButton) {
+          event.stopImmediatePropagation();
+          setAppView(navButton.dataset.nav);
+          return;
+        }
+        const nextButton = event.target.closest("[data-next-lesson]");
+        if (nextButton) {
+          event.stopImmediatePropagation();
+          openLesson(nextButton.dataset.nextLesson);
+        }
+      },
+      true
+    );
+    if (dom.lessonPanelHandle) {
+      dom.lessonPanelHandle.addEventListener("click", toggleLessonPanel);
+    }
+    dom.canvas.addEventListener(
+      "scroll",
+      () => {
+        const workspace = getCurrentWorkspace();
+        if (workspace && workspace.id === state.renderedWorkspaceId) {
+          state.canvasScroll[workspace.id] = { left: dom.canvas.scrollLeft, top: dom.canvas.scrollTop };
+        }
+      },
+      { passive: true }
+    );
+    // Close popovers (settings, parts) when clicking elsewhere or after picking an action.
+    document.addEventListener("click", (event) => {
+      document.querySelectorAll("details.settings-menu[open], details.parts-dropdown[open]").forEach((details) => {
+        if (!details.contains(event.target)) {
+          details.open = false;
+        }
+      });
+      const settingsAction = event.target.closest(".settings-actions button");
+      if (settingsAction && dom.settingsMenu) {
+        dom.settingsMenu.open = false;
+      }
+    });
   }
 
   function loadProject() {

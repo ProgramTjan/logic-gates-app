@@ -1,5 +1,6 @@
 import {
   CURRICULUM,
+  getOrderedLessonIds,
   isLessonUnlocked,
   getRequiredLessonTitle,
 } from "../data/curriculum.js";
@@ -77,6 +78,7 @@ export function createPanelRenderers(deps) {
   function renderWorkspaceList(currentWorkspace) {
     dom.workspaceTitle.textContent = currentWorkspace.name;
     dom.workspaceList.innerHTML = state.project.workspaces
+      .filter((item) => !(item.meta && item.meta.challengeId))
       .map((item) => {
         const nodeCount = item.nodes.length;
         const wireCount = item.wires.length;
@@ -106,7 +108,7 @@ export function createPanelRenderers(deps) {
               t("workspaceDuplicate")
             )}</button>
             <button class="ghost-button" type="button" data-delete-workspace="${item.id}" ${
-              state.project.workspaces.length === 1 ? "disabled" : ""
+              state.project.workspaces.filter((ws) => !(ws.meta && ws.meta.challengeId)).length <= 1 ? "disabled" : ""
             }>${escapeHtml(t("workspaceDelete"))}</button>
           </div>
         </div>`;
@@ -361,6 +363,7 @@ export function createPanelRenderers(deps) {
     const learner = getLearner();
     const unlocked = isChallengeUnlocked(challenge);
     const lessonCompleted = (learner.completedChallengeIds || []).includes(challenge.id);
+    const nextLessonId = getNextLessonId(challenge.id);
     const requiredTitle = unlocked ? null : localizedRequiredTitle(challenge);
     const theoryHtml = (localized.theory || [])
       .map((paragraph) => `<p class="theory-paragraph">${escapeHtml(paragraph)}</p>`)
@@ -461,7 +464,7 @@ export function createPanelRenderers(deps) {
         <div>
           <h3>${unlocked ? "" : "🔒 "}${escapeHtml(localized.title)}</h3>
           <div class="challenge-kicker">${escapeHtml(
-            `${challenge.phase} • ${challenge.inputs} in / ${challenge.outputs} out${constraintKicker}`
+            `${challenge.inputs} in / ${challenge.outputs} out${constraintKicker}`
           )}</div>
         </div>
         <span class="challenge-status">${escapeHtml(
@@ -481,8 +484,19 @@ export function createPanelRenderers(deps) {
         ${goalHtml}
         ${conceptsHtml}
         <div class="challenge-actions">
-          <button class="ghost-button" type="button" data-open-challenge="${challenge.id}" ${disabledAttr}>${S.start}</button>
-          <button class="ghost-button" type="button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${S.submit}</button>
+          ${
+            lessonCompleted && nextLessonId
+              ? `<button class="primary-button" type="button" data-next-lesson="${nextLessonId}">${escapeHtml(
+                  t("lessonNext")
+                )}</button>`
+              : ""
+          }
+          <button class="${lessonCompleted && nextLessonId ? "ghost-button" : "primary-button"}" type="button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
+            t("lessonCheck")
+          )}</button>
+          <button class="ghost-button" type="button" data-open-challenge="${challenge.id}" title="${escapeHtml(
+            t("lessonRestartTitle")
+          )}" ${disabledAttr}>${escapeHtml(t("lessonRestart"))}</button>
           ${
             challenge.id === "computer" && lessonCompleted
               ? `<button class="ghost-button" type="button" data-show-completion-overlay>${S.showCompletion}</button>`
@@ -496,81 +510,61 @@ export function createPanelRenderers(deps) {
     </article>`;
   }
 
-  function renderChallenges() {
-    if (!state.selectedChallengeId && CHALLENGES.length) {
-      state.selectedChallengeId = CHALLENGES[0].id;
+  function getLessonPosition(challengeId) {
+    const module = CURRICULUM.find((item) => item.lessonIds.includes(challengeId));
+    if (!module) {
+      return null;
     }
-    const learner = getLearner();
+    return {
+      module,
+      index: module.lessonIds.indexOf(challengeId),
+      total: module.lessonIds.length,
+    };
+  }
+
+  function getNextLessonId(challengeId) {
+    const order = getOrderedLessonIds(CURRICULUM);
+    const index = order.indexOf(challengeId);
+    if (index < 0 || index + 1 >= order.length) {
+      return null;
+    }
+    const nextId = order[index + 1];
+    const next = CHALLENGES.find((challenge) => challenge.id === nextId);
+    return next && isChallengeUnlocked(next) ? nextId : null;
+  }
+
+  function renderChallenges() {
+    const activeChallengeId =
+      (typeof deps.getActiveChallengeId === "function" && deps.getActiveChallengeId()) ||
+      state.selectedChallengeId ||
+      (CHALLENGES.length ? CHALLENGES[0].id : null);
+    state.selectedChallengeId = activeChallengeId;
+    const challenge = CHALLENGES.find((item) => item.id === activeChallengeId);
+    if (!challenge) {
+      dom.challengeList.innerHTML = "";
+      return;
+    }
     const userDefinitions = state.project.chipDefinitions.filter(
       (definition) => !challengeVerifier.isStarterDefinition(definition)
     );
-    const challengeStates = CHALLENGES.map((challenge) => ({
-      challenge,
-      result: challengeVerifier.evaluateChallengeResult(challenge, userDefinitions),
-      unlocked: isChallengeUnlocked(challenge),
-    }));
-    const completedSet = new Set(learner.completedChallengeIds || []);
-    const displayCompleted = CHALLENGES.filter((challenge) => completedSet.has(challenge.id)).length;
-
-    const moduleMarkup = CURRICULUM.map((module) => {
-      const localizedModule = localizeCurriculumModule(module);
-      const phaseItems = module.lessonIds
-        .map((id) => challengeStates.find((item) => item.challenge.id === id))
-        .filter(Boolean);
-      const phaseDone = phaseItems.filter((item) => completedSet.has(item.challenge.id)).length;
-      const items = phaseItems
-        .map(({ challenge, unlocked }) => {
-          const localized = localizeChallenge(challenge);
-          const active = state.selectedChallengeId === challenge.id;
-          const completed = completedSet.has(challenge.id);
-          const requiredTitle = unlocked ? null : localizedRequiredTitle(challenge);
-          const lockLabel = unlocked
-            ? ""
-            : `<span class="challenge-picker-lock" title="${escapeHtml(
-                requiredTitle ? t("lockNotice", { required: requiredTitle }) : t("locked")
-              )}">🔒</span>`;
-          return `<button class="challenge-picker-item ${completed ? "done" : ""} ${
-            unlocked ? "" : "locked"
-          } ${active ? "active" : ""}"
-            type="button" data-select-challenge="${challenge.id}">
-            <span class="challenge-picker-dot"></span>
-            <span class="challenge-picker-name">${escapeHtml(localized.title)}</span>
-            ${completed ? `<span class="challenge-picker-check">✓</span>` : lockLabel}
-          </button>`;
+    const result = challengeVerifier.evaluateChallengeResult(challenge, userDefinitions);
+    const position = getLessonPosition(challenge.id);
+    const positionLabel = position
+      ? t("lessonPosition", {
+          module: localizeCurriculumModule(position.module).title,
+          n: position.index + 1,
+          total: position.total,
         })
-        .join("");
-      const containsSelected = module.lessonIds.includes(state.selectedChallengeId);
-      return `<details class="challenge-picker-group"${containsSelected ? " open" : ""}>
-        <summary class="challenge-picker-phase">${escapeHtml(localizedModule.title)} <span class="challenge-phase-count">${phaseDone}/${phaseItems.length}</span></summary>
-        ${items}
-      </details>`;
-    }).join("");
-
-    const selected = challengeStates.find(({ challenge }) => challenge.id === state.selectedChallengeId);
-    const detailMarkup = selected
-      ? renderChallengeDetail(selected.challenge, selected.result, userDefinitions)
       : "";
 
-    const freeModeChecked = learner.unlockedAll ? "checked" : "";
-
     dom.challengeList.innerHTML = `
-      <div class="challenge-progress">
-        <span>${escapeHtml(
-          t("completedProgress", { done: displayCompleted, total: CHALLENGES.length })
-        )}</span>
-        <button type="button" class="ghost-button challenge-next-open" data-next-open-challenge>${S.nextOpen}</button>
-        <div class="challenge-progress-bar">
-          <div class="challenge-progress-fill" style="width:${Math.round((displayCompleted / CHALLENGES.length) * 100)}%"></div>
-        </div>
+      <div class="lesson-panel-head">
+        <button type="button" class="ghost-button lesson-back" data-nav="home">${escapeHtml(t("lessonBack"))}</button>
+        <span class="lesson-position">${escapeHtml(positionLabel)}</span>
       </div>
-      <label class="challenge-free-mode">
-        <input type="checkbox" data-toggle-free-mode ${freeModeChecked} />
-        <span>${S.freeMode}</span>
-      </label>
-      <div class="challenge-picker">${moduleMarkup}</div>
-      ${detailMarkup}
+      ${renderChallengeDetail(challenge, result, userDefinitions)}
       <details class="challenge-card how-to-card">
-        <summary class="challenge-kicker theory-kicker how-to-summary">🚀 ${escapeHtml(t("howToTitle"))}</summary>
+        <summary class="challenge-kicker theory-kicker how-to-summary">${escapeHtml(t("howToTitle"))}</summary>
         <div class="how-to-body">
           <p>${t("howTo1")}</p>
           <p>${t("howTo2")}</p>
@@ -596,5 +590,12 @@ export function createPanelRenderers(deps) {
     workspaceActions.updateChallengeSubmitButton();
   }
 
-  return { renderBuiltinPalette, renderWorkspaceList, renderChipLibrary, renderChallenges, isChallengeUnlocked };
+  return {
+    renderBuiltinPalette,
+    renderWorkspaceList,
+    renderChipLibrary,
+    renderChallenges,
+    isChallengeUnlocked,
+    getNextLessonId,
+  };
 }

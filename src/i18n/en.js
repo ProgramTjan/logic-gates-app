@@ -1,5 +1,30 @@
 /** English UI dictionary (default). */
 export default {
+  // App shell (UX fase A)
+  navLessons: "Lessons",
+  navSandbox: "Free build",
+  settingsTitle: "Settings",
+  settingsProject: "Project",
+  themeLabel: "Theme",
+  lessonBack: "← All lessons",
+  lessonPosition: "{module} · lesson {n} of {total}",
+  lessonCheck: "Check my circuit",
+  lessonRestart: "Start over",
+  lessonRestartTitle: "Open a fresh sheet for this lesson",
+  lessonNext: "Next lesson →",
+  lessonDone: "Lesson complete",
+  lessonPanelShow: "Show lesson",
+  lessonPanelHide: "Hide lesson",
+  homeEyebrow: "Learning path",
+  homeTitle: "From NAND to a working computer",
+  homeLead: "Each lesson builds on the previous one. Pick up where you left off, or open a module to revisit a lesson.",
+  homeShowLessons: "Lessons",
+  homeSandboxTitle: "Free build",
+  homeSandboxCopy: "An open workbench with every part and all your chips.",
+  homeSandboxOpen: "Open workbench",
+  homeSandboxLocked: "Unlocks after your first lesson.",
+  sandboxLockedStatus: "Free build unlocks after your first lesson.",
+  lessonCompleted: "Completed",
   // Brand / chrome
   brandEyebrow: "Logic Sandbox",
   brandCopy: "Build gates, make chips, reuse them.",
@@ -138,13 +163,11 @@ export default {
 
   // Onboarding / completion
   onboardingTitle: "Welcome to Forge Logic",
-  onboardingLead: "How to get started:",
-  onboardingStep1: "Open <strong>Parts</strong> and add gates or chips.",
-  onboardingStep2:
-    "Click an <strong>output pin</strong>, then an <strong>input pin</strong> to connect.",
-  onboardingStep3: "Use <strong>Snapshot</strong> to save a sheet as a chip.",
-  onboardingStep4:
-    "Pick a <strong>lesson</strong> on the right → <em>Start</em> → build → <em>Submit</em>.",
+  onboardingLead: "Learn by building — every lesson walks you through it:",
+  onboardingStep1: "<strong>Continue</strong> on the overview opens your next lesson.",
+  onboardingStep2: "Add components from <strong>Parts</strong>.",
+  onboardingStep3: "Click an <strong>output pin</strong>, then an <strong>input pin</strong> to connect.",
+  onboardingStep4: "<strong>Check my circuit</strong> — passing unlocks the next lesson.",
   onboardingShortcuts:
     "Shortcuts: <kbd>Ctrl+Z</kbd> undo · <kbd>Ctrl+A</kbd> select all · <kbd>Shift+drag</kbd> marquee · <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> copy/paste · <kbd>Ctrl+D</kbd> duplicate · <kbd>Esc</kbd> stop connecting · arrows move node.",
   onboardingIos:

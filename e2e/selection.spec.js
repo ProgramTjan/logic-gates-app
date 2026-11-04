@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { openSandbox } from "./helpers.js";
 
 /**
  * Multi-selectie en klembord: Ctrl+A, Shift+slepen (marquee),
@@ -15,7 +16,7 @@ test.describe("Selectie & klembord", () => {
     });
     await page.goto("/");
     await expect(page.locator("h1")).toContainText("Forge Logic");
-    await page.locator('.app-view-tab[data-app-view="workspace"]').click();
+    await openSandbox(page);
   });
 
   async function placePart(page, type) {

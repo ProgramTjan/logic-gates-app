@@ -2454,3 +2454,693 @@ h2 {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   word-break: break-all;
 }
+
+/* =============================================
+   APP SHELL — three views: home · lesson · sandbox (UX fase A)
+   ============================================= */
+
+[hidden] {
+  display: none !important;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "bar bar"
+    "side main";
+  gap: 0.75rem;
+  padding: 0.75rem;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.app[data-view="sandbox"] {
+  grid-template-columns: 260px minmax(0, 1fr);
+}
+
+.app[data-view="home"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "bar"
+    "home";
+  height: auto;
+  min-height: 100vh;
+}
+
+.app[data-view="home"] .lesson-panel,
+.app[data-view="home"] .sandbox-panel,
+.app[data-view="home"] .workspace-frame,
+.app[data-view="lesson"] .sandbox-panel,
+.app[data-view="sandbox"] .lesson-panel {
+  display: none;
+}
+
+/* —— App bar —— */
+.appbar {
+  grid-area: bar;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--toolbar-bg);
+  border-color: var(--toolbar-border);
+  position: relative;
+  z-index: 30;
+}
+
+.appbar-brand {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.appbar-brand-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: inherit;
+  padding: 0.35rem 0.55rem;
+}
+
+.appbar-brand-button:hover {
+  background: var(--ghost-hover);
+}
+
+.appbar-mark {
+  color: var(--accent);
+  font-size: 1.15em;
+}
+
+.appbar-nav {
+  display: flex;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.appbar-tab {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  padding: 0.4rem 0.75rem;
+}
+
+.appbar-tab:hover {
+  background: var(--ghost-hover);
+  color: var(--ink);
+}
+
+.appbar-tab.active {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.appbar-lock {
+  display: none;
+  margin-left: 0.3rem;
+  font-size: 0.8em;
+}
+
+.appbar-tab.locked {
+  opacity: 0.6;
+}
+
+.appbar-tab.locked .appbar-lock {
+  display: inline;
+}
+
+/* —— Settings menu —— */
+.settings-menu {
+  position: relative;
+}
+
+.settings-menu > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.4rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--ghost-border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.05rem;
+}
+
+.settings-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-menu[open] > summary {
+  background: var(--ghost-hover);
+}
+
+.settings-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.45rem);
+  width: min(300px, calc(100vw - 1.5rem));
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  background: var(--parts-menu-bg);
+  border-color: var(--parts-menu-border);
+}
+
+.settings-panel .eyebrow {
+  margin: 0.35rem 0 0;
+}
+
+.settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.settings-actions button {
+  font-size: 0.85rem;
+  padding: 0.45rem 0.5rem;
+}
+
+.settings-panel .locale-switcher,
+.settings-panel .theme-switcher {
+  justify-self: start;
+}
+
+/* —— Home (learning path) —— */
+.course-view.home-view {
+  grid-area: home;
+  width: 100%;
+  max-width: 1120px;
+  justify-self: center;
+  min-height: 0;
+  overflow: visible;
+  padding: 1.6rem 1.6rem 2rem;
+  gap: 1.4rem;
+}
+
+.home-view .course-hero h2 {
+  font-size: 1.75rem;
+  margin: 0.2rem 0 0.4rem;
+}
+
+.home-view .course-continue {
+  width: auto;
+  font-size: 1rem;
+  padding: 0.75rem 1.3rem;
+}
+
+.home-view .course-modules {
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  align-items: start;
+}
+
+.home-view .course-module-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.7rem;
+}
+
+.course-module-lock {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.course-module-top {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.home-view .course-module-start {
+  margin: 0;
+}
+
+.course-module-card.locked {
+  opacity: 0.72;
+}
+
+.course-lessons > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 0.15rem 0;
+}
+
+.course-lesson-list {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.course-lesson {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: left;
+  background: transparent;
+  color: var(--ink);
+  padding: 0.35rem 0.45rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+
+.course-lesson:hover:not(:disabled) {
+  background: var(--ghost-hover);
+}
+
+.course-lesson:disabled {
+  color: var(--muted);
+  opacity: 0.65;
+}
+
+.course-lesson-marker {
+  flex: none;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.68rem;
+  background: var(--ghost-bg);
+}
+
+.course-lesson.done .course-lesson-marker {
+  background: color-mix(in srgb, var(--signal-high) 22%, transparent);
+  color: var(--signal-high);
+}
+
+.course-lesson.next {
+  background: var(--accent-soft);
+}
+
+.course-lesson.next .course-lesson-marker {
+  background: var(--accent);
+  color: #fff;
+}
+
+.course-sandbox-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.05rem;
+  border: 1px dashed var(--panel-border);
+  border-radius: 12px;
+}
+
+.course-sandbox-card.attention {
+  animation: sandbox-attention 1.2s ease-out 2;
+}
+
+@keyframes sandbox-attention {
+  0% {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  100% {
+    border-color: var(--panel-border);
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+
+.course-sandbox-card h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+}
+
+.course-sandbox-card .course-module-copy {
+  margin: 0;
+}
+
+.course-free-mode {
+  justify-self: start;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* —— Lesson panel —— */
+.lesson-panel {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--right-bg);
+}
+
+.lesson-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.85rem;
+  align-content: start;
+}
+
+.lesson-panel-handle {
+  display: none;
+}
+
+.lesson-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lesson-back {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.lesson-position {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+.lesson-panel .challenge-detail-card {
+  cursor: default;
+}
+
+.lesson-panel .challenge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.lesson-panel .challenge-actions .ghost-button {
+  flex: 1;
+}
+
+/* —— Sandbox panel —— */
+.sandbox-panel {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow: auto;
+}
+
+.sandbox-panel .panel {
+  padding: 0.85rem;
+  background: var(--left-bg);
+}
+
+/* —— Workspace frame —— */
+.app .workspace-frame {
+  grid-area: main;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app .workspace-header {
+  align-items: center;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.8rem;
+}
+
+.workspace-heading .eyebrow {
+  margin: 0;
+}
+
+.workspace-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.app .workspace-header-right {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  width: auto;
+}
+
+.sim-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding-right: 0.6rem;
+  border-right: 1px solid var(--panel-border);
+}
+
+.sim-controls button {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.parts-dropdown > summary.parts-summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+}
+
+.parts-dropdown > summary.parts-summary::-webkit-details-marker {
+  display: none;
+}
+
+.workspace-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.app .workspace-canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.app .empty-state {
+  left: 50%;
+  top: 40%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+/* Canvas overlays: floating inspector/checks, status and view tools stay put while the canvas scrolls. */
+.canvas-overlay {
+  position: absolute;
+  left: 0.75rem;
+  right: 1.1rem;
+  display: flex;
+  gap: 0.6rem;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.canvas-overlay > * {
+  pointer-events: auto;
+}
+
+.canvas-overlay-top {
+  top: 0.75rem;
+  flex-direction: column;
+  align-items: flex-end;
+  max-height: calc(100% - 5.5rem);
+}
+
+.canvas-overlay-bottom {
+  bottom: 1.1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.floating-card {
+  width: min(300px, 100%);
+  min-height: 0;
+  overflow: auto;
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.floating-card-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.checks-card {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--panel-border));
+}
+
+.canvas-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  max-width: 60%;
+  pointer-events: none;
+}
+
+.canvas-status p {
+  margin: 0;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 8px;
+  background: var(--state-pill-bg);
+  backdrop-filter: blur(4px);
+}
+
+.canvas-status p:empty {
+  display: none;
+}
+
+.canvas-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.icon-button {
+  min-width: 2.2rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.zoom-reset {
+  min-width: 3.4rem;
+  font-size: 0.8rem;
+  padding: 0.38rem 0.4rem;
+}
+
+.canvas-tools-divider {
+  width: 1px;
+  height: 1.4rem;
+  margin: 0 0.15rem;
+  background: var(--panel-border);
+}
+
+/* —— Narrow screens & portrait tablets: lesson/sandbox panel becomes a bottom sheet —— */
+@media (max-width: 1023px) {
+  .app,
+  .app[data-view="sandbox"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "bar"
+      "main"
+      "side";
+  }
+
+  .lesson-panel,
+  .sandbox-panel {
+    max-height: 46vh;
+    max-height: 46dvh;
+  }
+
+  .lesson-panel-handle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.4rem 0.8rem 0.3rem;
+    background: transparent;
+    color: var(--ink);
+    border-radius: 0;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .lesson-panel-handle-bar {
+    width: 2.6rem;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--muted);
+    opacity: 0.6;
+  }
+
+  .lesson-panel-handle-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .app.lesson-panel-collapsed .lesson-panel-body {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .app {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .appbar {
+    gap: 0.35rem;
+  }
+
+  .appbar-brand-button span:not(.appbar-mark) {
+    display: none;
+  }
+
+  .appbar-tab {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.88rem;
+  }
+
+  .workspace-heading .eyebrow {
+    display: none;
+  }
+
+  .course-view.home-view {
+    padding: 1.1rem 1rem 1.5rem;
+  }
+
+  .home-view .course-hero h2 {
+    font-size: 1.35rem;
+  }
+
+  .home-view .course-continue {
+    width: 100%;
+  }
+
+  .home-view .course-modules {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .course-sandbox-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .canvas-status {
+    display: none;
+  }
+
+  .canvas-overlay-bottom {
+    justify-content: flex-end;
+  }
+}

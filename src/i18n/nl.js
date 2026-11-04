@@ -1,5 +1,30 @@
 /** Dutch UI dictionary. */
 export default {
+  // App shell (UX fase A)
+  navLessons: "Lessen",
+  navSandbox: "Vrij bouwen",
+  settingsTitle: "Instellingen",
+  settingsProject: "Project",
+  themeLabel: "Thema",
+  lessonBack: "← Alle lessen",
+  lessonPosition: "{module} · les {n} van {total}",
+  lessonCheck: "Controleer mijn schakeling",
+  lessonRestart: "Opnieuw beginnen",
+  lessonRestartTitle: "Open een verse sheet voor deze les",
+  lessonNext: "Volgende les →",
+  lessonDone: "Les voltooid",
+  lessonPanelShow: "Toon les",
+  lessonPanelHide: "Verberg les",
+  homeEyebrow: "Leerpad",
+  homeTitle: "Van NAND tot werkende computer",
+  homeLead: "Elke les bouwt voort op de vorige. Ga verder waar je gebleven was, of open een module om een les terug te zien.",
+  homeShowLessons: "Lessen",
+  homeSandboxTitle: "Vrij bouwen",
+  homeSandboxCopy: "Een open werkbank met alle onderdelen en al je chips.",
+  homeSandboxOpen: "Open werkbank",
+  homeSandboxLocked: "Wordt ontgrendeld na je eerste les.",
+  sandboxLockedStatus: "Vrij bouwen wordt ontgrendeld na je eerste les.",
+  lessonCompleted: "Voltooid",
   brandEyebrow: "Logic Sandbox",
   brandCopy: "Bouw poorten, maak chips, gebruik ze opnieuw.",
   metaDescription:
@@ -134,13 +159,11 @@ export default {
   workspaceMeta: "{nodes} nodes • {wires} wires",
 
   onboardingTitle: "Welkom bij Forge Logic",
-  onboardingLead: "Zo pak je het aan:",
-  onboardingStep1: "Open <strong>Parts</strong> en voeg poorten of chips toe.",
-  onboardingStep2:
-    "Klik een <strong>output-pin</strong>, daarna een <strong>input-pin</strong> om te verbinden.",
-  onboardingStep3: "Gebruik <strong>Snapshot</strong> om een sheet als chip op te slaan.",
-  onboardingStep4:
-    "Kies rechts een <strong>les</strong> → <em>Start</em> → bouw → <em>Dien in</em>.",
+  onboardingLead: "Leren door te bouwen — elke les neemt je mee:",
+  onboardingStep1: "<strong>Ga verder</strong> op het overzicht opent je volgende les.",
+  onboardingStep2: "Voeg onderdelen toe via <strong>Parts</strong>.",
+  onboardingStep3: "Klik een <strong>output-pin</strong>, daarna een <strong>input-pin</strong> om te verbinden.",
+  onboardingStep4: "<strong>Controleer mijn schakeling</strong> — geslaagd ontgrendelt de volgende les.",
   onboardingShortcuts:
     "Sneltoetsen: <kbd>Ctrl+Z</kbd> undo · <kbd>Ctrl+A</kbd> alles selecteren · <kbd>Shift+slepen</kbd> selectiekader · <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> kopiëren/plakken · <kbd>Ctrl+D</kbd> dupliceer · <kbd>Esc</kbd> stop met verbinden · pijlen verplaatsen node.",
   onboardingIos:

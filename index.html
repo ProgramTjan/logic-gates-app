@@ -20,125 +20,112 @@
     </script>
   </head>
   <body>
-    <div class="shell">
-      <aside class="sidebar left-panel">
-        <div class="panel brand-panel">
-          <p class="eyebrow" data-i18n="brandEyebrow">Logic Sandbox</p>
-          <h1>Forge Logic</h1>
-          <p class="panel-copy" data-i18n="brandCopy">Build gates, make chips, reuse them.</p>
-          <div class="app-view-tabs" role="tablist" data-i18n-aria="mainViewAria" aria-label="Main view">
-            <button type="button" class="app-view-tab" data-app-view="course" role="tab" data-i18n="course">Course</button>
-            <button type="button" class="app-view-tab" data-app-view="workspace" role="tab" data-i18n="workshop">Workshop</button>
+    <div class="app" id="app" data-view="home">
+      <header class="appbar panel">
+        <h1 class="appbar-brand">
+          <button type="button" class="appbar-brand-button" data-nav="home">
+            <span class="appbar-mark" aria-hidden="true">⬡</span>
+            <span>Forge Logic</span>
+          </button>
+        </h1>
+        <nav class="appbar-nav" data-i18n-aria="mainViewAria" aria-label="Main view">
+          <button type="button" class="appbar-tab" data-nav="home" data-i18n="navLessons">Lessons</button>
+          <button type="button" class="appbar-tab" data-nav="sandbox" id="nav-sandbox">
+            <span data-i18n="navSandbox">Free build</span>
+            <span class="appbar-lock" aria-hidden="true">🔒</span>
+          </button>
+        </nav>
+        <details class="settings-menu" id="settings-menu">
+          <summary class="ghost-button settings-summary" data-i18n-title="settingsTitle" title="Settings">
+            <span aria-hidden="true">⚙</span>
+          </summary>
+          <div class="settings-panel panel">
+            <p class="eyebrow" data-i18n="settingsProject">Project</p>
+            <div class="settings-actions">
+              <button id="export-button" class="ghost-button" type="button" data-i18n="export">Export</button>
+              <button id="import-button" class="ghost-button" type="button" data-i18n="import">Import</button>
+              <button id="restore-backup-button" class="ghost-button" type="button" data-i18n="restoreBackup" data-i18n-title="restoreBackupTitle" title="Restore a local backup">Restore backup</button>
+              <button id="share-link-button" class="ghost-button" type="button" data-i18n="copyLink" data-i18n-title="copyLinkTitle" title="Copy URL with embedded project">Copy link</button>
+              <button id="share-paste-button" class="ghost-button" type="button" data-i18n="importLink" data-i18n-title="importLinkTitle" title="Paste a previously copied URL">Import link</button>
+            </div>
+            <p class="eyebrow" data-i18n="languageTitle">Language</p>
+            <div class="locale-switcher" id="locale-switcher" data-i18n-title="languageTitle" title="Language">
+              <button type="button" class="locale-btn active" data-set-locale="en">EN</button>
+              <button type="button" class="locale-btn" data-set-locale="nl">NL</button>
+            </div>
+            <p class="eyebrow" data-i18n="themeLabel">Theme</p>
+            <div class="theme-switcher" id="theme-switcher" data-i18n-title="themeTitle" title="Choose a theme">
+              <button class="theme-btn theme-btn-dark" data-theme="dark" type="button" title="Dark">●</button>
+              <button class="theme-btn theme-btn-light" data-theme="light" type="button" title="Light">○</button>
+              <button class="theme-btn theme-btn-neon" data-theme="neon" type="button" title="Neon">◉</button>
+            </div>
           </div>
-        </div>
+        </details>
+      </header>
 
+      <section id="course-view" class="course-view home-view"></section>
+
+      <aside class="lesson-panel panel" id="lesson-panel">
+        <button type="button" class="lesson-panel-handle" id="lesson-panel-handle" aria-expanded="true">
+          <span class="lesson-panel-handle-bar" aria-hidden="true"></span>
+          <span class="lesson-panel-handle-label" id="lesson-panel-handle-label"></span>
+        </button>
+        <div id="challenge-list" class="challenge-list lesson-panel-body"></div>
+        <!-- Legacy hooks (hidden): kept so existing action wiring keeps working. -->
+        <button id="challenge-start-button" type="button" hidden></button>
+        <button id="challenge-submit-button" type="button" hidden></button>
+      </aside>
+
+      <aside class="sandbox-panel" id="sandbox-panel">
         <section class="panel">
           <div class="panel-title-row">
             <h2 data-i18n="sheets">Sheets</h2>
-            <button id="new-workspace-button" class="ghost-button" type="button" data-i18n="newSheet">
-              New
-            </button>
+            <button id="new-workspace-button" class="ghost-button" type="button" data-i18n="newSheet">New</button>
           </div>
           <div id="workspace-list" class="workspace-list"></div>
         </section>
-
         <section class="panel">
           <div class="panel-title-row">
             <h2 data-i18n="chips">Chips</h2>
-            <button id="save-chip-button" class="ghost-button" type="button" data-i18n="snapshot">
-              Snapshot
-            </button>
+            <button id="save-chip-button" class="ghost-button" type="button" data-i18n="snapshot">Snapshot</button>
           </div>
           <div id="chip-library" class="chip-library"></div>
         </section>
       </aside>
 
-      <main class="main-panel">
-        <header class="toolbar panel">
-          <div class="toolbar-group">
-            <button id="undo-button" class="ghost-button" type="button" data-i18n="undo" data-i18n-title="undoTitle" title="Undo (Ctrl+Z)" disabled>↩ Undo</button>
-            <button id="redo-button" class="ghost-button" type="button" data-i18n="redo" data-i18n-title="redoTitle" title="Redo (Ctrl+Y)" disabled>↪ Redo</button>
+      <main class="workspace-frame panel">
+        <div class="workspace-header">
+          <div class="workspace-heading">
+            <p class="eyebrow" data-i18n="currentSheet">Current sheet</p>
+            <h2 id="workspace-title">Main</h2>
           </div>
-          <div class="toolbar-group">
-            <button id="duplicate-workspace-button" type="button" data-i18n="duplicateWorkspace">
-              Duplicate sheet
-            </button>
-            <button id="toggle-clocks-button" type="button" data-i18n="toggleClocks">
-              Toggle clocks
-            </button>
-            <button id="step-registers-button" type="button" data-i18n="stepRegisters">
-              Step registers
-            </button>
-            <button id="clock-play-button" type="button" data-i18n="play" data-i18n-title="playPauseTitle" title="Play / pause clock">
-              ▶ Play
-            </button>
-            <label class="clock-speed-label" for="clock-speed-select">Hz</label>
-            <select id="clock-speed-select" class="clock-speed-select" data-i18n-title="clockSpeedTitle" title="Clock speed">
-              <option value="1">1</option>
-              <option value="4" selected>4</option>
-              <option value="16">16</option>
-              <option value="max">max</option>
-            </select>
-            <button id="reset-state-button" type="button" data-i18n="resetState">Reset State</button>
-          </div>
-          <div class="toolbar-group">
-            <button id="export-button" class="ghost-button" type="button" data-i18n="export">
-              Export
-            </button>
-            <button id="import-button" class="ghost-button" type="button" data-i18n="import">
-              Import
-            </button>
-            <button id="restore-backup-button" class="ghost-button" type="button" data-i18n="restoreBackup" data-i18n-title="restoreBackupTitle" title="Restore a local backup">
-              Restore backup
-            </button>
-            <button id="share-link-button" class="ghost-button" type="button" data-i18n="copyLink" data-i18n-title="copyLinkTitle" title="Copy URL with embedded project">
-              Copy link
-            </button>
-            <button id="share-paste-button" class="ghost-button" type="button" data-i18n="importLink" data-i18n-title="importLinkTitle" title="Paste a previously copied URL">
-              Import link
-            </button>
-          </div>
-          <div class="locale-switcher" id="locale-switcher" data-i18n-title="languageTitle" title="Language">
-            <button type="button" class="locale-btn active" data-set-locale="en">EN</button>
-            <button type="button" class="locale-btn" data-set-locale="nl">NL</button>
-          </div>
-          <div class="theme-switcher" id="theme-switcher" data-i18n-title="themeTitle" title="Choose a theme">
-            <button class="theme-btn theme-btn-dark" data-theme="dark" type="button" title="Dark">●</button>
-            <button class="theme-btn theme-btn-light" data-theme="light" type="button" title="Light">○</button>
-            <button class="theme-btn theme-btn-neon" data-theme="neon" type="button" title="Neon">◉</button>
-          </div>
-        </header>
-
-        <section id="course-view" class="course-view panel" hidden></section>
-
-        <section class="workspace-frame panel">
-          <div class="workspace-header">
-            <div>
-              <p class="eyebrow" data-i18n="currentSheet">Current sheet</p>
-              <h2 id="workspace-title">Main</h2>
+          <div class="workspace-header-right">
+            <div class="sim-controls" id="sim-controls" hidden>
+              <button id="toggle-clocks-button" class="ghost-button" type="button" data-i18n="toggleClocks">Toggle clocks</button>
+              <button id="step-registers-button" class="ghost-button" type="button" data-i18n="stepRegisters">Step registers</button>
+              <button id="clock-play-button" class="ghost-button" type="button" data-i18n="play" data-i18n-title="playPauseTitle" title="Play / pause clock">▶ Play</button>
+              <label class="clock-speed-label" for="clock-speed-select">Hz</label>
+              <select id="clock-speed-select" class="clock-speed-select" data-i18n-title="clockSpeedTitle" title="Clock speed">
+                <option value="1">1</option>
+                <option value="4" selected>4</option>
+                <option value="16">16</option>
+                <option value="max">max</option>
+              </select>
+              <button id="reset-state-button" class="ghost-button" type="button" data-i18n="resetState">Reset State</button>
             </div>
-            <div class="workspace-header-right">
-              <details class="parts-dropdown">
-                <summary class="ghost-button" data-i18n="parts">Parts</summary>
-                <div class="parts-menu panel">
-                  <div class="parts-menu-head">
-                    <span class="eyebrow" data-i18n="quickAdd">Quick add</span>
-                    <h3 data-i18n="parts">Parts</h3>
-                  </div>
-                  <div id="builtin-palette" class="palette-grid palette-grid-dropdown"></div>
+            <details class="parts-dropdown">
+              <summary class="primary-button parts-summary" data-i18n="parts">Parts</summary>
+              <div class="parts-menu panel">
+                <div class="parts-menu-head">
+                  <span class="eyebrow" data-i18n="quickAdd">Quick add</span>
+                  <h3 data-i18n="parts">Parts</h3>
                 </div>
-              </details>
-              <div class="workspace-zoom-controls">
-                <button id="zoom-out-button" class="ghost-button" type="button">-</button>
-                <button id="zoom-reset-button" class="ghost-button" type="button">100%</button>
-                <button id="zoom-in-button" class="ghost-button" type="button">+</button>
-                <span id="zoom-value" class="zoom-value">100%</span>
+                <div id="builtin-palette" class="palette-grid palette-grid-dropdown"></div>
               </div>
-              <p id="connection-status" class="connection-status" data-i18n="connectionHint">
-                Click output, click input.
-              </p>
-            </div>
+            </details>
           </div>
+        </div>
+        <div class="workspace-body">
           <div id="workspace-canvas" class="workspace-canvas">
             <div id="workspace-stage-viewport" class="workspace-stage-viewport">
               <div id="workspace-stage" class="workspace-stage">
@@ -150,61 +137,47 @@
               Open Parts and add components. Use Input and Output to turn this sheet into a chip.
             </div>
           </div>
-        </section>
-      </main>
 
-      <aside class="sidebar right-panel">
-        <section class="panel">
-          <div class="panel-title-row">
-            <h2 data-i18n="challenges">Lessons</h2>
-            <div class="panel-title-actions">
-              <button id="challenge-start-button" type="button" data-i18n="startSelected">Start selected</button>
-              <button id="challenge-submit-button" class="ghost-button" type="button" data-i18n="submitCurrent">Submit</button>
+          <div class="canvas-overlay canvas-overlay-top">
+            <section class="floating-card inspector-card" id="inspector-card">
+              <h2 class="floating-card-title" data-i18n="inspector">Inspector</h2>
+              <div id="inspector" class="inspector empty" data-i18n="inspectorEmpty">Select a node to edit its properties.</div>
+            </section>
+            <section class="floating-card checks-card" id="checks-card">
+              <h2 class="floating-card-title" data-i18n="checks">Checks</h2>
+              <div id="error-list" class="error-list" data-i18n="checksEmpty">No errors in the active workspace.</div>
+            </section>
+          </div>
+
+          <div class="canvas-overlay canvas-overlay-bottom">
+            <div class="canvas-status">
+              <p id="connection-status" class="connection-status" data-i18n="connectionHint">Click output, click input.</p>
+              <p id="status-line" class="status-line" data-i18n="statusDefault">Local storage is active. Project changes are saved automatically in this browser.</p>
+            </div>
+            <div class="canvas-tools">
+              <button id="undo-button" class="ghost-button icon-button" type="button" data-i18n-title="undoTitle" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↩</button>
+              <button id="redo-button" class="ghost-button icon-button" type="button" data-i18n-title="redoTitle" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↪</button>
+              <span class="canvas-tools-divider" aria-hidden="true"></span>
+              <button id="zoom-out-button" class="ghost-button icon-button" type="button" aria-label="Zoom out">−</button>
+              <button id="zoom-reset-button" class="ghost-button zoom-reset" type="button">100%</button>
+              <button id="zoom-in-button" class="ghost-button icon-button" type="button" aria-label="Zoom in">+</button>
+              <span id="zoom-value" class="zoom-value" hidden>100%</span>
             </div>
           </div>
-          <div id="challenge-list" class="challenge-list" data-i18n="challengesEmpty">
-            No lessons loaded yet.
-          </div>
-        </section>
-
-        <section class="panel">
-          <h2 data-i18n="inspector">Inspector</h2>
-          <div id="inspector" class="inspector empty" data-i18n="inspectorEmpty">
-            Select a node to edit its properties.
-          </div>
-        </section>
-
-        <section class="panel">
-          <h2 data-i18n="checks">Checks</h2>
-          <div id="error-list" class="error-list" data-i18n="checksEmpty">
-            No errors in the active workspace.
-          </div>
-        </section>
-
-        <section class="panel">
-          <h2 data-i18n="status">Status</h2>
-          <p id="status-line" class="status-line" data-i18n="statusDefault">
-            Local storage is active. Project changes are saved automatically in this browser.
-          </p>
-        </section>
-      </aside>
+        </div>
+      </main>
     </div>
 
     <div id="onboarding-overlay" class="onboarding-overlay" hidden>
       <div class="onboarding-card panel">
         <h2 data-i18n="onboardingTitle">Welcome to Forge Logic</h2>
-        <p class="onboarding-lead" data-i18n="onboardingLead">How to get started:</p>
+        <p class="onboarding-lead" data-i18n="onboardingLead">Learn by building — every lesson walks you through it:</p>
         <ol class="onboarding-steps">
           <li data-i18n-html="onboardingStep1">Open <strong>Parts</strong> and add gates or chips.</li>
           <li data-i18n-html="onboardingStep2">Click an <strong>output pin</strong>, then an <strong>input pin</strong> to connect.</li>
           <li data-i18n-html="onboardingStep3">Use <strong>Snapshot</strong> to save a sheet as a chip.</li>
           <li data-i18n-html="onboardingStep4">Pick a <strong>lesson</strong> on the right → <em>Start</em> → build → <em>Submit</em>.</li>
         </ol>
-        <p class="onboarding-shortcuts" data-i18n-html="onboardingShortcuts">
-          Shortcuts: <kbd>Ctrl+Z</kbd> undo · <kbd>Ctrl+A</kbd> select all ·
-          <kbd>Shift+drag</kbd> marquee · <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> copy/paste ·
-          <kbd>Ctrl+D</kbd> duplicate · <kbd>Esc</kbd> stop connecting · arrows move node.
-        </p>
         <p class="onboarding-shortcuts" data-i18n="onboardingIos">
           On iPhone/iPad, export your project as a file now and then (Safari may clear site data for rarely used sites).
         </p>
