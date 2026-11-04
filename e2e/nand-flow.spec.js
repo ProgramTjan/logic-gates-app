@@ -1,7 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { openLessonFromHome, skipTutorial } from "./helpers.js";
 
 /**
- * Happy path: boot → les 1 (NAND) → place NAND → wire → Submit → Verified → les 2 unlocked.
+ * Happy path: overzicht → les 1 (NAND) → place NAND → wire → Controleer → Verified
+ * → volgende les en Vrij bouwen ontgrendeld.
  */
 test.describe("NAND leerflow", () => {
   test.beforeEach(async ({ page }) => {
@@ -14,19 +16,8 @@ test.describe("NAND leerflow", () => {
   });
 
   test("les 1 NAND submit unlocked les 2", async ({ page }) => {
-    await page.locator('[data-select-challenge="nand"]').click();
-    await page.locator('[data-open-challenge="nand"]').click();
-
-    await page.evaluate(() => {
-      const skipBtn = document.querySelector("[data-tutorial-skip]");
-      if (skipBtn) {
-        skipBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      }
-      const root = document.getElementById("tutorial-root");
-      if (root) {
-        root.hidden = true;
-      }
-    });
+    await openLessonFromHome(page, "nand");
+    await skipTutorial(page);
 
     const partsSummary = page.locator(".parts-dropdown summary");
     if (await partsSummary.isVisible()) {
@@ -72,6 +63,10 @@ test.describe("NAND leerflow", () => {
       timeout: 15_000,
     });
 
-    await expect(page.locator('[data-select-challenge="not"]')).not.toHaveClass(/locked/);
+    await expect(page.locator('[data-next-lesson="not"]')).toBeVisible();
+    await expect(page.locator("#nav-sandbox")).not.toHaveClass(/locked/);
+
+    await page.locator('[data-next-lesson="not"]').click();
+    await expect(page.locator(".challenge-detail-card h3")).toContainText(/NOT/);
   });
 });

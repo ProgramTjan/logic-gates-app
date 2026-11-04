@@ -409,3 +409,21 @@
 **Aanname:** chip-/poortnamen blijven Engels; project-JSON bevat geen locale (apparaatvoorkeur zoals thema).
 
 **Resultaat:** groen — `npm run check` + `npm test` (141) + `npm run e2e` (15, incl. locale smoke)
+
+---
+
+## 2026-11-04 — UX fase A: schermindeling home · les · vrij bouwen
+
+**Uitgevoerd:**
+- `docs/ux-roadmap.md` aangemaakt (fases A–E, ontwerpbesluiten eigenaar).
+- `index.html`: drie-koloms dashboard vervangen door `.app[data-view]` met app-balk (Lessen / Vrij bouwen / ⚙), startpagina, lespaneel, sandbox-paneel en canvas. Beheerknoppen (export, import, back-up, links, taal, thema) in het ⚙-menu.
+- `script.js`: `state.appView ∈ {home, lesson, sandbox}`, `openLesson()` hervat de bestaande les-sheet ("Opnieuw beginnen" maakt een verse), `ensureSandboxWorkspace()`, vrij bouwen vergrendeld tot de eerste les van het curriculum af is (of vrije modus), contextuele chrome: klokknoppen alleen bij sequentiële les of sheet met klok/register/ROM/screen/keyboard (ook via chips), inspector/checks als zwevende kaarten, scrollpositie per sheet.
+- `src/ui/course.js`: startpagina met modules, lessenlijst per module, vrij-bouwen-kaart en vrije modus.
+- `src/ui/panels.js`: lespaneel toont alleen de actieve les (terug, positie, "Controleer mijn schakeling", "Volgende les"); sheetlijst toont geen les-drafts.
+- `styles.css`: `[hidden]`-lek gerepareerd; layout per view; onder 1024px wordt het lespaneel een inklapbaar onderpaneel.
+- Onboarding-tekst ingekort en in lijn met de nieuwe flow (volledige vervanging in fase C).
+- E2E bijgewerkt naar de nieuwe flow + `e2e/helpers.js`; nieuwe tests: vergrendeling vrij bouwen, klokknoppen contextueel, les hervatten.
+
+**Aannames:** "les 0" bestaat nog niet; tot fase C geldt de eerste les van het curriculum als ontgrendelvoorwaarde. Simulatie/verificatie niet aangeraakt.
+
+**Resultaat:** groen — `npm test` 141/141, `npm run check` OK, e2e 15/15; geen horizontale overflow op 390/820/1180/1440px.

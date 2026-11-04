@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { enableFreeMode, openLessonFromHome, openSandbox, skipTutorial } from "./helpers.js";
 
 /**
  * Reproductie van gebruikersscenario: XOR bouwen met 4 NAND-gates
@@ -15,9 +16,8 @@ test.describe("XOR met NAND repro", () => {
     });
     await page.goto("/");
     await expect(page.locator("h1")).toContainText("Forge Logic");
-    // Ga naar Werkplaats en zet vrije modus aan zodat xor bereikbaar is.
-    await page.locator('.app-view-tab[data-app-view="workspace"]').click();
-    await page.locator("#challenge-list [data-toggle-free-mode]").click();
+    // Zet vrije modus aan zodat xor bereikbaar is.
+    await enableFreeMode(page);
   });
 
   async function placePart(page, type) {
@@ -47,8 +47,8 @@ test.describe("XOR met NAND repro", () => {
   }
 
   async function buildAndSubmitXor(page, challengeId) {
-    await page.locator(`[data-select-challenge="${challengeId}"]`).click();
-    await page.locator(`[data-open-challenge="${challengeId}"]`).click();
+    await openLessonFromHome(page, challengeId);
+    await skipTutorial(page);
 
     for (let i = 0; i < 4; i += 1) {
       await placePart(page, "gate-nand");
@@ -103,7 +103,8 @@ test.describe("XOR met NAND repro", () => {
   test("xor-les: 4-NAND XOR bouwen en indienen", async ({ page }) => {
     await buildAndSubmitXor(page, "xor");
 
-    // Chip-bibliotheek toont de opgeslagen chip als uitklapregel met versiebeheer.
+    // Chip-bibliotheek (in Vrij bouwen) toont de opgeslagen chip als uitklapregel met versiebeheer.
+    await openSandbox(page);
     const seriesCard = page
       .locator("#chip-library .chip-series-card")
       .filter({ has: page.locator(".chip-series-name", { hasText: /^XOR$/ }) });
@@ -119,13 +120,16 @@ test.describe("XOR met NAND repro", () => {
     await buildAndSubmitXor(page, "xor-nand-only");
   });
 
-  test("indienen vanaf verkeerde sheet toont duidelijke feedback", async ({ page }) => {
-    // Selecteer de xor-les maar blijf op de gewone hoofdsheet.
-    await page.locator('[data-select-challenge="xor"]').click();
-    await page.locator('[data-submit-challenge="xor"]').click();
+  test("les hervat de bestaande sheet; Opnieuw beginnen geeft een verse", async ({ page }) => {
+    await openLessonFromHome(page, "xor");
+    await skipTutorial(page);
+    await placePart(page, "gate-nand");
+    await expect(page.locator("article.gate-nand")).toHaveCount(1);
 
-    const feedback = page.locator(".challenge-detail-card .submit-feedback.bad");
-    await expect(feedback).toBeVisible();
-    await expect(feedback).toContainText(/challenge.?sheet/i);
+    await openLessonFromHome(page, "xor");
+    await expect(page.locator("article.gate-nand")).toHaveCount(1);
+
+    await page.locator('[data-open-challenge="xor"]').click();
+    await expect(page.locator("article.gate-nand")).toHaveCount(0);
   });
 });

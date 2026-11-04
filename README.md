@@ -73,11 +73,13 @@ src/
 
 ## Gebruik
 
-1. **Cursus** — verse gebruikers zien eerst het leerpad; **Ga verder** opent de volgende les.
-2. **Parts** — voeg poorten of opgeslagen chips toe in de Werkplaats.
-3. Klik **output-pin** → **input-pin** om te verbinden.
-4. **Snapshot** — sla een sheet op als chip (Input/Output-pins vormen de interface).
-5. **Lessen** (rechterpaneel) — start, bouw, dien in; badges per voltooide module.
+De app heeft drie schermen, bereikbaar via de balk bovenin:
+
+1. **Lessen** (startscherm) — het leerpad per module. **Ga verder** opent je volgende les; per module kun je eerdere lessen terugzien.
+2. **Les** — canvas met links (of onderin, op smalle schermen) het lespaneel: doel, theorie, quiz en **Controleer mijn schakeling**. Een les hervat je laatste sheet; **Opnieuw beginnen** geeft een verse.
+3. **Vrij bouwen** — open werkbank met sheets en je chipbibliotheek (**Snapshot** slaat een sheet op als chip). Ontgrendeld na de eerste les, of via *Vrije modus* op het startscherm.
+
+Klik **output-pin** → **input-pin** om te verbinden. Export, import, back-ups, links, taal en thema staan onder **⚙**.
 
 Sneltoetsen: `Ctrl+Z` undo · `Ctrl+A` alles selecteren · `Ctrl+C`/`Ctrl+V` kopiëren/plakken · `Ctrl+D` dupliceren · `Shift+klik` multi-select · `Shift+slepen` selectiekader · `Delete` node verwijderen · `Esc` verbinden stoppen.
 

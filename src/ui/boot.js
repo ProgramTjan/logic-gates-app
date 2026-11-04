@@ -43,7 +43,9 @@ export function createEventBinder(deps) {
       }
     }
     dom.newWorkspaceButton.addEventListener("click", handlers.createWorkspaceFromPrompt);
-    dom.duplicateWorkspaceButton.addEventListener("click", handlers.duplicateCurrentWorkspace);
+    if (dom.duplicateWorkspaceButton) {
+      dom.duplicateWorkspaceButton.addEventListener("click", handlers.duplicateCurrentWorkspace);
+    }
     dom.saveChipButton.addEventListener("click", handlers.saveCurrentWorkspaceAsChip);
     dom.toggleClocksButton.addEventListener("click", handlers.toggleWorkspaceClocks);
     dom.stepRegistersButton.addEventListener("click", handlers.stepRegisters);
