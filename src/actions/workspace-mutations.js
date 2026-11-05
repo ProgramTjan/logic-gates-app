@@ -72,59 +72,81 @@ export function createWorkspaceMutations(deps) {
     };
   }
 
+  /**
+   * Where a newly added part goes: a free spot (no overlap with nodes or floating cards),
+   * preferably inside the visible canvas and close to the selected node / the circuit.
+   * Falls back to the nearest free spot outside the view; `pendingReveal` then asks the
+   * caller to scroll it into view.
+   */
   function getSuggestedNodePosition(workspace) {
     const margin = 24;
+    const gap = 14;
+    const newSize = (typeof deps.getNewNodeSize === "function" && deps.getNewNodeSize()) || { w: 150, h: 110 };
+    const sizeOf = (node) =>
+      (typeof deps.getNodeSize === "function" && deps.getNodeSize(node.id)) || { w: 150, h: 110 };
+    const obstacles = [
+      ...workspace.nodes.map((node) => {
+        const size = sizeOf(node);
+        return { x: node.x, y: node.y, w: size.w, h: size.h };
+      }),
+      ...((typeof deps.getReservedStageRects === "function" && deps.getReservedStageRects()) || []),
+    ];
+    const isFree = (x, y) =>
+      obstacles.every(
+        (r) => x + newSize.w + gap <= r.x || x >= r.x + r.w + gap || y + newSize.h + gap <= r.y || y >= r.y + r.h + gap
+      );
+
     const selectedNode = workspace.nodes.find((item) => item.id === state.selectedNodeId);
     const anchor = selectedNode
-      ? { x: selectedNode.x + 110, y: selectedNode.y + 70 }
+      ? { x: selectedNode.x + sizeOf(selectedNode).w + 30, y: selectedNode.y }
       : getWorkspaceClusterAnchor(workspace);
-    const stagger = workspace.nodes.length % 4;
-    let x = anchor.x + stagger * 18;
-    let y = anchor.y + stagger * 14;
 
-    // Keep new parts inside the visible part of the canvas (left of the floating inspector),
-    // on a free spot so successive additions never stack on top of each other.
     const view = typeof deps.getVisibleStageRect === "function" ? deps.getVisibleStageRect() : null;
-    if (view && view.width > 0 && view.height > 0) {
-      const NODE_W = 150;
-      const NODE_H = 120;
-      const usable = {
-        x: view.x + margin,
-        y: view.y + margin,
-        width: Math.max(NODE_W, view.width - 340 - margin),
-        height: Math.max(NODE_H, view.height - 80 - margin),
-      };
-      const fits = (cx, cy) =>
-        cx >= usable.x &&
-        cy >= usable.y &&
-        cx + NODE_W <= usable.x + usable.width &&
-        cy + NODE_H <= usable.y + usable.height;
-      const isFree = (cx, cy) =>
-        workspace.nodes.every(
-          (node) => cx + NODE_W <= node.x || cx >= node.x + NODE_W || cy + NODE_H <= node.y || cy >= node.y + NODE_H
-        );
-      if (!(fits(x, y) && isFree(x, y))) {
-        let found = null;
-        for (let row = usable.y; !found && row + NODE_H <= usable.y + usable.height; row += NODE_H + 10) {
-          for (let col = usable.x; col + NODE_W <= usable.x + usable.width; col += NODE_W + 10) {
-            if (isFree(col, row)) {
-              found = { x: col, y: row };
-              break;
-            }
+    const stage = { x: margin, y: margin, w: WORKSPACE_BASE_WIDTH - 2 * margin, h: WORKSPACE_BASE_HEIGHT - 2 * margin };
+    const area = view && view.width > 0 && view.height > 0
+      ? {
+          x: Math.max(stage.x, view.x + 12),
+          y: Math.max(stage.y, view.y + 12),
+          w: Math.max(newSize.w, view.width - 24),
+          h: Math.max(newSize.h, view.height - 24),
+        }
+      : stage;
+    const inside = (x, y, box) => x >= box.x && y >= box.y && x + newSize.w <= box.x + box.w && y + newSize.h <= box.y + box.h;
+    const preferred = inside(anchor.x, anchor.y, area)
+      ? anchor
+      : { x: area.x + area.w * 0.35, y: area.y + area.h * 0.3 };
+
+    const search = (box) => {
+      const step = 20;
+      let best = null;
+      for (let y = box.y; y + newSize.h <= box.y + box.h; y += step) {
+        for (let x = box.x; x + newSize.w <= box.x + box.w; x += step) {
+          if (!isFree(x, y)) {
+            continue;
+          }
+          const distance = Math.hypot(x - preferred.x, y - preferred.y);
+          if (!best || distance < best.distance) {
+            best = { x, y, distance };
           }
         }
-        if (found) {
-          x = found.x;
-          y = found.y;
-        } else if (!fits(x, y)) {
-          x = usable.x + stagger * 18;
-          y = usable.y + stagger * 14;
-        }
+      }
+      return best;
+    };
+
+    let spot = search(area);
+    state.pendingReveal = null;
+    if (!spot && area !== stage) {
+      spot = search(stage);
+      if (spot) {
+        state.pendingReveal = { x: spot.x, y: spot.y, w: newSize.w, h: newSize.h };
       }
     }
+    const stagger = workspace.nodes.length % 4;
+    const x = spot ? spot.x : anchor.x + stagger * 18;
+    const y = spot ? spot.y : anchor.y + stagger * 14;
     return {
-      x: clamp(x, margin, WORKSPACE_BASE_WIDTH - 140),
-      y: clamp(y, margin, WORKSPACE_BASE_HEIGHT - 110),
+      x: clamp(Math.round(x), margin, WORKSPACE_BASE_WIDTH - 140),
+      y: clamp(Math.round(y), margin, WORKSPACE_BASE_HEIGHT - 110),
     };
   }
 
@@ -168,6 +190,11 @@ export function createWorkspaceMutations(deps) {
     const template = challenge.template || { inputs: [], outputs: [] };
     const inputStep = Math.max(90, Math.floor(420 / Math.max(1, template.inputs.length)));
     const outputStep = Math.max(90, Math.floor(420 / Math.max(1, template.outputs.length)));
+    // Narrow canvas (tablet portrait / phone): pull inputs and outputs closer together.
+    const view = typeof deps.getVisibleStageRect === "function" ? deps.getVisibleStageRect() : null;
+    const viewWidth = view && view.width > 0 ? view.width : 1000;
+    const inputX = viewWidth < 700 ? 30 : 120;
+    const outputX = Math.max(380, Math.min(760, Math.round(viewWidth - 190)));
 
     template.inputs.forEach((item, index) => {
       const label = typeof item === "string" ? item : item.name;
@@ -176,7 +203,7 @@ export function createWorkspaceMutations(deps) {
         chipDefinitionsService.createConfiguredNode(
           state.project,
           "input-pin",
-          { x: 120, y: 120 + index * inputStep },
+          { x: inputX, y: 120 + index * inputStep },
           { label, width, previewValue: "0".repeat(width) }
         )
       );
@@ -189,7 +216,7 @@ export function createWorkspaceMutations(deps) {
         chipDefinitionsService.createConfiguredNode(
           state.project,
           "output-pin",
-          { x: 760, y: 120 + index * outputStep },
+          { x: outputX, y: 120 + index * outputStep },
           { label, width }
         )
       );

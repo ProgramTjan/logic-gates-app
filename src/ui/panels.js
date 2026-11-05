@@ -105,6 +105,22 @@ export function createPanelRenderers(deps) {
           </div>`
         : "";
 
+    if (dom.partsStrip) {
+      // Compact one-tap strip for narrow screens (shown via CSS below 1024px).
+      dom.partsStrip.innerHTML = [
+        ...visibleParts.map(
+          (part) =>
+            `<button type="button" class="parts-strip-button" data-strip-part="${part.type}">${escapeHtml(part.label)}</button>`
+        ),
+        ...latestDefinitions.map(
+          (definition) =>
+            `<button type="button" class="parts-strip-button is-chip" data-strip-chip="${definition.id}">${escapeHtml(
+              definition.name
+            )}</button>`
+        ),
+      ].join("");
+    }
+
     dom.builtinPalette.innerHTML = `
       <div class="palette-section-title">${escapeHtml(lesson ? t("paletteForLesson") : t("basicParts"))}</div>
       ${builtinMarkup}

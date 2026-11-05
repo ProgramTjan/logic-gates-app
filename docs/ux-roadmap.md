@@ -89,7 +89,7 @@ Lesson-view toont alleen relevante onderdelen; sandbox toont alles. Uitgewerkt i
 **Acceptatie:** les 1–3 doorlopen zonder ooit de pagina te scrollen op 1440×900 (lespaneel scrollt intern); geen tabs meer.
 
 ### Bevindingen tijdens fase B (meenemen in latere fases)
-- Inspector-kaart is op staande tablet te groot en bedekt het canvas → **D**: compacte/inklapbare inspector op smalle schermen.
+- ~~Inspector-kaart is op staande tablet te groot~~ → inklapbaar sinds C, standaard dicht op smalle schermen sinds D.
 - NL-beschrijvingen van onderdelen in EN-modus ("Publieke chipinput" e.d. in `builtinParts.js`) → **E**.
 - Starter-chips zijn in een les-sheet nog wel via oude sheets/plakken bruikbaar en tellen dan mee in de verificatie → **E** (verificatie laten weigeren).
 
@@ -117,11 +117,11 @@ Les 0–5: volledige coach. Daarna een hintladder (hint 1 → hint 2 → aanwijz
 - Les-sheets krijgen de (vertaalde) lestitel als naam.
 
 ### Bevindingen tijdens fase C (meenemen in latere fases)
-- Telefoon: Parts-menu loopt rechts buiten beeld; canvas is erg klein naast het onderpaneel → **D**.
+- ~~Telefoon: Parts-menu loopt rechts buiten beeld; canvas is erg klein~~ → opgelost in D.
 
 ---
 
-## FASE D — Tablet eerst
+## FASE D — Tablet eerst ✅ gedaan 2026-11-05
 
 1. Onderpaneel (bottom sheet) met drie standen: ingeklapt (titel + primaire actie), half, vol; sleepbaar.
 2. Pin-hitboxen ≥ 32px op touch (`@media (pointer: coarse)`), pinch-zoom op canvas, geen hover-afhankelijke bediening.
@@ -129,6 +129,16 @@ Les 0–5: volledige coach. Daarna een hintladder (hint 1 → hint 2 → aanwijz
 4. E2E-viewports 1180×820 en 820×1180 toegevoegd.
 
 **Acceptatie:** geen horizontale overflow ≤ 390px; les 0 volledig op touch-viewport te doorlopen.
+
+**Uitgevoerd:**
+- `@media (pointer: coarse)`: nodes 124px breed, pins ≥ 26px met onzichtbare tikzone van 32px die van de node af wijst, grotere toggles, bredere draad-tikzone, 40px canvasknoppen.
+- Eigen gebaren op het canvas (`touch-action: none`): één vinger pant, twee vingers pinchen rond het middelpunt en pannen mee; Ctrl/⌘ + scroll (trackpad) zoomt rond de cursor. Knop ⤢ maakt passend.
+- Onderpaneel (< 1024px) met drie standen — opgevouwen (titel, live-status, Controleer), half, vol — tik op de greep vouwt, slepen kiest de dichtstbijzijnde stand. Ook voor het sandbox-paneel ("Sheets & chips", standaard opgevouwen). Op een telefoon vouwt het lespaneel op zodra je een onderdeel plaatst.
+- Onderdelenstrip (< 1024px) onder het canvas i.p.v. het Parts-menu; de coach wijst daar de knop aan.
+- Plaatsing van onderdelen rekent met echte node-maten, ontwijkt zwevende kaarten, kiest de vrije plek het dichtst bij de vorige node en scrollt mee als het zichtbare deel vol is.
+- Lessen op een smal canvas krijgen een compactere indeling en passen zich bij openen in beeld (niet kleiner dan 60%).
+- Inspector ook in Vrij bouwen ingeklapt op smalle schermen.
+- E2E `e2e/touch.spec.js`: 820×1180, 1180×820 en 390×844 met touch-emulatie.
 
 ---
 

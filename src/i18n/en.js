@@ -1,5 +1,7 @@
 /** English UI dictionary (default). */
 export default {
+  zoomFit: "Fit to screen",
+  sheetsAndChips: "Sheets & chips",
   // Coach (UX fase C)
   "coach.start": "Let's go",
   "coach.next": "Got it",

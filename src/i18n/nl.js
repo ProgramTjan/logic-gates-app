@@ -1,5 +1,7 @@
 /** Dutch UI dictionary. */
 export default {
+  zoomFit: "Passend maken",
+  sheetsAndChips: "Sheets & chips",
   // Coach (UX fase C)
   "coach.start": "Aan de slag",
   "coach.next": "Begrepen",

@@ -456,3 +456,18 @@
 - Tests: unit (prerequisites, migratie, palet les 0) en e2e (volledige les 0 met coach → les 1; coach opnieuw starten; coach uitzetten; hulpmenu).
 
 **Resultaat:** groen — `npm test` 163/163, `npm run check` OK, e2e 17/17.
+
+---
+
+## 2026-11-05 — UX fase D: tablet en touch
+
+**Uitgevoerd:**
+- Touch-maten via `@media (pointer: coarse)` (nodes, pins + tikzones, toggles, draden, canvasknoppen).
+- Gebaren: pinch-zoom + twee-vinger-pan rond het middelpunt, Ctrl/⌘+wheel-zoom rond de cursor (`bindTouchGestures` in `script.js`); `setZoom` kreeg een focuspunt; `fitToContent` + knop ⤢.
+- Onderpaneel met drie standen (peek/half/full), sleepbaar, voor les- en sandbox-paneel; peek toont live-status en Controleer.
+- Onderdelenstrip op smalle schermen (`#parts-strip`, aparte data-attributen zodat bestaande selectors uniek blijven); coach wijst de strip aan.
+- Plaatsing: echte node-maten, obstakels = nodes + zwevende kaarten, dichtstbijzijnde vrije plek, buiten beeld → canvas scrollt mee (`pendingReveal`).
+- Compacte les-indeling op smal canvas + automatisch passend maken bij openen; lesscherm wordt getoond vóór de sheet wordt aangemaakt zodat de maat bekend is.
+- E2E `touch.spec.js` (3 viewports); pinch handmatig geverifieerd met synthetische pointer-events (100% → 200%).
+
+**Resultaat:** groen — `npm test` 163/163, `npm run check` OK, e2e 20/20.

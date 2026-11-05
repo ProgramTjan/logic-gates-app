@@ -145,6 +145,13 @@ export function createTutorial(deps) {
   }
 
   function partButton(match) {
+    // Narrow screens: the one-tap parts strip replaces the Parts menu.
+    if (match.gate) {
+      const stripButton = visible(document.querySelector(`#parts-strip [data-strip-part="gate-${match.gate.toLowerCase()}"]`));
+      if (stripButton) {
+        return stripButton;
+      }
+    }
     const dropdown = document.querySelector(".parts-dropdown");
     if (dropdown && !dropdown.open) {
       return dropdown.querySelector("summary");
