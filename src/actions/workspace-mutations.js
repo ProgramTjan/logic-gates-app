@@ -79,9 +79,52 @@ export function createWorkspaceMutations(deps) {
       ? { x: selectedNode.x + 110, y: selectedNode.y + 70 }
       : getWorkspaceClusterAnchor(workspace);
     const stagger = workspace.nodes.length % 4;
+    let x = anchor.x + stagger * 18;
+    let y = anchor.y + stagger * 14;
+
+    // Keep new parts inside the visible part of the canvas (left of the floating inspector),
+    // on a free spot so successive additions never stack on top of each other.
+    const view = typeof deps.getVisibleStageRect === "function" ? deps.getVisibleStageRect() : null;
+    if (view && view.width > 0 && view.height > 0) {
+      const NODE_W = 150;
+      const NODE_H = 120;
+      const usable = {
+        x: view.x + margin,
+        y: view.y + margin,
+        width: Math.max(NODE_W, view.width - 340 - margin),
+        height: Math.max(NODE_H, view.height - 80 - margin),
+      };
+      const fits = (cx, cy) =>
+        cx >= usable.x &&
+        cy >= usable.y &&
+        cx + NODE_W <= usable.x + usable.width &&
+        cy + NODE_H <= usable.y + usable.height;
+      const isFree = (cx, cy) =>
+        workspace.nodes.every(
+          (node) => cx + NODE_W <= node.x || cx >= node.x + NODE_W || cy + NODE_H <= node.y || cy >= node.y + NODE_H
+        );
+      if (!(fits(x, y) && isFree(x, y))) {
+        let found = null;
+        for (let row = usable.y; !found && row + NODE_H <= usable.y + usable.height; row += NODE_H + 10) {
+          for (let col = usable.x; col + NODE_W <= usable.x + usable.width; col += NODE_W + 10) {
+            if (isFree(col, row)) {
+              found = { x: col, y: row };
+              break;
+            }
+          }
+        }
+        if (found) {
+          x = found.x;
+          y = found.y;
+        } else if (!fits(x, y)) {
+          x = usable.x + stagger * 18;
+          y = usable.y + stagger * 14;
+        }
+      }
+    }
     return {
-      x: clamp(anchor.x + stagger * 18, margin, WORKSPACE_BASE_WIDTH - 140),
-      y: clamp(anchor.y + stagger * 14, margin, WORKSPACE_BASE_HEIGHT - 110),
+      x: clamp(x, margin, WORKSPACE_BASE_WIDTH - 140),
+      y: clamp(y, margin, WORKSPACE_BASE_HEIGHT - 110),
     };
   }
 
@@ -171,7 +214,7 @@ export function createWorkspaceMutations(deps) {
     if (!challenge) {
       return;
     }
-    const workspace = createWorkspace(state.project, `${challenge.title} Draft`, null, {
+    const workspace = createWorkspace(state.project, localizeChallenge(challenge).title, null, {
       challengeId,
     });
     populateChallengeWorkspace(workspace, challenge);

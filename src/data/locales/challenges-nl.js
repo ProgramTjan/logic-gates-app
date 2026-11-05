@@ -1,5 +1,41 @@
 /** Auto-extracted / maintained challenge prose. Do not put tests here. */
 export default {
+  "intro-light": {
+    "title": "Licht aan",
+    "description": "Casus: de buitenlamp mag alleen aan als de deur dicht is én het alarm aan staat. Bouw de schakeling die de lamp aanstuurt.",
+    "hints": [
+      "Open Parts en plaats de AND-poort.",
+      "Verbind DOOR en ALARM elk met een ingang van de AND-poort.",
+      "Verbind de uitgang van de AND-poort met LAMP en zet daarna DOOR en ALARM aan."
+    ],
+    "theory": [
+      "Een schakeling bestaat uit onderdelen die met draden verbonden zijn. Over elke draad loopt een bit: 1 is aan, 0 is uit.",
+      "Links staan de inputs (hier DOOR en ALARM), rechts de output (LAMP). Een AND-poort geeft alleen 1 als beide ingangen 1 zijn — precies de regel van deze casus.",
+      "In de volgende lessen bouw je zulke poorten zelf, te beginnen met NAND."
+    ],
+    "learning": {
+      "goal": "Leer onderdelen plaatsen, verbinden met draden en je schakeling testen.",
+      "concepts": [
+        "input",
+        "output",
+        "draad",
+        "AND"
+      ],
+      "quiz": [
+        {
+          "question": "Wanneer gaat de lamp aan?",
+          "options": [
+            "Zodra de deur dicht is",
+            "Als de deur dicht is én het alarm aan staat",
+            "Als één van beide aan staat",
+            "Nooit"
+          ],
+          "explain": "AND geeft alleen 1 als beide ingangen 1 zijn.",
+          "answerIndex": 1
+        }
+      ]
+    }
+  },
   "nand": {
     "title": "Build NAND",
     "description": "Maak je eigen NAND-chip zonder de starterversie te gebruiken.",

@@ -122,14 +122,21 @@ export function createCourseRenderers(deps) {
       </article>`;
     }).join("");
 
+    const isNewcomer = !(learner.completedChallengeIds || []).length;
+    const continueLabel = nextTitle
+      ? isNewcomer
+        ? t("homeWelcomeStart", { title: nextTitle })
+        : `${S.continue}: ${nextTitle}`
+      : S.courseEmptyDone;
+
     dom.courseView.innerHTML = `
-      <div class="course-hero">
-        <p class="eyebrow">${escapeHtml(t("homeEyebrow"))}</p>
-        <h2>${escapeHtml(t("homeTitle"))}</h2>
-        <p class="course-lead">${escapeHtml(t("homeLead"))}</p>
+      <div class="course-hero ${isNewcomer ? "is-welcome" : ""}">
+        <p class="eyebrow">${escapeHtml(isNewcomer ? t("homeWelcomeEyebrow") : t("homeEyebrow"))}</p>
+        <h2>${escapeHtml(isNewcomer ? t("homeWelcomeTitle") : t("homeTitle"))}</h2>
+        <p class="course-lead">${escapeHtml(isNewcomer ? t("homeWelcomeLead") : t("homeLead"))}</p>
         <div class="course-hero-actions">
           <button type="button" class="primary-button course-continue" data-course-continue ${nextId ? "" : "disabled"}>
-            ${nextTitle ? `${escapeHtml(S.continue)}: ${escapeHtml(nextTitle)}` : escapeHtml(S.courseEmptyDone)}
+            ${escapeHtml(continueLabel)}
           </button>
         </div>
       </div>

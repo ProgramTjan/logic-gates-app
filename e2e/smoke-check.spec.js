@@ -41,12 +41,13 @@ test.describe("Leerapp smoke", () => {
     await expect(page.locator("#course-view")).toBeVisible();
   });
 
-  test("Ga verder opent les 1 met tutorial en zonder klokknoppen", async ({ page }) => {
+  test("Start opent les 0 met coach en zonder klokknoppen", async ({ page }) => {
     await page.locator("[data-course-continue]").click();
+    await expect(page.locator(".challenge-detail-card h3")).toContainText(/Light on|Licht aan/);
     await expect(page.locator("#app")).toHaveAttribute("data-view", "lesson");
     await expect(page.locator(".workspace-frame")).toBeVisible();
     await expect(page.locator("#lesson-panel")).toBeVisible();
-    await expect(page.locator("#tutorial-root, .tutorial-coachmark")).toBeVisible();
+    await expect(page.locator("[data-tutorial-coach]")).toBeVisible();
     await expect(page.locator("#sim-controls")).toBeHidden();
     await expect(page.locator("#export-button")).toBeHidden();
   });
@@ -76,25 +77,60 @@ test.describe("Leerapp smoke", () => {
     await expect(playButton).not.toHaveClass(/is-running/);
   });
 
-  test("lespaneel heeft tabbladen Theory/Hints/Tests", async ({ page }) => {
-    await page.locator("[data-course-continue]").click();
+  test("lespaneel: stappen, hints, gefilterd palet en live controle", async ({ page }) => {
+    await enableFreeMode(page);
+    await openLessonFromHome(page, "not");
     await skipTutorial(page);
 
-    const tabs = page.locator(".challenge-detail-card .challenge-tab");
-    await expect(tabs).toHaveCount(3);
-    await expect(tabs.nth(0)).toContainText(/Theory|Theorie/);
+    const steps = page.locator(".lesson-flow [data-lesson-step]");
+    await expect(steps.first()).toBeVisible();
+    await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-current/);
 
-    await page.locator('[data-challenge-tab="hints"]').click();
-    await expect(page.locator(".challenge-detail-card .challenge-hints")).toBeVisible();
+    // Hintladder: één hint per klik.
+    await page.locator("[data-reveal-hint]").click();
+    await expect(page.locator(".hint-list li")).toHaveCount(1);
 
-    await page.locator('[data-challenge-tab="tests"]').click();
-    await expect(page.locator(".challenge-detail-card .truth-probe-table")).toBeVisible();
+    // Palet: NAND wel, de NOT die je bouwt niet.
+    await page.locator(".parts-dropdown summary").click();
+    await expect(page.locator('#builtin-palette [data-part-type="gate-nand"]')).toBeVisible();
+    await expect(page.locator('#builtin-palette [data-part-type="gate-not"]')).toHaveCount(0);
+    await expect(page.locator('#builtin-palette [data-part-type="switch"]')).toHaveCount(0);
+    await page.locator('#builtin-palette [data-part-type="gate-nand"]').click();
 
-    await page.locator('[data-challenge-tab="theorie"]').click();
-    await expect(page.locator(".challenge-detail-card .theory-body")).toBeVisible();
+    // Live controle: nog geen score zolang OUT niet verbonden is.
+    await expect(page.locator(".live-check .live-check-note")).toBeVisible();
 
-    await page.locator("#challenge-list .lesson-back").click();
-    await expect(page.locator("#app")).toHaveAttribute("data-view", "home");
+    const inOut = page
+      .locator("article.node")
+      .filter({ has: page.locator(".node-label", { hasText: /^IN$/ }) })
+      .locator('[data-pin-direction="output"]')
+      .first();
+    await inOut.click();
+    await page.locator('article.gate-nand [data-pin-key="A"][data-pin-direction="input"]').click();
+    await inOut.click();
+    await page.locator('article.gate-nand [data-pin-key="B"][data-pin-direction="input"]').click();
+    await page.locator('article.gate-nand [data-pin-key="OUT"][data-pin-direction="output"]').click();
+    await page
+      .locator("article.node-output-pin")
+      .filter({ has: page.locator(".node-label", { hasText: /^OUT$/ }) })
+      .locator('[data-pin-key="IN"][data-pin-direction="input"]')
+      .click();
+
+    await expect(page.locator(".live-check-summary")).toHaveClass(/ok/);
+    await page.locator('[data-submit-challenge="not"]').click();
+    await expect(page.locator('[data-lesson-step="check"]')).toHaveClass(/is-done/);
+    await expect(page.locator(".lesson-unlocked-parts")).toContainText("NOT");
+  });
+
+  test("hulpmenu toont sneltoetsen; coach uitzetten in instellingen", async ({ page }) => {
+    await page.locator("#help-menu summary").click();
+    await expect(page.locator(".help-shortcuts")).toContainText("Ctrl+Z");
+    await page.locator("#settings-menu summary").click();
+    await expect(page.locator(".help-shortcuts")).toBeHidden();
+    await page.locator("#coach-enabled-toggle").uncheck();
+    await page.locator('.appbar-tab[data-nav="home"]').click();
+    await page.locator("[data-course-continue]").click();
+    await expect(page.locator("[data-tutorial-coach]")).toBeHidden();
   });
 
   test("taalschakelaar in het instellingenmenu verandert chrome-tekst", async ({ page }) => {

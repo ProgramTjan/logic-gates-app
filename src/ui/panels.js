@@ -6,6 +6,7 @@ import {
 } from "../data/curriculum.js";
 import { S, t } from "../i18n/index.js";
 import { localizeChallenge, localizeCurriculumModule } from "../i18n/challenges.js";
+import { getLessonPartTypes, getPartsUnlockedBy, isSequentialChallenge } from "../model/lesson-palette.js";
 
 export function createPanelRenderers(deps) {
   const {
@@ -42,18 +43,39 @@ export function createPanelRenderers(deps) {
     return required ? localizeChallenge(required).title : raw;
   }
 
-  function renderBuiltinPalette() {
-    const builtinMarkup = BUILTIN_PARTS.map(
-      (part) =>
-        `<button class="palette-button" type="button" data-part-type="${part.type}">
+  function getActiveLesson() {
+    if (state.appView !== "lesson" || typeof deps.getActiveChallengeId !== "function") {
+      return null;
+    }
+    const id = deps.getActiveChallengeId();
+    return id ? challengesById.get(id) || null : null;
+  }
+
+  function partLabel(type) {
+    const part = BUILTIN_PARTS.find((item) => item.type === type);
+    return part ? part.label : type;
+  }
+
+  function renderPartButton(part) {
+    return `<button class="palette-button" type="button" data-part-type="${part.type}">
           ${escapeHtml(part.label)}
           <small>${escapeHtml(part.copy)}</small>
-        </button>`
-    ).join("");
+        </button>`;
+  }
+
+  function renderBuiltinPalette() {
+    const lesson = getActiveLesson();
+    const lessonParts = lesson ? getLessonPartTypes(lesson, getLearner()) : null;
+    const visibleParts = lessonParts
+      ? BUILTIN_PARTS.filter((part) => lessonParts.available.includes(part.type))
+      : BUILTIN_PARTS;
+    const builtinMarkup = visibleParts.map(renderPartButton).join("");
 
     const latestDefinitions = state.project.chipSeries
       .map((series) => getLatestChipDefinitionForSeries(series.id))
       .filter(Boolean)
+      // In a lesson you only build with chips you made yourself.
+      .filter((definition) => !lesson || !challengeVerifier.isStarterDefinition(definition))
       .sort((left, right) => left.name.localeCompare(right.name));
 
     const chipMarkup = latestDefinitions.length
@@ -67,11 +89,29 @@ export function createPanelRenderers(deps) {
           .join("")
       : `<div class="palette-section-empty">${escapeHtml(t("paletteChipsEmpty"))}</div>`;
 
+    const lockedMarkup =
+      lessonParts && lessonParts.locked.length
+        ? `<div class="palette-later">
+            <span class="palette-later-label">${escapeHtml(t("paletteLater"))}</span>
+            ${lessonParts.locked
+              .map(({ type, lessonId }) => {
+                const teaching = challengesById.get(lessonId);
+                const title = teaching ? localizeChallenge(teaching).title : lessonId;
+                return `<span class="palette-later-part" title="${escapeHtml(
+                  t("paletteLockedTitle", { title })
+                )}">🔒 ${escapeHtml(partLabel(type))}</span>`;
+              })
+              .join("")}
+          </div>`
+        : "";
+
     dom.builtinPalette.innerHTML = `
-      <div class="palette-section-title">${escapeHtml(t("basicParts"))}</div>
+      <div class="palette-section-title">${escapeHtml(lesson ? t("paletteForLesson") : t("basicParts"))}</div>
       ${builtinMarkup}
       <div class="palette-section-title">${escapeHtml(t("savedChips"))}</div>
       ${chipMarkup}
+      ${lockedMarkup}
+      ${lesson ? `<p class="palette-sandbox-note">${escapeHtml(t("paletteSandboxNote"))}</p>` : ""}
     `;
   }
 
@@ -192,69 +232,6 @@ export function createPanelRenderers(deps) {
     `;
   }
 
-  function pickDefinitionForProbe(challenge, userDefinitions) {
-    const matches = challengeVerifier.findDefinitionsForChallenge(challenge, userDefinitions);
-    if (!matches.length) {
-      return null;
-    }
-    return [...matches].sort((a, b) => b.version - a.version)[0];
-  }
-
-  function renderTruthProbeTable(challenge, userDefinitions) {
-    if (challenge.verification !== "combinational" || !challenge.tests?.length) {
-      return "";
-    }
-    const definition = pickDefinitionForProbe(challenge, userDefinitions);
-    const rows = challenge.tests
-      .map((test) => {
-        const inputs = Object.entries(test.inputs)
-          .map(([k, v]) => `${k}=${v}`)
-          .join(" · ");
-        const expected = Object.entries(test.outputs)
-          .map(([k, v]) => `${k}=${v}`)
-          .join(" · ");
-        let actual = "—";
-        let mark = "";
-        if (definition) {
-          try {
-            const out = challengeVerifier.previewOutputs(challenge, definition, test.inputs);
-            const ok = Object.entries(test.outputs).every(([k, v]) => out[k] === v);
-            actual = Object.entries(test.outputs)
-              .map(([k]) => `${k}=${out[k] ?? "?"}`)
-              .join(" · ");
-            mark = ok ? "✓" : "✗";
-          } catch {
-            actual = "(simulatiefout)";
-            mark = "?";
-          }
-        }
-        return `<tr>
-          <td class="truth-col-in">${escapeHtml(inputs)}</td>
-          <td class="truth-col-exp">${escapeHtml(expected)}</td>
-          <td class="truth-col-act">${escapeHtml(actual)}</td>
-          <td class="truth-col-ok">${mark}</td>
-        </tr>`;
-      })
-      .join("");
-    const defHint = definition
-      ? `<p class="truth-probe-hint">${escapeHtml(
-          t("truthProbeHintDef", { name: definition.name, version: definition.version })
-        )}</p>`
-      : `<p class="truth-probe-hint">${escapeHtml(t("truthProbeHintEmpty"))}</p>`;
-    return `<div class="challenge-details truth-probe-wrap">
-      <div class="challenge-kicker">${escapeHtml(t("truthProbe"))}</div>
-      ${defHint}
-      <div class="truth-probe-scroll">
-        <table class="truth-probe-table">
-          <thead><tr><th>${escapeHtml(t("truthColInput"))}</th><th>${escapeHtml(
-            t("truthColExpected")
-          )}</th><th>${escapeHtml(t("truthColYours"))}</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </div>`;
-  }
-
   function statusLabel(label) {
     if (label === "Verified") {
       return S.verified;
@@ -358,155 +335,277 @@ export function createPanelRenderers(deps) {
     </div>`;
   }
 
-  function renderChallengeDetail(challenge, result, userDefinitions) {
+  function formatPins(pins) {
+    return (pins || [])
+      .map((pin) => {
+        if (pin && typeof pin === "object") {
+          return pin.width && pin.width > 1 ? `${pin.name}[${pin.width}]` : pin.name;
+        }
+        return String(pin);
+      })
+      .join(", ");
+  }
+
+  function formatAssignments(values) {
+    return Object.entries(values || {})
+      .map(([k, v]) => `${k}=${v}`)
+      .join(" · ");
+  }
+
+  /** Live test table: evaluates the sheet as it is now, without saving a chip. */
+  function renderLiveCheckInner(challenge) {
+    if (challenge.verification !== "combinational" || !challenge.tests?.length) {
+      return `<p class="live-check-note">${escapeHtml(t("liveSequential"))}</p>`;
+    }
+    const live = typeof deps.buildLiveDefinition === "function" ? deps.buildLiveDefinition() : null;
+    if (!live || !live.definition) {
+      return `<p class="live-check-note">${escapeHtml(t("liveNeedsInterface"))}</p>`;
+    }
+    let passed = 0;
+    let firstFailIndex = -1;
+    const rows = challenge.tests
+      .map((test, index) => {
+        let actual = "?";
+        let ok = false;
+        try {
+          const out = challengeVerifier.previewOutputs(challenge, live.definition, test.inputs);
+          ok = Object.entries(test.outputs).every(([k, v]) => out[k] === v);
+          actual = Object.keys(test.outputs)
+            .map((k) => `${k}=${out[k] ?? "?"}`)
+            .join(" · ");
+        } catch {
+          actual = "—";
+        }
+        if (ok) {
+          passed += 1;
+        } else if (firstFailIndex < 0) {
+          firstFailIndex = index;
+        }
+        return `<tr class="${ok ? "ok" : "bad"} ${index === firstFailIndex ? "first-fail" : ""}">
+          <td class="mono">${escapeHtml(formatAssignments(test.inputs))}</td>
+          <td class="mono">${escapeHtml(formatAssignments(test.outputs))}</td>
+          <td class="mono">${escapeHtml(actual)}</td>
+          <td class="live-mark">${ok ? "✓" : "✗"}</td>
+        </tr>`;
+      })
+      .join("");
+    const total = challenge.tests.length;
+    const allPass = passed === total;
+    return `<div class="live-check-summary ${allPass ? "ok" : ""}">
+        <span class="live-check-meter" style="--ratio:${total ? passed / total : 0}"></span>
+        <span>${escapeHtml(allPass ? t("liveAllPass") : t("livePassing", { passed, total }))}</span>
+      </div>
+      <div class="live-check-table-wrap">
+        <table class="live-check-table">
+          <thead><tr>
+            <th>${escapeHtml(t("truthColInput"))}</th>
+            <th>${escapeHtml(t("truthColExpected"))}</th>
+            <th>${escapeHtml(t("liveColNow"))}</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function refreshLiveCheck() {
+    const container = dom.challengeList.querySelector("[data-live-check]");
+    if (!container) {
+      return;
+    }
+    const challenge = challengesById.get(container.dataset.liveCheck);
+    if (challenge) {
+      container.innerHTML = renderLiveCheckInner(challenge);
+    }
+  }
+
+  function renderHintLadder(challenge, localized) {
+    const hints = localized.hints || [];
+    if (!hints.length) {
+      return "";
+    }
+    const shown = Math.min(hints.length, (state.hintsShown && state.hintsShown[challenge.id]) || 0);
+    const list = shown
+      ? `<ol class="hint-list">${hints
+          .slice(0, shown)
+          .map((hint) => `<li>${escapeHtml(hint)}</li>`)
+          .join("")}</ol>`
+      : "";
+    const button =
+      shown < hints.length
+        ? `<button type="button" class="ghost-button hint-button" data-reveal-hint="${challenge.id}">💡 ${escapeHtml(
+            t("hintShow", { n: shown + 1, total: hints.length })
+          )}</button>`
+        : "";
+    return `${list}${button}`;
+  }
+
+  function renderStep(number, key, stateClass, title, body) {
+    return `<li class="lesson-step ${stateClass}" data-lesson-step="${key}">
+      <span class="lesson-step-marker">${stateClass === "is-done" ? "✓" : number}</span>
+      <div class="lesson-step-body">
+        <h4 class="lesson-step-title">${escapeHtml(title)}</h4>
+        ${body}
+      </div>
+    </li>`;
+  }
+
+  function renderChallengeDetail(challenge, result) {
     const localized = localizeChallenge(challenge);
     const learner = getLearner();
     const unlocked = isChallengeUnlocked(challenge);
-    const lessonCompleted = (learner.completedChallengeIds || []).includes(challenge.id);
+    const lessonCompleted = (learner.completedChallengeIds || []).includes(challenge.id) || Boolean(result.done);
     const nextLessonId = getNextLessonId(challenge.id);
     const requiredTitle = unlocked ? null : localizedRequiredTitle(challenge);
-    const theoryHtml = (localized.theory || [])
-      .map((paragraph) => `<p class="theory-paragraph">${escapeHtml(paragraph)}</p>`)
-      .join("");
-
-    const testsHtml = (challenge.tests || [])
-      .map((test) => {
-        const inputs = Object.entries(test.inputs).map(([k, v]) => `${k}=${v}`).join("  ");
-        const outputs = Object.entries(test.outputs).map(([k, v]) => `${k}=${v}`).join("  ");
-        return `<div class="challenge-test-row"><span>${escapeHtml(inputs)}</span><span>→</span><span>${escapeHtml(outputs)}</span></div>`;
-      })
-      .join("");
-
-    const constraintKicker =
-      challenge.gateConstraint?.allowedGateTypes?.length
-        ? ` • poorten: ${challenge.gateConstraint.allowedGateTypes.join(", ")}`
-        : challenge.gateConstraint?.forbiddenGateTypes?.length
-          ? ` • verboden: ${challenge.gateConstraint.forbiddenGateTypes.join(", ")}`
-          : "";
-
     const learning = localized.learning || {};
-    const goalHtml = learning.goal
-      ? `<p class="lesson-goal"><span class="lesson-goal-label">${escapeHtml(t("lessonGoal"))}</span> ${escapeHtml(
-          learning.goal
-        )}</p>`
-      : "";
-    const conceptsHtml = Array.isArray(learning.concepts) && learning.concepts.length
-      ? `<div class="lesson-concepts">${learning.concepts
-          .map((concept) => `<span class="lesson-concept">${escapeHtml(concept)}</span>`)
-          .join("")}</div>`
-      : "";
-
     const quizHtml = renderLessonQuiz(localized, learner);
-
-    const lockNotice = !unlocked
-      ? `<p class="challenge-lock-notice">${escapeHtml(
-          t("lockNotice", { required: requiredTitle || t("locked") })
-        )}</p>`
-      : "";
-
+    const quizItems = Array.isArray(localized.learning?.quiz) ? localized.learning.quiz : [];
+    const quizAnswered =
+      quizItems.length > 0 &&
+      quizItems.every((_, index) => learner.quizAnswers?.[challenge.id]?.[String(index)] !== undefined);
     const disabledAttr = unlocked ? "" : "disabled";
 
     const feedback =
       state.lastSubmitFeedback && state.lastSubmitFeedback.challengeId === challenge.id
         ? state.lastSubmitFeedback
         : null;
+    const lastCheckFailed = Boolean(feedback && !feedback.ok);
+
+    // Step states: done ✓ · current (accent) · upcoming (muted).
+    const buildState = lessonCompleted ? "is-done" : lastCheckFailed ? "" : "is-current";
+    const checkState = lessonCompleted ? "is-done" : lastCheckFailed ? "is-current" : "";
+    const quizState = !quizItems.length ? "" : quizAnswered ? "is-done" : lessonCompleted ? "is-current" : "";
+    const nextState = lessonCompleted && (!quizItems.length || quizAnswered) ? "is-current" : "";
+
+    const theoryOpen =
+      state.theoryOpen && state.theoryOpen[challenge.id] !== undefined
+        ? state.theoryOpen[challenge.id]
+        : !lessonCompleted;
+    const theoryParagraphs = (localized.theory || [])
+      .map((paragraph) => `<p class="theory-paragraph">${escapeHtml(paragraph)}</p>`)
+      .join("");
+
+    const template = challenge.template || { inputs: [], outputs: [] };
+    const conceptsHtml =
+      Array.isArray(learning.concepts) && learning.concepts.length
+        ? `<div class="lesson-concepts">${learning.concepts
+            .map((concept) => `<span class="lesson-concept">${escapeHtml(concept)}</span>`)
+            .join("")}</div>`
+        : "";
+
+    const steps = [];
+    let n = 1;
+    steps.push(
+      renderStep(
+        n++,
+        "goal",
+        "is-done",
+        t("stepGoal"),
+        `<p class="lesson-goal-text">${escapeHtml(learning.goal || localized.description || "")}</p>${conceptsHtml}`
+      )
+    );
+    if (theoryParagraphs) {
+      steps.push(
+        renderStep(
+          n++,
+          "theory",
+          "is-done",
+          t("stepTheory"),
+          `<details class="lesson-theory" data-theory-toggle="${challenge.id}"${theoryOpen ? " open" : ""}>
+            <summary>${escapeHtml(theoryOpen ? t("theoryHide") : t("theoryRead"))}</summary>
+            <div class="theory-body">${theoryParagraphs}</div>
+          </details>`
+        )
+      );
+    }
+    steps.push(
+      renderStep(
+        n++,
+        "build",
+        buildState,
+        t("stepBuild"),
+        `<p class="lesson-step-copy">${escapeHtml(t("buildInstruction"))}</p>
+        <p class="lesson-interface"><span>${escapeHtml(formatPins(template.inputs))}</span> → <span>${escapeHtml(
+          formatPins(template.outputs)
+        )}</span></p>
+        ${
+          unlocked && typeof deps.hasCoach === "function" && deps.hasCoach(challenge.id)
+            ? `<button type="button" class="ghost-button coach-button" data-coach-start="${challenge.id}">▶ ${escapeHtml(
+                t("coachShowMe")
+              )}</button>`
+            : ""
+        }
+        ${renderHintLadder(challenge, localized)}`
+      )
+    );
+
     const feedbackHtml = feedback
       ? `<p class="submit-feedback ${feedback.ok ? "ok" : "bad"}">${escapeHtml(feedback.message)}</p>`
       : "";
-
-    const failedCount = !result.done && Array.isArray(result.failedCases) ? result.failedCases.length : 0;
-    const hasTheory = Boolean(theoryHtml || quizHtml);
-    const tabs = [
-      hasTheory ? { id: "theorie", label: t("tabTheory") } : null,
-      { id: "hints", label: t("tabHints") },
-      {
-        id: "tests",
-        label: failedCount ? t("tabTestsFailed", { n: failedCount }) : t("tabTests"),
-      },
-    ].filter(Boolean);
-    let activeTab = state.challengeDetailTab || "theorie";
-    if (!tabs.some((tab) => tab.id === activeTab)) {
-      activeTab = tabs[0].id;
-    }
-    const tabButtons = tabs
-      .map(
-        (tab) => `<button type="button" class="challenge-tab ${tab.id === activeTab ? "active" : ""}"
-          data-challenge-tab="${tab.id}">${escapeHtml(tab.label)}</button>`
+    const sequentialFailures = isSequentialChallenge(challenge) ? renderFailedCasesTable(result) : "";
+    steps.push(
+      renderStep(
+        n++,
+        "check",
+        checkState,
+        t("stepCheck"),
+        `${unlocked ? `<div class="live-check" data-live-check="${challenge.id}">${renderLiveCheckInner(challenge)}</div>` : ""}
+        ${feedbackHtml}
+        ${sequentialFailures}
+        <button class="${lessonCompleted ? "ghost-button" : "primary-button"} lesson-check-button" type="button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
+          t("lessonCheck")
+        )}</button>`
       )
-      .join("");
+    );
 
-    let paneHtml = "";
-    if (activeTab === "theorie") {
-      paneHtml = `<div class="lesson-theory-block">
-        ${theoryHtml ? `<div class="theory-body">${theoryHtml}</div>` : ""}
-        ${quizHtml}
-      </div>`;
-    } else if (activeTab === "hints") {
-      paneHtml = `<div class="challenge-details">
-        <ul class="challenge-hints">
-          ${(localized.hints || []).map((hint) => `<li>${escapeHtml(hint)}</li>`).join("")}
-        </ul>
-      </div>`;
-    } else {
-      paneHtml = `
-        ${renderFailedCasesTable(result)}
-        ${renderTruthProbeTable(challenge, userDefinitions)}
-        ${testsHtml ? `<div class="challenge-details">
-          <div class="challenge-kicker">${escapeHtml(
-            t("referenceTests", { n: challenge.tests.length })
-          )}</div>
-          <div class="challenge-tests">${testsHtml}</div>
-        </div>` : ""}`;
+    if (quizHtml) {
+      steps.push(renderStep(n++, "quiz", quizState, t("stepQuiz"), quizHtml));
     }
 
-    return `<article class="challenge-card challenge-detail-card ${lessonCompleted || result.done ? "done" : ""} ${unlocked ? "" : "locked"}">
-      <div class="challenge-head">
-        <div>
-          <h3>${unlocked ? "" : "🔒 "}${escapeHtml(localized.title)}</h3>
-          <div class="challenge-kicker">${escapeHtml(
-            `${challenge.inputs} in / ${challenge.outputs} out${constraintKicker}`
-          )}</div>
-        </div>
-        <span class="challenge-status">${escapeHtml(
-          lessonCompleted || result.done
-            ? statusLabel(result.label || "Verified")
-            : unlocked
-              ? statusLabel(result.label)
-              : S.locked
-        )}</span>
-      </div>
-      <p class="challenge-copy">${escapeHtml(localized.description)}</p>
-      ${lockNotice}
-      ${feedbackHtml}
-      ${result.summary ? `<p class="challenge-copy challenge-result-summary">${escapeHtml(result.summary)}</p>` : ""}
-
-      <div class="lesson-build-block">
-        ${goalHtml}
-        ${conceptsHtml}
-        <div class="challenge-actions">
+    const unlockedParts = getPartsUnlockedBy(challenge.id)
+      .map((type) => BUILTIN_PARTS.find((part) => part.type === type)?.label || type)
+      .join(", ");
+    const nextBody = lessonCompleted
+      ? `${unlockedParts ? `<p class="lesson-unlocked-parts">✨ ${escapeHtml(t("unlockedParts", { parts: unlockedParts }))}</p>` : ""}
+        <div class="lesson-next-actions">
           ${
-            lessonCompleted && nextLessonId
+            nextLessonId
               ? `<button class="primary-button" type="button" data-next-lesson="${nextLessonId}">${escapeHtml(
                   t("lessonNext")
                 )}</button>`
               : ""
           }
-          <button class="${lessonCompleted && nextLessonId ? "ghost-button" : "primary-button"}" type="button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
-            t("lessonCheck")
-          )}</button>
-          <button class="ghost-button" type="button" data-open-challenge="${challenge.id}" title="${escapeHtml(
-            t("lessonRestartTitle")
-          )}" ${disabledAttr}>${escapeHtml(t("lessonRestart"))}</button>
+          <button class="ghost-button" type="button" data-nav="home">${escapeHtml(t("backToOverview"))}</button>
           ${
-            challenge.id === "computer" && lessonCompleted
+            challenge.id === "computer"
               ? `<button class="ghost-button" type="button" data-show-completion-overlay>${S.showCompletion}</button>`
               : ""
           }
-        </div>
-      </div>
+        </div>`
+      : `<p class="lesson-step-copy muted">${escapeHtml(t("nextLocked"))}</p>`;
+    steps.push(renderStep(n++, "next", nextState, t("stepNext"), nextBody));
 
-      <div class="challenge-tabs" role="tablist">${tabButtons}</div>
-      <div class="challenge-tab-pane">${paneHtml}</div>
+    const lockNotice = !unlocked
+      ? `<p class="challenge-lock-notice">${escapeHtml(t("lockNotice", { required: requiredTitle || t("locked") }))}</p>`
+      : "";
+
+    return `<article class="challenge-card challenge-detail-card lesson-flow ${lessonCompleted ? "done" : ""} ${
+      unlocked ? "" : "locked"
+    }">
+      <div class="challenge-head">
+        <h3>${unlocked ? "" : "🔒 "}${escapeHtml(localized.title)}</h3>
+        <span class="challenge-status">${escapeHtml(
+          lessonCompleted ? statusLabel("Verified") : unlocked ? statusLabel(result.label === "Open" ? "Open" : "Needs Work") : S.locked
+        )}</span>
+      </div>
+      <p class="challenge-copy">${escapeHtml(localized.description)}</p>
+      ${lockNotice}
+      <ol class="lesson-steps">${steps.join("")}</ol>
+      <div class="lesson-footer">
+        <button class="link-button" type="button" data-open-challenge="${challenge.id}" title="${escapeHtml(
+          t("lessonRestartTitle")
+        )}" ${disabledAttr}>↺ ${escapeHtml(t("lessonRestart"))}</button>
+      </div>
     </article>`;
   }
 
@@ -562,29 +661,7 @@ export function createPanelRenderers(deps) {
         <button type="button" class="ghost-button lesson-back" data-nav="home">${escapeHtml(t("lessonBack"))}</button>
         <span class="lesson-position">${escapeHtml(positionLabel)}</span>
       </div>
-      ${renderChallengeDetail(challenge, result, userDefinitions)}
-      <details class="challenge-card how-to-card">
-        <summary class="challenge-kicker theory-kicker how-to-summary">${escapeHtml(t("howToTitle"))}</summary>
-        <div class="how-to-body">
-          <p>${t("howTo1")}</p>
-          <p>${t("howTo2")}</p>
-          <p>${t("howTo3")}</p>
-          <p>${t("howTo4")}</p>
-          <p>${t("howTo5")}</p>
-          <p>${t("howTo6")}</p>
-        </div>
-        <div class="how-to-tips">
-          <div class="challenge-kicker">${escapeHtml(t("tips"))}</div>
-          <ul class="challenge-hints">
-            <li>${t("tipWireDelete")}</li>
-            <li>${t("tipNodeDelete")}</li>
-            <li>${t("tipVersions")}</li>
-            <li>${t("tipWireColors")}</li>
-            <li>${t("tipBus")}</li>
-            <li>${t("tipMultiSelect")}</li>
-          </ul>
-        </div>
-      </details>
+      ${renderChallengeDetail(challenge, result)}
     `;
     workspaceActions.updateChallengeStartButton();
     workspaceActions.updateChallengeSubmitButton();
@@ -597,5 +674,6 @@ export function createPanelRenderers(deps) {
     renderChallenges,
     isChallengeUnlocked,
     getNextLessonId,
+    refreshLiveCheck,
   };
 }

@@ -46,7 +46,8 @@ import { createTutorial } from "./src/ui/tutorial.js";
 import { createCourseRenderers } from "./src/ui/course.js";
 import { S, t, initLocale, setLocale, applyStaticI18n } from "./src/i18n/index.js";
 import { localizeChallenge } from "./src/i18n/challenges.js";
-import { getOrderedLessonIds } from "./src/data/curriculum.js";
+import { INTRO_LESSON_ID } from "./src/data/curriculum.js";
+import { getCoachScript } from "./src/data/coach-scripts.js";
 import { createUndoManager } from "./src/actions/undo.js";
 import { createCircuitMutations } from "./src/actions/circuit-mutations.js";
 import { createWorkspaceMutations } from "./src/actions/workspace-mutations.js";
@@ -162,6 +163,9 @@ import {
     renderedWorkspaceId: null,
     canvasScroll: {},
     sheetListSignature: "",
+    hintsShown: {},
+    inspectorOpenByView: { lesson: false, sandbox: true },
+    theoryOpen: {},
     lessonPanelCollapsed: false,
     challengeDetailTab: "theorie",
     lastSubmitFeedback: null,
@@ -216,7 +220,9 @@ import {
   const tutorial = createTutorial({
     state,
     getCurrentWorkspace,
+    getChipDefinition,
     setStatus,
+    getScript: getCoachScript,
   });
 
   let renderOrchestrator;
@@ -322,6 +328,12 @@ import {
     tutorial,
     stopClockRunner: () => runtimeActions.clockRunner.stop(),
     showCompletionOverlay: null,
+    getVisibleStageRect: () => ({
+      x: dom.canvas.scrollLeft / state.zoom,
+      y: dom.canvas.scrollTop / state.zoom,
+      width: dom.canvas.clientWidth / state.zoom,
+      height: dom.canvas.clientHeight / state.zoom,
+    }),
   };
   const workspaceMutations = createWorkspaceMutations(workspaceMutationDeps);
 
@@ -451,8 +463,7 @@ import {
     if (learner.unlockedAll) {
       return true;
     }
-    const firstLessonId = getOrderedLessonIds()[0];
-    return (learner.completedChallengeIds || []).includes(firstLessonId);
+    return (learner.completedChallengeIds || []).includes(INTRO_LESSON_ID);
   }
 
   function ensureSandboxWorkspace() {
@@ -547,6 +558,7 @@ import {
     state.selectedChallengeId = challengeId;
     state.lastSubmitFeedback = null;
     state.lessonPanelCollapsed = false;
+    dom.challengeList.scrollTop = 0;
     const existing = fresh ? null : findLatestLessonWorkspace(challengeId);
     if (existing) {
       state.project.currentWorkspaceId = existing.id;
@@ -561,6 +573,7 @@ import {
       state.appView = "lesson";
       workspaceMutations.openChallengeWorkspace(challengeId);
     }
+    dom.challengeList.scrollTop = 0;
     window.scrollTo(0, 0);
   }
 
@@ -597,6 +610,10 @@ import {
     document.querySelectorAll(".appbar-tab").forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.nav === view);
     });
+    const coachToggle = document.getElementById("coach-enabled-toggle");
+    if (coachToggle) {
+      coachToggle.checked = state.project.learner?.coachEnabled !== false;
+    }
     const sandboxUnlocked = isSandboxUnlocked();
     if (dom.navSandbox) {
       dom.navSandbox.classList.toggle("locked", !sandboxUnlocked);
@@ -618,6 +635,9 @@ import {
     const workspace = getCurrentWorkspace();
     if (!workspace) {
       return;
+    }
+    if (state.appView === "lesson") {
+      scheduleLiveCheck();
     }
     if (state.appView === "sandbox") {
       const signature = state.project.workspaces
@@ -641,14 +661,59 @@ import {
       }
     }
     if (dom.inspectorCard) {
-      const hasSelection = workspace.nodes.some((node) => node.id === state.selectedNodeId);
-      dom.inspectorCard.hidden = !hasSelection;
+      const selected = workspace.nodes.find((node) => node.id === state.selectedNodeId);
+      dom.inspectorCard.hidden = !selected;
+      // In lessons the inspector starts folded so it never hides pins; one tap opens it.
+      const open = Boolean(state.inspectorOpenByView[state.appView]);
+      dom.inspectorCard.classList.toggle("collapsed", !open);
+      const toggle = document.getElementById("inspector-toggle");
+      if (toggle) {
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+      const nodeLabel = document.getElementById("inspector-toggle-node");
+      if (nodeLabel) {
+        nodeLabel.textContent = selected ? selected.config?.label || selected.type : "";
+      }
     }
     if (dom.checksCard) {
       const errors = state.lastEvaluation ? state.lastEvaluation.errors : [];
       dom.checksCard.hidden = !errors || errors.length === 0;
     }
   }
+
+  /** Transient chip definition of the current sheet, for live testing without saving. */
+  function buildLiveDefinition() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace) {
+      return null;
+    }
+    const iface = chipDefinitionsService.extractChipInterface(workspace);
+    if (iface.errors.length) {
+      return { error: iface.errors[0].message };
+    }
+    // Only show live results once every output pin is actually driven by the circuit.
+    const outputIds = workspace.nodes.filter((node) => node.type === "output-pin").map((node) => node.id);
+    const allOutputsWired = outputIds.every((id) => workspace.wires.some((wire) => wire.toNodeId === id));
+    if (!allOutputsWired) {
+      return { error: "outputs-unwired" };
+    }
+    return {
+      definition: {
+        id: `live-${workspace.id}`,
+        name: workspace.name,
+        version: 0,
+        inputs: iface.inputs,
+        outputs: iface.outputs,
+        circuitSnapshot: { id: `live-${workspace.id}`, name: workspace.name, nodes: workspace.nodes, wires: workspace.wires, meta: {} },
+      },
+    };
+  }
+
+  const scheduleLiveCheck = debounce(() => {
+    if (state.appView === "lesson") {
+      panelRenderers.refreshLiveCheck();
+    }
+  }, 200);
 
   function toggleLessonPanel() {
     state.lessonPanelCollapsed = !state.lessonPanelCollapsed;
@@ -689,6 +754,8 @@ import {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    buildLiveDefinition,
+    hasCoach: (challengeId) => tutorial.hasScript(challengeId),
     getActiveChallengeId: () => {
       const challenge = workspaceMutations.getActiveWorkspaceChallenge();
       return challenge ? challenge.id : null;
@@ -797,7 +864,6 @@ import {
       render();
       eventBinder.bindEvents();
       bindShellEvents();
-      projectIo.showOnboardingIfNeeded();
     } catch (error) {
       console.error("Forge Logic bootstrap failed, resetting project.", error);
       state.project = createProject();
@@ -812,7 +878,6 @@ import {
       render();
       eventBinder.bindEvents();
       bindShellEvents();
-      projectIo.showOnboardingIfNeeded();
       setStatus(t("status.projectReset"));
     }
   }
@@ -835,6 +900,20 @@ import {
           setAppView(navButton.dataset.nav);
           return;
         }
+        const coachButton = event.target.closest("[data-coach-start]");
+        if (coachButton) {
+          event.stopImmediatePropagation();
+          tutorial.start(coachButton.dataset.coachStart);
+          return;
+        }
+        const hintButton = event.target.closest("[data-reveal-hint]");
+        if (hintButton) {
+          event.stopImmediatePropagation();
+          const id = hintButton.dataset.revealHint;
+          state.hintsShown[id] = (state.hintsShown[id] || 0) + 1;
+          panelRenderers.renderChallenges();
+          return;
+        }
         const nextButton = event.target.closest("[data-next-lesson]");
         if (nextButton) {
           event.stopImmediatePropagation();
@@ -846,6 +925,20 @@ import {
     if (dom.lessonPanelHandle) {
       dom.lessonPanelHandle.addEventListener("click", toggleLessonPanel);
     }
+    dom.challengeList.addEventListener(
+      "toggle",
+      (event) => {
+        const details = event.target;
+        if (details && details.dataset && details.dataset.theoryToggle) {
+          state.theoryOpen[details.dataset.theoryToggle] = details.open;
+          const summary = details.querySelector("summary");
+          if (summary) {
+            summary.textContent = details.open ? t("theoryHide") : t("theoryRead");
+          }
+        }
+      },
+      true
+    );
     dom.canvas.addEventListener(
       "scroll",
       () => {
@@ -856,7 +949,27 @@ import {
       },
       { passive: true }
     );
-    // Close popovers (settings, parts) when clicking elsewhere or after picking an action.
+    const inspectorToggle = document.getElementById("inspector-toggle");
+    if (inspectorToggle) {
+      inspectorToggle.addEventListener("click", () => {
+        state.inspectorOpenByView[state.appView] = !state.inspectorOpenByView[state.appView];
+        updateWorkspaceChrome();
+      });
+    }
+    const coachToggle = document.getElementById("coach-enabled-toggle");
+    if (coachToggle) {
+      coachToggle.addEventListener("change", () => {
+        const learner = state.project.learner;
+        learner.coachEnabled = coachToggle.checked;
+        if (coachToggle.checked) {
+          learner.coachDismissed = {};
+        } else {
+          tutorial.stop();
+        }
+        saveProject();
+      });
+    }
+    // Close popovers (settings, help, parts) when clicking elsewhere or after picking an action.
     document.addEventListener("click", (event) => {
       document.querySelectorAll("details.settings-menu[open], details.parts-dropdown[open]").forEach((details) => {
         if (!details.contains(event.target)) {
