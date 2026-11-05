@@ -427,3 +427,47 @@
 **Aannames:** "les 0" bestaat nog niet; tot fase C geldt de eerste les van het curriculum als ontgrendelvoorwaarde. Simulatie/verificatie niet aangeraakt.
 
 **Resultaat:** groen — `npm test` 141/141, `npm run check` OK, e2e 15/15; geen horizontale overflow op 390/820/1180/1440px.
+
+---
+
+## 2026-11-04 — UX fase B: lespaneel als stappenflow
+
+**Uitgevoerd:**
+- `src/ui/panels.js`: tabs (Theory/Hints/Tests) vervangen door verticale stappen Doel → Snap het → Bouw → Controleer → Begrepen? → Verder, met status per stap (✓ / huidig / komt nog). Theorie inklapbaar (open tot de les af is, keuze onthouden), hintladder (één hint per klik), interface-regel (`A, B → OUT`), "Nieuw in je onderdelen" na afronden, "Opnieuw beginnen" als subtiele link.
+- Live controle: voor combinatorische lessen wordt de huidige sheet als tijdelijke chip doorgerekend (zonder opslaan) en toont een testtabel met ✓/✗ per rij; eerste foute rij uitgelicht. Pas zichtbaar als alle outputs verbonden zijn. Debounced ververst bij elke wijziging op het canvas.
+- `src/model/lesson-palette.js` (nieuw): onderdelen per les; poorten komen vrij na de les die ze bouwt. Starter-chips verborgen in lessen.
+- `src/actions/workspace-mutations.js`: nieuwe onderdelen op een vrije plek binnen het zichtbare canvas.
+- Truth-probe-tabel (op basis van opgeslagen chip) vervangen door de live controle.
+- Tests: 14 nieuwe unit-tests (palet), e2e-test voor stappen/hints/palet/live controle.
+
+**Aannames:** poort-ontgrendeling is een UX-filter, geen verificatie-eis; vrije modus biedt alle poorten.
+
+**Resultaat:** groen — `npm test` 155/155, `npm run check` OK, e2e 15/15.
+
+---
+
+## 2026-11-05 — UX fase C: begeleiding en les 0
+
+**Uitgevoerd:**
+- Les 0 "Licht aan" (`intro-light`): casus buitenlamp (DOOR AND ALARM → LAMP), eigen module "0. Start", EN/NL-teksten en quiz. `extraParts` in het lesschema om AND in deze les aan te bieden.
+- Coach data-gedreven: `src/data/coach-scripts.js` (les 0–5) + generieke engine `src/ui/tutorial.js` (predicaten has/wire/fed/high/completed/ack/all; doelen part/out/toggle/check/selector; tweefasige draadbegeleiding; volgt menu's en scroll; scrollt doel in beeld).
+- Learner: `coachEnabled`, `coachDismissed` per les; migratie van het oude `tutorialDismissed` en automatisch les 0 voor bestaande voortgang.
+- UI: "Laat zien hoe"-knop in de Bouw-stap, ⚙ → Begeleiding, `?`-hulpmenu met herschreven uitleg en sneltoetsen, welkomst-hero op het startscherm i.p.v. overlay, inklapbare inspector (dicht in lessen), gelokaliseerde sheetnamen.
+- Tests: unit (prerequisites, migratie, palet les 0) en e2e (volledige les 0 met coach → les 1; coach opnieuw starten; coach uitzetten; hulpmenu).
+
+**Resultaat:** groen — `npm test` 163/163, `npm run check` OK, e2e 17/17.
+
+---
+
+## 2026-11-05 — UX fase D: tablet en touch
+
+**Uitgevoerd:**
+- Touch-maten via `@media (pointer: coarse)` (nodes, pins + tikzones, toggles, draden, canvasknoppen).
+- Gebaren: pinch-zoom + twee-vinger-pan rond het middelpunt, Ctrl/⌘+wheel-zoom rond de cursor (`bindTouchGestures` in `script.js`); `setZoom` kreeg een focuspunt; `fitToContent` + knop ⤢.
+- Onderpaneel met drie standen (peek/half/full), sleepbaar, voor les- en sandbox-paneel; peek toont live-status en Controleer.
+- Onderdelenstrip op smalle schermen (`#parts-strip`, aparte data-attributen zodat bestaande selectors uniek blijven); coach wijst de strip aan.
+- Plaatsing: echte node-maten, obstakels = nodes + zwevende kaarten, dichtstbijzijnde vrije plek, buiten beeld → canvas scrollt mee (`pendingReveal`).
+- Compacte les-indeling op smal canvas + automatisch passend maken bij openen; lesscherm wordt getoond vóór de sheet wordt aangemaakt zodat de maat bekend is.
+- E2E `touch.spec.js` (3 viewports); pinch handmatig geverifieerd met synthetische pointer-events (100% → 200%).
+
+**Resultaat:** groen — `npm test` 163/163, `npm run check` OK, e2e 20/20.

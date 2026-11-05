@@ -110,6 +110,35 @@ function makeRamChallenge(id, title, names, addrWidth, phase = "Project 5") {
 
 export const CHALLENGES = [
   {
+    id: "intro-light",
+    phase: "Start",
+    title: "Licht aan",
+    names: ["LIGHT"],
+    inputs: 2,
+    outputs: 1,
+    description:
+      "Casus: de buitenlamp mag alleen aan als de deur dicht is én het alarm aan staat. Bouw de schakeling die de lamp aanstuurt.",
+    verification: "combinational",
+    extraParts: ["gate-and"],
+    template: { inputs: ["DOOR", "ALARM"], outputs: ["LAMP"] },
+    hints: [
+      "Open Parts en plaats de AND-poort.",
+      "Verbind DOOR en ALARM elk met een ingang van de AND-poort.",
+      "Verbind de uitgang van de AND-poort met LAMP en zet daarna DOOR en ALARM aan.",
+    ],
+    tests: [
+      { inputs: { DOOR: "0", ALARM: "0" }, outputs: { LAMP: "0" } },
+      { inputs: { DOOR: "0", ALARM: "1" }, outputs: { LAMP: "0" } },
+      { inputs: { DOOR: "1", ALARM: "0" }, outputs: { LAMP: "0" } },
+      { inputs: { DOOR: "1", ALARM: "1" }, outputs: { LAMP: "1" } },
+    ],
+    theory: [
+      "Een schakeling bestaat uit onderdelen die met draden verbonden zijn. Over elke draad loopt een bit: 1 is aan, 0 is uit.",
+      "Links staan de inputs (hier DOOR en ALARM), rechts de output (LAMP). Een AND-poort geeft alleen 1 als beide ingangen 1 zijn — precies de regel van deze casus.",
+      "In de volgende lessen bouw je zulke poorten zelf, te beginnen met NAND.",
+    ],
+  },
+  {
     id: "nand",
     phase: "Project 1",
     title: "Build NAND",
@@ -1495,6 +1524,18 @@ export const CHALLENGES = [
 
 /** Lesdoelen, concepten en optionele quiz — gekoppeld op challenge-id. */
 const LEARNING_BY_ID = {
+  "intro-light": {
+    goal: "Leer onderdelen plaatsen, verbinden met draden en je schakeling testen.",
+    concepts: ["input", "output", "draad", "AND"],
+    quiz: [
+      {
+        question: "Wanneer gaat de lamp aan?",
+        options: ["Zodra de deur dicht is", "Als de deur dicht is én het alarm aan staat", "Als één van beide aan staat", "Nooit"],
+        answerIndex: 1,
+        explain: "AND geeft alleen 1 als beide ingangen 1 zijn.",
+      },
+    ],
+  },
   nand: {
     goal: "Begrijp waarom NAND universeel is en bouw een werkende NAND-chip.",
     concepts: ["bit", "universele poort", "NAND"],

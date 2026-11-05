@@ -1,5 +1,41 @@
 /** Auto-extracted / maintained challenge prose. Do not put tests here. */
 export default {
+  "intro-light": {
+    "title": "Light on",
+    "description": "Case: the porch lamp may only turn on when the door is closed and the alarm is armed. Build the circuit that controls the lamp.",
+    "hints": [
+      "Open Parts and place the AND gate.",
+      "Connect DOOR and ALARM each to one input of the AND gate.",
+      "Connect the AND gate's output to LAMP, then switch DOOR and ALARM on."
+    ],
+    "theory": [
+      "A circuit is made of parts connected by wires. Each wire carries a bit: 1 is on, 0 is off.",
+      "Inputs sit on the left (here DOOR and ALARM), the output on the right (LAMP). An AND gate outputs 1 only when both inputs are 1 — exactly the rule of this case.",
+      "In the next lessons you will build gates like this yourself, starting with NAND."
+    ],
+    "learning": {
+      "goal": "Learn to place parts, connect them with wires and test your circuit.",
+      "concepts": [
+        "input",
+        "output",
+        "wire",
+        "AND"
+      ],
+      "quiz": [
+        {
+          "question": "When does the lamp turn on?",
+          "options": [
+            "As soon as the door is closed",
+            "When the door is closed and the alarm is armed",
+            "When either one is on",
+            "Never"
+          ],
+          "explain": "AND only outputs 1 when both inputs are 1.",
+          "answerIndex": 1
+        }
+      ]
+    }
+  },
   "nand": {
     "title": "Build NAND",
     "description": "Make your own NAND chip without using the starter version.",

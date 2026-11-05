@@ -75,11 +75,11 @@ src/
 
 De app heeft drie schermen, bereikbaar via de balk bovenin:
 
-1. **Lessen** (startscherm) — het leerpad per module. **Ga verder** opent je volgende les; per module kun je eerdere lessen terugzien.
+1. **Lessen** (startscherm) — het leerpad per module, beginnend met les 0 "Licht aan" (een begeleide casus). **Ga verder** opent je volgende les; per module kun je eerdere lessen terugzien.
 2. **Les** — canvas met links (of onderin, op smalle schermen) het lespaneel: doel, theorie, quiz en **Controleer mijn schakeling**. Een les hervat je laatste sheet; **Opnieuw beginnen** geeft een verse.
 3. **Vrij bouwen** — open werkbank met sheets en je chipbibliotheek (**Snapshot** slaat een sheet op als chip). Ontgrendeld na de eerste les, of via *Vrije modus* op het startscherm.
 
-Klik **output-pin** → **input-pin** om te verbinden. Export, import, back-ups, links, taal en thema staan onder **⚙**.
+Klik **output-pin** → **input-pin** om te verbinden. In les 0–5 begeleidt een coach je stap voor stap (**Laat zien hoe** start hem opnieuw). Hulp en sneltoetsen staan onder **?**; export, import, back-ups, links, begeleiding, taal en thema onder **⚙**.
 
 Sneltoetsen: `Ctrl+Z` undo · `Ctrl+A` alles selecteren · `Ctrl+C`/`Ctrl+V` kopiëren/plakken · `Ctrl+D` dupliceren · `Shift+klik` multi-select · `Shift+slepen` selectiekader · `Delete` node verwijderen · `Esc` verbinden stoppen.
 
