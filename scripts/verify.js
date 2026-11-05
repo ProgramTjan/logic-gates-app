@@ -447,7 +447,8 @@ import {
 } from "../src/data/curriculum.js";
 import { CHALLENGES as REAL_CHALLENGES } from "../src/data/challenges.js";
 
-assert("nand prerequisites = []", getPrerequisites("nand").length === 0);
+assert("intro-light prerequisites = []", getPrerequisites("intro-light").length === 0);
+assert("nand komt na les 0 (intro-light)", getPrerequisites("nand")[0] === "intro-light");
 assert("not prerequisites = [nand]", getPrerequisites("not").length === 1 && getPrerequisites("not")[0] === "nand");
 assert(
   "half-adder prerequisites = last poorten les (dmux8way)",
@@ -457,7 +458,8 @@ assert("not16 komt na dmux in curriculum", getPrerequisites("not16")[0] === "dmu
 assert("or8way komt na dmux4way", getPrerequisites("or8way")[0] === "dmux4way");
 
 const freshLearner = createDefaultLearner();
-assert("verse learner: nand unlocked", isLessonUnlocked("nand", freshLearner) === true);
+assert("verse learner: les 0 unlocked", isLessonUnlocked("intro-light", freshLearner) === true);
+assert("verse learner: nand nog op slot", isLessonUnlocked("nand", freshLearner) === false);
 assert("verse learner: not locked", isLessonUnlocked("not", freshLearner) === false);
 assert(
   "na nand completed: not unlocked",
@@ -1383,6 +1385,19 @@ assert("palette: brede les biedt splitter/joiner", getLessonPartTypes(lpWide, {}
 assert("palette: vrije modus biedt alle poorten", getLessonPartTypes(lpNot, { unlockedAll: true }).available.includes("gate-and"));
 assert("palette: computer-les biedt ROM", getLessonPartTypes(REAL_CHALLENGES.find((c) => c.id === "computer"), {}).available.includes("rom"));
 assert("palette: les OR ontgrendelt OR en NOR", getPartsUnlockedBy("or").includes("gate-or") && getPartsUnlockedBy("or").includes("gate-nor"));
+
+// ─── Les 0 + coach-velden (UX fase C) ─────────────────────────────────────
+console.log("\nSectie: les 0 en coach");
+import { INTRO_LESSON_ID, normalizeLearner as normalizeLearnerC } from "../src/data/curriculum.js";
+const migratedC = normalizeLearnerC({ completedChallengeIds: ["nand", "not"], tutorialDismissed: true });
+assert("migratie: bestaande voortgang krijgt les 0", migratedC.completedChallengeIds[0] === INTRO_LESSON_ID);
+assert("migratie: oude walkthrough-skip → coach NAND gedismissed", migratedC.coachDismissed.nand === true);
+assert("migratie: coach standaard aan", migratedC.coachEnabled === true);
+const freshNorm = normalizeLearnerC({ completedChallengeIds: [] });
+assert("verse learner krijgt les 0 niet cadeau", freshNorm.completedChallengeIds.length === 0);
+const introLesson = REAL_CHALLENGES.find((c) => c.id === INTRO_LESSON_ID);
+assert("les 0 palet biedt AND", getLessonPartTypes(introLesson, {}).available.includes("gate-and"));
+assert("les 0 palet: AND niet als 'later'", !getLessonPartTypes(introLesson, {}).locked.some((l) => l.type === "gate-and"));
 
 console.log("\n" + "-".repeat(44));
 console.log("Totaal: " + passed + " geslaagd, " + failed + " mislukt");

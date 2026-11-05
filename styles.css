@@ -3422,3 +3422,119 @@ h2 {
   font-size: 0.75rem;
   color: var(--muted);
 }
+
+/* =============================================
+   COACH, HELP & SETTINGS (UX fase C)
+   ============================================= */
+
+.tutorial-coach {
+  background: var(--parts-menu-bg);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--panel-border));
+  box-shadow: var(--shadow);
+}
+
+.tutorial-coach-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tutorial-ack {
+  width: auto;
+  padding: 0.4rem 0.9rem;
+}
+
+.coach-button {
+  font-size: 0.82rem;
+  padding: 0.35rem 0.7rem;
+  margin: 0 0.35rem 0.4rem 0;
+}
+
+.help-menu > summary {
+  font-weight: 700;
+}
+
+.help-panel {
+  width: min(380px, calc(100vw - 1.5rem));
+  max-height: min(70vh, 560px);
+  overflow: auto;
+}
+
+.help-body p {
+  margin: 0 0 0.55rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.help-shortcuts kbd {
+  font-size: 0.75rem;
+}
+
+.help-note {
+  color: var(--muted);
+}
+
+.settings-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+}
+
+.course-hero.is-welcome h2 {
+  max-width: 34rem;
+}
+
+/* Inspector: foldable floating card (folded by default in lessons). */
+.inspector-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 0.45rem;
+  background: transparent;
+  color: var(--ink);
+  border: none;
+  text-align: left;
+}
+
+.inspector-toggle:hover {
+  background: transparent;
+}
+
+.inspector-toggle .floating-card-title {
+  margin: 0;
+}
+
+.inspector-toggle-node {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-toggle-icon {
+  color: var(--muted);
+  transition: transform 120ms ease;
+}
+
+.inspector-card.collapsed {
+  width: auto;
+  max-width: 240px;
+  padding: 0.4rem 0.65rem;
+}
+
+.inspector-card.collapsed .inspector-toggle {
+  margin: 0;
+}
+
+.inspector-card.collapsed .inspector-toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.inspector-card.collapsed #inspector {
+  display: none;
+}

@@ -67,6 +67,7 @@ export function getLessonPartTypes(challenge, learner = {}) {
   if (isSequentialChallenge(challenge)) {
     SEQUENTIAL_PARTS.forEach((type) => available.add(type));
   }
+  (challenge?.extraParts || []).forEach((type) => available.add(type));
   (template.nodes || []).forEach((spec) => {
     if (spec && spec.type) {
       available.add(spec.type);
@@ -76,6 +77,9 @@ export function getLessonPartTypes(challenge, learner = {}) {
   // NOR is taught by OR; keep only one locked entry per lesson for a tidy "learn later" row.
   const seenLessons = new Set();
   const tidyLocked = locked.filter((item) => {
+    if (available.has(item.type)) {
+      return false;
+    }
     if (seenLessons.has(item.lessonId)) {
       return false;
     }

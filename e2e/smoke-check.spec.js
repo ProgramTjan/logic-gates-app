@@ -41,12 +41,13 @@ test.describe("Leerapp smoke", () => {
     await expect(page.locator("#course-view")).toBeVisible();
   });
 
-  test("Ga verder opent les 1 met tutorial en zonder klokknoppen", async ({ page }) => {
+  test("Start opent les 0 met coach en zonder klokknoppen", async ({ page }) => {
     await page.locator("[data-course-continue]").click();
+    await expect(page.locator(".challenge-detail-card h3")).toContainText(/Light on|Licht aan/);
     await expect(page.locator("#app")).toHaveAttribute("data-view", "lesson");
     await expect(page.locator(".workspace-frame")).toBeVisible();
     await expect(page.locator("#lesson-panel")).toBeVisible();
-    await expect(page.locator("#tutorial-root, .tutorial-coachmark")).toBeVisible();
+    await expect(page.locator("[data-tutorial-coach]")).toBeVisible();
     await expect(page.locator("#sim-controls")).toBeHidden();
     await expect(page.locator("#export-button")).toBeHidden();
   });
@@ -119,6 +120,17 @@ test.describe("Leerapp smoke", () => {
     await page.locator('[data-submit-challenge="not"]').click();
     await expect(page.locator('[data-lesson-step="check"]')).toHaveClass(/is-done/);
     await expect(page.locator(".lesson-unlocked-parts")).toContainText("NOT");
+  });
+
+  test("hulpmenu toont sneltoetsen; coach uitzetten in instellingen", async ({ page }) => {
+    await page.locator("#help-menu summary").click();
+    await expect(page.locator(".help-shortcuts")).toContainText("Ctrl+Z");
+    await page.locator("#settings-menu summary").click();
+    await expect(page.locator(".help-shortcuts")).toBeHidden();
+    await page.locator("#coach-enabled-toggle").uncheck();
+    await page.locator('.appbar-tab[data-nav="home"]').click();
+    await page.locator("[data-course-continue]").click();
+    await expect(page.locator("[data-tutorial-coach]")).toBeHidden();
   });
 
   test("taalschakelaar in het instellingenmenu verandert chrome-tekst", async ({ page }) => {

@@ -528,6 +528,13 @@ export function createPanelRenderers(deps) {
         <p class="lesson-interface"><span>${escapeHtml(formatPins(template.inputs))}</span> → <span>${escapeHtml(
           formatPins(template.outputs)
         )}</span></p>
+        ${
+          unlocked && typeof deps.hasCoach === "function" && deps.hasCoach(challenge.id)
+            ? `<button type="button" class="ghost-button coach-button" data-coach-start="${challenge.id}">▶ ${escapeHtml(
+                t("coachShowMe")
+              )}</button>`
+            : ""
+        }
         ${renderHintLadder(challenge, localized)}`
       )
     );
@@ -655,28 +662,6 @@ export function createPanelRenderers(deps) {
         <span class="lesson-position">${escapeHtml(positionLabel)}</span>
       </div>
       ${renderChallengeDetail(challenge, result)}
-      <details class="challenge-card how-to-card">
-        <summary class="challenge-kicker theory-kicker how-to-summary">${escapeHtml(t("howToTitle"))}</summary>
-        <div class="how-to-body">
-          <p>${t("howTo1")}</p>
-          <p>${t("howTo2")}</p>
-          <p>${t("howTo3")}</p>
-          <p>${t("howTo4")}</p>
-          <p>${t("howTo5")}</p>
-          <p>${t("howTo6")}</p>
-        </div>
-        <div class="how-to-tips">
-          <div class="challenge-kicker">${escapeHtml(t("tips"))}</div>
-          <ul class="challenge-hints">
-            <li>${t("tipWireDelete")}</li>
-            <li>${t("tipNodeDelete")}</li>
-            <li>${t("tipVersions")}</li>
-            <li>${t("tipWireColors")}</li>
-            <li>${t("tipBus")}</li>
-            <li>${t("tipMultiSelect")}</li>
-          </ul>
-        </div>
-      </details>
     `;
     workspaceActions.updateChallengeStartButton();
     workspaceActions.updateChallengeSubmitButton();

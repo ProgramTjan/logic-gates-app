@@ -35,6 +35,24 @@
             <span class="appbar-lock" aria-hidden="true">🔒</span>
           </button>
         </nav>
+        <details class="settings-menu help-menu" id="help-menu">
+          <summary class="ghost-button settings-summary" data-i18n-title="helpTitle" title="Help &amp; shortcuts">
+            <span aria-hidden="true">?</span>
+          </summary>
+          <div class="settings-panel help-panel panel">
+            <p class="eyebrow" data-i18n="helpTitle">Help &amp; shortcuts</p>
+            <div class="help-body">
+              <p data-i18n-html="howTo1"></p>
+              <p data-i18n-html="howTo2"></p>
+              <p data-i18n-html="howTo3"></p>
+              <p data-i18n-html="howTo4"></p>
+              <p data-i18n-html="howTo5"></p>
+              <p data-i18n-html="howTo6"></p>
+              <p class="help-shortcuts" data-i18n-html="onboardingShortcuts"></p>
+              <p class="help-note" data-i18n="onboardingIos"></p>
+            </div>
+          </div>
+        </details>
         <details class="settings-menu" id="settings-menu">
           <summary class="ghost-button settings-summary" data-i18n-title="settingsTitle" title="Settings">
             <span aria-hidden="true">⚙</span>
@@ -48,6 +66,11 @@
               <button id="share-link-button" class="ghost-button" type="button" data-i18n="copyLink" data-i18n-title="copyLinkTitle" title="Copy URL with embedded project">Copy link</button>
               <button id="share-paste-button" class="ghost-button" type="button" data-i18n="importLink" data-i18n-title="importLinkTitle" title="Paste a previously copied URL">Import link</button>
             </div>
+            <p class="eyebrow" data-i18n="settingsGuidance">Guidance</p>
+            <label class="settings-check">
+              <input type="checkbox" id="coach-enabled-toggle" checked />
+              <span data-i18n="settingsCoach">Coach me through the first lessons</span>
+            </label>
             <p class="eyebrow" data-i18n="languageTitle">Language</p>
             <div class="locale-switcher" id="locale-switcher" data-i18n-title="languageTitle" title="Language">
               <button type="button" class="locale-btn active" data-set-locale="en">EN</button>
@@ -140,7 +163,11 @@
 
           <div class="canvas-overlay canvas-overlay-top">
             <section class="floating-card inspector-card" id="inspector-card">
-              <h2 class="floating-card-title" data-i18n="inspector">Inspector</h2>
+              <button type="button" class="inspector-toggle" id="inspector-toggle" aria-expanded="true">
+                <span class="floating-card-title" data-i18n="inspector">Inspector</span>
+                <span class="inspector-toggle-node" id="inspector-toggle-node"></span>
+                <span class="inspector-toggle-icon" aria-hidden="true">▾</span>
+              </button>
               <div id="inspector" class="inspector empty" data-i18n="inspectorEmpty">Select a node to edit its properties.</div>
             </section>
             <section class="floating-card checks-card" id="checks-card">
@@ -166,23 +193,6 @@
           </div>
         </div>
       </main>
-    </div>
-
-    <div id="onboarding-overlay" class="onboarding-overlay" hidden>
-      <div class="onboarding-card panel">
-        <h2 data-i18n="onboardingTitle">Welcome to Forge Logic</h2>
-        <p class="onboarding-lead" data-i18n="onboardingLead">Learn by building — every lesson walks you through it:</p>
-        <ol class="onboarding-steps">
-          <li data-i18n-html="onboardingStep1">Open <strong>Parts</strong> and add gates or chips.</li>
-          <li data-i18n-html="onboardingStep2">Click an <strong>output pin</strong>, then an <strong>input pin</strong> to connect.</li>
-          <li data-i18n-html="onboardingStep3">Use <strong>Snapshot</strong> to save a sheet as a chip.</li>
-          <li data-i18n-html="onboardingStep4">Pick a <strong>lesson</strong> on the right → <em>Start</em> → build → <em>Submit</em>.</li>
-        </ol>
-        <p class="onboarding-shortcuts" data-i18n="onboardingIos">
-          On iPhone/iPad, export your project as a file now and then (Safari may clear site data for rarely used sites).
-        </p>
-        <button id="onboarding-dismiss" type="button" class="primary-button" data-i18n="onboardingDismiss">Get started</button>
-      </div>
     </div>
 
     <div id="completion-overlay" class="onboarding-overlay" hidden>

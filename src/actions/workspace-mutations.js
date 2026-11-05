@@ -214,7 +214,7 @@ export function createWorkspaceMutations(deps) {
     if (!challenge) {
       return;
     }
-    const workspace = createWorkspace(state.project, `${challenge.title} Draft`, null, {
+    const workspace = createWorkspace(state.project, localizeChallenge(challenge).title, null, {
       challengeId,
     });
     populateChallengeWorkspace(workspace, challenge);

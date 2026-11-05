@@ -443,3 +443,16 @@
 **Aannames:** poort-ontgrendeling is een UX-filter, geen verificatie-eis; vrije modus biedt alle poorten.
 
 **Resultaat:** groen — `npm test` 155/155, `npm run check` OK, e2e 15/15.
+
+---
+
+## 2026-11-05 — UX fase C: begeleiding en les 0
+
+**Uitgevoerd:**
+- Les 0 "Licht aan" (`intro-light`): casus buitenlamp (DOOR AND ALARM → LAMP), eigen module "0. Start", EN/NL-teksten en quiz. `extraParts` in het lesschema om AND in deze les aan te bieden.
+- Coach data-gedreven: `src/data/coach-scripts.js` (les 0–5) + generieke engine `src/ui/tutorial.js` (predicaten has/wire/fed/high/completed/ack/all; doelen part/out/toggle/check/selector; tweefasige draadbegeleiding; volgt menu's en scroll; scrollt doel in beeld).
+- Learner: `coachEnabled`, `coachDismissed` per les; migratie van het oude `tutorialDismissed` en automatisch les 0 voor bestaande voortgang.
+- UI: "Laat zien hoe"-knop in de Bouw-stap, ⚙ → Begeleiding, `?`-hulpmenu met herschreven uitleg en sneltoetsen, welkomst-hero op het startscherm i.p.v. overlay, inklapbare inspector (dicht in lessen), gelokaliseerde sheetnamen.
+- Tests: unit (prerequisites, migratie, palet les 0) en e2e (volledige les 0 met coach → les 1; coach opnieuw starten; coach uitzetten; hulpmenu).
+
+**Resultaat:** groen — `npm test` 163/163, `npm run check` OK, e2e 17/17.

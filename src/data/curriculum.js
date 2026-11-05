@@ -4,7 +4,16 @@
  * of als learner.unlockedAll (vrije modus) aan staat.
  */
 
+/** First lesson of the path (lesson 0); completing it unlocks free build. */
+export const INTRO_LESSON_ID = "intro-light";
+
 export const CURRICULUM = [
+  {
+    id: "start",
+    title: "0. Start",
+    description: "Eerste casus: leer plaatsen, verbinden en testen.",
+    lessonIds: ["intro-light"],
+  },
   {
     id: "poorten",
     title: "1. Poorten",
@@ -147,9 +156,27 @@ export function createDefaultLearner() {
     unlockedAll: false,
     quizAnswers: {},
     tutorialDismissed: false,
+    coachEnabled: true,
+    coachDismissed: {},
     completionOverlayDismissed: false,
     badges: [],
   };
+}
+
+function normalizeCoachDismissed(source) {
+  const result = {};
+  if (source?.coachDismissed && typeof source.coachDismissed === "object") {
+    for (const [id, value] of Object.entries(source.coachDismissed)) {
+      if (value) {
+        result[String(id)] = true;
+      }
+    }
+  }
+  // Legacy: the old single walkthrough (lesson NAND) had one global "dismissed" flag.
+  if (source?.tutorialDismissed) {
+    result.nand = true;
+  }
+  return result;
 }
 
 function normalizeBadges(raw) {
@@ -198,6 +225,11 @@ export function normalizeLearner(rawLearner, deps = {}) {
     completedChallengeIds = [];
   }
 
+  // Lesson 0 was added later: learners who already made progress don't have to redo it.
+  if (completedChallengeIds.length && !completedChallengeIds.includes(INTRO_LESSON_ID)) {
+    completedChallengeIds.unshift(INTRO_LESSON_ID);
+  }
+
   const quizAnswers = {};
   if (source?.quizAnswers && typeof source.quizAnswers === "object") {
     for (const [challengeId, value] of Object.entries(source.quizAnswers)) {
@@ -212,6 +244,8 @@ export function normalizeLearner(rawLearner, deps = {}) {
     unlockedAll,
     quizAnswers,
     tutorialDismissed: Boolean(source?.tutorialDismissed),
+    coachEnabled: source?.coachEnabled !== false,
+    coachDismissed: normalizeCoachDismissed(source),
     completionOverlayDismissed: Boolean(source?.completionOverlayDismissed),
     badges: normalizeBadges(source?.badges),
   };
@@ -232,6 +266,8 @@ export function markChallengeCompleted(learner, challengeId) {
     unlockedAll: Boolean(base.unlockedAll),
     quizAnswers: base.quizAnswers && typeof base.quizAnswers === "object" ? { ...base.quizAnswers } : {},
     tutorialDismissed: Boolean(base.tutorialDismissed),
+    coachEnabled: base.coachEnabled !== false,
+    coachDismissed: base.coachDismissed && typeof base.coachDismissed === "object" ? { ...base.coachDismissed } : {},
     completionOverlayDismissed: Boolean(base.completionOverlayDismissed),
     badges: normalizeBadges(base.badges),
   });

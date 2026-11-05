@@ -95,7 +95,7 @@ Lesson-view toont alleen relevante onderdelen; sandbox toont alles. Uitgewerkt i
 
 ---
 
-## FASE C — Begeleiding
+## FASE C — Begeleiding ✅ gedaan 2026-11-05
 
 ### Stap C.1: Coach-engine data-gedreven
 Generaliseer `src/ui/tutorial.js`: stappen komen uit `challenge.coach: [{ textKey, target, until }]` met een kleine set predicaten (`hasNode(type)`, `hasWire(from,to)`, `toggled(label)`, `submitted`). Les 1-walkthrough herschrijven als data.
@@ -107,6 +107,17 @@ Nieuwe eerste les (`intro-light`): schakelaar → AND → lamp, met verhaal ("de
 Les 0–5: volledige coach. Daarna een hintladder (hint 1 → hint 2 → aanwijzing op canvas), alleen op verzoek. Instelling "Begeleiding: veel / weinig" in ⚙.
 
 **Acceptatie:** verse gebruiker komt zonder tekstmuur in les 0 en voltooit die zonder voorkennis; e2e dekt les 0.
+
+**Uitgevoerd (afwijkingen/aanvullingen):**
+- Coach-scripts in `src/data/coach-scripts.js` voor les 0 t/m 5 (intro-light, nand, not, and, or, xor); engine in `src/ui/tutorial.js`. Bij draadstappen wijst de coach eerst de bron-pin aan en na het kiezen een vrije ingang van het doel.
+- Overslaan geldt per les (`learner.coachDismissed`); "Laat zien hoe" in de Bouw-stap start de coach altijd opnieuw; ⚙ → Begeleiding zet de coach aan/uit.
+- Les 0 krijgt een eigen module "0. Start"; bestaande voortgang krijgt les 0 automatisch (migratie in `normalizeLearner`). Vrij bouwen gaat open na les 0.
+- Welkomst-overlay verwijderd; het startscherm verwelkomt nieuwe gebruikers. Hulp en sneltoetsen in een `?`-menu in de app-balk (teksten herschreven voor de nieuwe flow).
+- Inspector in lessen standaard ingeklapt tot een label, zodat hij geen pins afdekt.
+- Les-sheets krijgen de (vertaalde) lestitel als naam.
+
+### Bevindingen tijdens fase C (meenemen in latere fases)
+- Telefoon: Parts-menu loopt rechts buiten beeld; canvas is erg klein naast het onderpaneel → **D**.
 
 ---
 
