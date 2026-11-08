@@ -147,7 +147,7 @@ const nandChallenge = {
   ],
 };
 
-const verifier = createChallengeVerifier({
+const verifierDeps = {
   deepClone: (x) => JSON.parse(JSON.stringify(x)),
   parseBits,
   formatBits,
@@ -160,7 +160,8 @@ const verifier = createChallengeVerifier({
   setRuntimeRegisterStates: (next) => {
     registerStates = next;
   },
-});
+};
+const verifier = createChallengeVerifier(verifierDeps);
 
 const nandResult = verifier.evaluateChallengeResult(nandChallenge, [nandDefinition]);
 assert("NAND challenge: done=true", nandResult.done === true);
@@ -993,7 +994,7 @@ const computerResult = computerVerifier.runChallengeVerification(computerChallen
 assert("referentie Computer verified", computerResult.done === true);
 assert(
   "referentie Computer summary",
-  computerResult.done && /script-stappen geslaagd/.test(computerResult.summary)
+  computerResult.done && /script (steps passed|-stappen geslaagd)/.test(computerResult.summary)
 );
 
 // --- 15. Combo chip-instance cache + nest-benchmark ---
@@ -1398,6 +1399,71 @@ assert("verse learner krijgt les 0 niet cadeau", freshNorm.completedChallengeIds
 const introLesson = REAL_CHALLENGES.find((c) => c.id === INTRO_LESSON_ID);
 assert("les 0 palet biedt AND", getLessonPartTypes(introLesson, {}).available.includes("gate-and"));
 assert("les 0 palet: AND niet als 'later'", !getLessonPartTypes(introLesson, {}).locked.some((l) => l.type === "gate-and"));
+
+// ─── Afwerking (UX fase E) ────────────────────────────────────────────────
+console.log("\nSectie: afwerking");
+import { circuitSignature, sameCircuit } from "../src/model/circuit-signature.js";
+import { setLocale as setLocaleE } from "../src/i18n/index.js";
+
+const sigBase = {
+  nodes: [
+    { id: "n1", type: "input-pin", x: 10, y: 10, config: { label: "A", previewValue: "0" } },
+    { id: "n2", type: "gate", x: 50, y: 10, config: { gateType: "NOT" } },
+  ],
+  wires: [{ id: "w1", fromNodeId: "n1", fromPin: "OUT", toNodeId: "n2", toPin: "A" }],
+};
+const moved = JSON.parse(JSON.stringify(sigBase));
+moved.nodes[1].x = 400;
+moved.nodes[0].config.previewValue = "1";
+assert("signature: verplaatsen/schakelen telt niet als wijziging", sameCircuit(sigBase, moved));
+const rewired = JSON.parse(JSON.stringify(sigBase));
+rewired.wires = [];
+assert("signature: draad weg = wijziging", !sameCircuit(sigBase, rewired));
+const regated = JSON.parse(JSON.stringify(sigBase));
+regated.nodes[1].config.gateType = "AND";
+assert("signature: ander poorttype = wijziging", circuitSignature(sigBase) !== circuitSignature(regated));
+
+// Meldingen volgen de taal.
+setLocaleE("en", { persist: false });
+const enSummary = verifier.runChallengeVerification(
+  REAL_CHALLENGES.find((c) => c.id === "nand"),
+  { id: "x", name: "NAND", inputs: [], outputs: [], circuitSnapshot: { nodes: [], wires: [] } }
+).summary;
+assert("EN: verificatie-samenvatting in het Engels", !/geslaagd|opgeslagen/.test(enSummary));
+setLocaleE("nl", { persist: false });
+const nlSummary = verifier.runChallengeVerification(
+  REAL_CHALLENGES.find((c) => c.id === "nand"),
+  { id: "x", name: "NAND", inputs: [], outputs: [], circuitSnapshot: { nodes: [], wires: [] } }
+).summary;
+assert("NL: verificatie-samenvatting in het Nederlands", nlSummary !== enSummary);
+setLocaleE("en", { persist: false });
+
+// Starter-chip mag de les die hem bouwt niet oplossen.
+const starterHalf = {
+  id: "starter-ha",
+  name: "Half Adder",
+  description: "Starter half adder met SUM en CARRY.",
+  inputs: [{ name: "A" }, { name: "B" }],
+  outputs: [{ name: "SUM" }, { name: "CARRY" }],
+  circuitSnapshot: { nodes: [], wires: [], meta: { isStarter: true } },
+};
+const starterVerifier = createChallengeVerifier({
+  ...verifierDeps,
+  getChipDefinition: (id) => (id === "starter-ha" ? starterHalf : null),
+});
+const wrapper = {
+  id: "mine",
+  name: "Half Adder",
+  inputs: [{ name: "A" }, { name: "B" }],
+  outputs: [{ name: "SUM" }, { name: "CARRY" }],
+  circuitSnapshot: {
+    nodes: [{ id: "c1", type: "chip-instance", config: { definitionId: "starter-ha" } }],
+    wires: [],
+  },
+};
+const halfAdderChallenge = REAL_CHALLENGES.find((c) => c.id === "half-adder");
+const shortcut = starterVerifier.runChallengeVerification(halfAdderChallenge, wrapper);
+assert("starter-chip als oplossing van zijn eigen les wordt geweigerd", !shortcut.done && /starter/i.test(shortcut.summary));
 
 console.log("\n" + "-".repeat(44));
 console.log("Totaal: " + passed + " geslaagd, " + failed + " mislukt");

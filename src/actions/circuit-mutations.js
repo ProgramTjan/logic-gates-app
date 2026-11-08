@@ -14,31 +14,31 @@ export function createCircuitMutations(deps) {
   function connectPins(fromNodeId, fromPin, toNodeId, toPin) {
     const workspace = getCurrentWorkspace();
     if (fromNodeId === toNodeId) {
-      return { ok: false, message: "Een node kan niet op zichzelf worden aangesloten." };
+      return { ok: false, message: t("msg.selfConnect") };
     }
 
     const sourceNode = workspace.nodes.find((node) => node.id === fromNodeId);
     const targetNode = workspace.nodes.find((node) => node.id === toNodeId);
     if (!sourceNode || !targetNode) {
-      return { ok: false, message: "Kon de nodes voor deze verbinding niet vinden." };
+      return { ok: false, message: t("msg.nodesMissing") };
     }
 
     const sourcePin = getNodeSpec(sourceNode).outputs.find((pin) => pin.key === fromPin);
     const targetPin = getNodeSpec(targetNode).inputs.find((pin) => pin.key === toPin);
     if (!sourcePin || !targetPin) {
-      return { ok: false, message: "Ongeldige pinselectie." };
+      return { ok: false, message: t("msg.invalidPins") };
     }
 
     if (sourcePin.width !== targetPin.width) {
       return {
         ok: false,
-        message: `Bitbreedte mismatch: ${sourcePin.width}-bit kan niet naar ${targetPin.width}-bit.`,
+        message: t("msg.widthMismatchWire", { from: sourcePin.width, to: targetPin.width }),
       };
     }
 
     const existing = workspace.wires.find((wire) => wire.toNodeId === toNodeId && wire.toPin === toPin);
     if (existing) {
-      return { ok: false, message: "Deze input-pin heeft al een driver." };
+      return { ok: false, message: t("msg.pinHasDriver") };
     }
 
     pushUndo();

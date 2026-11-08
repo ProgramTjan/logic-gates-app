@@ -65,8 +65,8 @@ Inhoudelijk is de app ver (40 lessen, unlock-gating, quiz, walkthrough les 1, kl
 
 ### Bevindingen tijdens fase A (meenemen in latere fases)
 - ~~Nieuwe onderdelen landen op een vaste positie, soms buiten beeld~~ → opgelost in B.2.
-- Elke "Controleer" maakt een nieuwe chipversie; de chipbibliotheek groeit snel → **E**: alleen een nieuwe versie bij een gewijzigde schakeling.
-- NL-strings in EN-modus: `Nog geen eigen oplossing opgeslagen`, `functionele tests geslaagd` (verificatiesamenvatting) → **E**.
+- ~~Elke "Controleer" maakt een nieuwe chipversie~~ → opgelost in E.
+- ~~NL-strings in EN-modus~~ → opgelost in E.
 
 ---
 
@@ -90,8 +90,8 @@ Lesson-view toont alleen relevante onderdelen; sandbox toont alles. Uitgewerkt i
 
 ### Bevindingen tijdens fase B (meenemen in latere fases)
 - ~~Inspector-kaart is op staande tablet te groot~~ → inklapbaar sinds C, standaard dicht op smalle schermen sinds D.
-- NL-beschrijvingen van onderdelen in EN-modus ("Publieke chipinput" e.d. in `builtinParts.js`) → **E**.
-- Starter-chips zijn in een les-sheet nog wel via oude sheets/plakken bruikbaar en tellen dan mee in de verificatie → **E** (verificatie laten weigeren).
+- ~~NL-beschrijvingen van onderdelen in EN-modus~~ → opgelost in E.
+- ~~Starter-chips als oplossing van hun eigen les~~ → verificatie weigert dit sinds E.
 
 ---
 
@@ -142,11 +142,19 @@ Les 0–5: volledige coach. Daarna een hintladder (hint 1 → hint 2 → aanwijz
 
 ---
 
-## FASE E — Afwerking
+## FASE E — Afwerking ✅ gedaan 2026-11-08
 
 - Hardcoded strings naar i18n (o.a. `Nog geen eigen oplossing opgeslagen`, `poorten:`/`verboden:` in de kicker).
 - Legacy "Project N"-label vervangen door module + lesnummer ("Poorten · les 1/19").
 - Lege staten met één concrete actie; consistente knophiërarchie (één primaire knop per scherm).
+
+**Uitgevoerd:**
+- Alle hardcoded NL-teksten naar `src/i18n/en.js` + `nl.js`: verbindingsfouten, simulatiefouten (`src/sim/evaluate.js`), chip-interfacefouten, verificatie-samenvattingen, deel-dialogen, beschrijvingen van onderdelen (`partCopy.*`) en starter-chips (weergave in de huidige taal). Controle: een scan van alle schermen in EN vindt geen Nederlands meer.
+- Nieuwe chipversie alleen bij een gewijzigde schakeling (`src/model/circuit-signature.js`: verplaatsen en schakelen tellen niet mee).
+- Verificatie weigert de starter-chip als oplossing van de les die die chip bouwt (`checkStarterShortcut`).
+- Lege staten: chipbibliotheek met knop "Sla deze sheet op als chip"; palet-tekst verschilt tussen les en Vrij bouwen.
+- Knophiërarchie: één primaire knop per scherm — "Ga verder/Start" op het overzicht (module met de volgende les krijgt een accentrand), "Controleer" in de les; Parts is een sterke secundaire knop.
+- Legacy "Project N"-label was al in fase B verdwenen.
 
 ---
 

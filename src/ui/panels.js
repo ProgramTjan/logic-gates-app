@@ -51,6 +51,18 @@ export function createPanelRenderers(deps) {
     return id ? challengesById.get(id) || null : null;
   }
 
+  /** Starter chips carry a stored (Dutch) description; show it in the current language. */
+  function describeChip(definition) {
+    if (challengeVerifier.isStarterDefinition(definition)) {
+      const key = `starterDescription.${definition.name}`;
+      const localized = t(key);
+      if (localized !== key) {
+        return localized;
+      }
+    }
+    return definition.description;
+  }
+
   function partLabel(type) {
     const part = BUILTIN_PARTS.find((item) => item.type === type);
     return part ? part.label : type;
@@ -59,7 +71,7 @@ export function createPanelRenderers(deps) {
   function renderPartButton(part) {
     return `<button class="palette-button" type="button" data-part-type="${part.type}">
           ${escapeHtml(part.label)}
-          <small>${escapeHtml(part.copy)}</small>
+          <small>${escapeHtml(t(`partCopy.${part.type}`) === `partCopy.${part.type}` ? part.copy : t(`partCopy.${part.type}`))}</small>
         </button>`;
   }
 
@@ -87,7 +99,9 @@ export function createPanelRenderers(deps) {
             </button>`
           )
           .join("")
-      : `<div class="palette-section-empty">${escapeHtml(t("paletteChipsEmpty"))}</div>`;
+      : `<div class="palette-section-empty">${escapeHtml(
+          lesson ? t("paletteChipsEmptyLesson") : t("paletteChipsEmpty")
+        )}</div>`;
 
     const lockedMarkup =
       lessonParts && lessonParts.locked.length
@@ -177,9 +191,10 @@ export function createPanelRenderers(deps) {
       (definition) => !challengeVerifier.isStarterDefinition(definition)
     );
     if (!definitions.length) {
-      dom.chipLibrary.innerHTML = `<div class="chip-card"><div class="chip-meta">${escapeHtml(
-        t("chipLibraryEmpty")
-      )}</div></div>`;
+      dom.chipLibrary.innerHTML = `<div class="chip-card empty-card">
+        <div class="chip-meta">${escapeHtml(t("chipLibraryEmpty"))}</div>
+        <button type="button" class="ghost-button" data-empty-snapshot>${escapeHtml(t("chipLibraryEmptyAction"))}</button>
+      </div>`;
       return;
     }
 
@@ -230,7 +245,7 @@ export function createPanelRenderers(deps) {
             }</span>
           </summary>
           <div class="chip-series-body">
-            ${latest.description ? `<p class="chip-meta">${escapeHtml(latest.description)}</p>` : ""}
+            ${latest.description ? `<p class="chip-meta">${escapeHtml(describeChip(latest))}</p>` : ""}
             ${
               dependencyCount
                 ? `<p class="chip-meta">${escapeHtml(t("chipNested", { n: dependencyCount }))}</p>`

@@ -3754,3 +3754,26 @@ h2 {
     min-width: 40px;
   }
 }
+
+/* Button hierarchy (UX fase E): one primary action per screen; Parts is a strong secondary. */
+.parts-dropdown > summary.parts-summary {
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--ghost-border));
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.parts-dropdown[open] > summary.parts-summary {
+  background: var(--accent-soft);
+}
+
+.empty-card {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+.course-module-start.is-next {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--ghost-border));
+  color: var(--accent);
+  font-weight: 600;
+}

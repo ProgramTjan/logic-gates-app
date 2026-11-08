@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 export function createChallengeVerifier(deps) {
   const { getChipDefinition } = deps;
 
@@ -13,6 +14,12 @@ export function createChallengeVerifier(deps) {
         (definition.circuitSnapshot &&
           definition.circuitSnapshot.meta &&
           definition.circuitSnapshot.meta.isStarter)
+    );
+  }
+
+  function definitionNameMatches(definition, challenge) {
+    return challenge.names.some(
+      (name) => normalizeChallengeName(definition.name) === normalizeChallengeName(name)
     );
   }
 
@@ -61,7 +68,7 @@ export function createChallengeVerifier(deps) {
         const uniq = [...new Set(bad)].join(", ");
         return {
           ok: false,
-          message: `Poort-constraint: alleen ${[...allowed].join(", ")} — verboden aangetroffen: ${uniq}.`,
+          message: t("verify.gateOnly", { allowed: [...allowed].join(", "), found: uniq }),
         };
       }
     }
@@ -70,14 +77,31 @@ export function createChallengeVerifier(deps) {
       const bad = acc.filter((g) => forbidden.has(g));
       if (bad.length) {
         const uniq = [...new Set(bad)].join(", ");
-        return { ok: false, message: `Verboden poorten in je chip: ${uniq}.` };
+        return { ok: false, message: t("verify.forbidden", { found: uniq }) };
+      }
+    }
+    return { ok: true, message: "" };
+  }
+
+  /** A lesson can't be passed by dropping in the starter chip of the very chip it asks you to build. */
+  function checkStarterShortcut(challenge, definition) {
+    const nodes = definition.circuitSnapshot?.nodes || [];
+    for (const node of nodes) {
+      if (node.type !== "chip-instance") {
+        continue;
+      }
+      const def = getChipDefinition(node.config?.definitionId);
+      if (def && isStarterDefinition(def) && definitionNameMatches(def, challenge)) {
+        return { ok: false, message: t("verify.starterShortcut", { name: def.name }) };
       }
     }
     return { ok: true, message: "" };
   }
 
   function finalizeWithGateConstraint(challenge, definition, base) {
-    const gc = checkGateConstraints(challenge, definition);
+    const starter = checkStarterShortcut(challenge, definition);
+    const gateCheck = checkGateConstraints(challenge, definition);
+    const gc = starter.ok ? gateCheck : starter;
     const done = Boolean(base.done) && gc.ok;
     let summary = base.summary || "";
     if (!gc.ok) {
@@ -97,7 +121,7 @@ export function createChallengeVerifier(deps) {
       return {
         done: false,
         label: "Open",
-        summary: "Nog geen eigen oplossing opgeslagen.",
+        summary: t("verify.noSolution"),
       };
     }
 
@@ -127,7 +151,7 @@ export function createChallengeVerifier(deps) {
     const base = {
       done: true,
       label: "Shape OK",
-      summary: "Interface komt overeen met de opdracht.",
+      summary: t("verify.shapeOk"),
       score: 1,
     };
     return finalizeWithGateConstraint(challenge, definition, base);
@@ -165,7 +189,7 @@ export function createChallengeVerifier(deps) {
     const base = {
       done: passed === tests.length,
       label: passed === tests.length ? "Verified" : "Needs Work",
-      summary: `${passed}/${tests.length} functionele tests geslaagd.`,
+      summary: t("verify.functional", { passed, total: tests.length }),
       score: tests.length ? passed / tests.length : 0,
       failedCases,
     };
@@ -223,7 +247,7 @@ export function createChallengeVerifier(deps) {
       const base = {
         done: passed === checkpoints.length,
         label: passed === checkpoints.length ? "Verified" : "Needs Work",
-        summary: `${passed}/${checkpoints.length} sequentiële checks geslaagd.`,
+        summary: t("verify.sequential", { passed, total: checkpoints.length }),
         score: checkpoints.length ? passed / checkpoints.length : 0,
       };
       return finalizeWithGateConstraint(challenge, definition, base);
@@ -269,7 +293,7 @@ export function createChallengeVerifier(deps) {
       const base = {
         done: passed === checks.length,
         label: passed === checks.length ? "Verified" : "Needs Work",
-        summary: `${passed}/${checks.length} sequentiële PC-checks geslaagd.`,
+        summary: t("verify.pc", { passed, total: checks.length }),
         score: checks.length ? passed / checks.length : 0,
       };
       return finalizeWithGateConstraint(challenge, definition, base);
@@ -350,7 +374,7 @@ export function createChallengeVerifier(deps) {
       const base = {
         done: total > 0 && passed === total,
         label: total > 0 && passed === total ? "Verified" : "Needs Work",
-        summary: `${passed}/${total} script-stappen geslaagd.`,
+        summary: t("verify.script", { passed, total }),
         score: total ? passed / total : 0,
         failedCases,
       };

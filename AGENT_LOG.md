@@ -471,3 +471,18 @@
 - E2E `touch.spec.js` (3 viewports); pinch handmatig geverifieerd met synthetische pointer-events (100% → 200%).
 
 **Resultaat:** groen — `npm test` 163/163, `npm run check` OK, e2e 20/20.
+
+---
+
+## 2026-11-08 — UX fase E: afwerking
+
+**Uitgevoerd:**
+- i18n: ~45 hardcoded NL-teksten naar sleutels (`msg.*`, `sim.*`, `chip.*`, `verify.*`, `share.*`, `partCopy.*`, `starterDescription.*`) in o.a. `circuit-mutations.js`, `sim/evaluate.js`, `chips/definitions.js`, `challenges/verification.js`, `project-io.js`, `lib/project-share.js`, `builtinParts.js`.
+- `src/model/circuit-signature.js` (nieuw): logische handtekening van een schakeling; `saveCurrentWorkspaceAsChip` hergebruikt de laatste versie bij een ongewijzigde schakeling.
+- `checkStarterShortcut` in de verificatie.
+- Lege staten en knophiërarchie (overzicht, Parts, chipbibliotheek).
+- Tests: 6 nieuwe unit-tests (handtekening, taal van meldingen, starter-regel), e2e: opnieuw controleren maakt geen nieuwe chipversie. Handmatige scan van alle schermen in EN: 0 Nederlandse regels (zelfde scan in NL: 146).
+
+**Aanname:** de taal van foutmeldingen volgt de taal op het moment van evalueren; na een taalwissel rekent de app opnieuw en kloppen de meldingen weer.
+
+**Resultaat:** groen — `npm test` 169/169, `npm run check` OK, e2e 20/20.

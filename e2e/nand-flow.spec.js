@@ -99,6 +99,15 @@ test.describe("Leerflow nieuwe gebruiker", () => {
       timeout: 15_000,
     });
     await expect(page.locator('[data-next-lesson="not"]')).toBeVisible();
+
+    // Nogmaals controleren zonder wijziging → geen nieuwe chipversie.
+    const countDefinitions = () =>
+      page.evaluate(() => JSON.parse(localStorage.getItem("forge-logic-project-v2") || "{}").chipDefinitions?.length || 0);
+    await expect.poll(countDefinitions).toBeGreaterThan(0);
+    const versionsBefore = await countDefinitions();
+    await page.locator('[data-submit-challenge="nand"]').click();
+    await page.waitForTimeout(600);
+    expect(await countDefinitions()).toBe(versionsBefore);
   });
 
   test("Laat zien hoe start de coach opnieuw na overslaan", async ({ page }) => {

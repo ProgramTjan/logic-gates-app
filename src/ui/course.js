@@ -110,7 +110,9 @@ export function createCourseRenderers(deps) {
         </div>
         ${
           startId
-            ? `<button type="button" class="primary-button course-module-start" data-course-lesson="${escapeHtml(
+            ? `<button type="button" class="ghost-button ${
+                module.lessonIds.includes(nextId) ? "is-next" : ""
+              } course-module-start" data-course-lesson="${escapeHtml(
                 startId
               )}">${done === total ? t("courseView") : done > 0 ? S.continue : S.start}</button>`
             : `<p class="course-module-lock">🔒 ${escapeHtml(S.locked)}</p>`

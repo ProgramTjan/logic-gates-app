@@ -1133,6 +1133,16 @@ import {
       true
     );
     document.querySelectorAll("[data-sheet-grip]").forEach(bindSheetGrip);
+    dom.chipLibrary.addEventListener(
+      "click",
+      (event) => {
+        if (event.target.closest("[data-empty-snapshot]")) {
+          event.stopImmediatePropagation();
+          dom.saveChipButton.click();
+        }
+      },
+      true
+    );
     const fitButton = document.getElementById("zoom-fit-button");
     if (fitButton) {
       fitButton.addEventListener("click", () => fitToContent({ minZoom: MIN_ZOOM, maxZoom: 1.5 }));

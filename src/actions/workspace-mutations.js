@@ -1,3 +1,4 @@
+import { sameCircuit } from "../model/circuit-signature.js";
 import { markChallengeCompleted } from "../data/curriculum.js";
 import { t } from "../i18n/index.js";
 import { localizeChallenge } from "../i18n/challenges.js";
@@ -356,6 +357,22 @@ export function createWorkspaceMutations(deps) {
     if (!series) {
       series = { id: allocateId(state.project, "chip-series"), name: trimmedName, definitionIds: [] };
       state.project.chipSeries.push(series);
+    }
+
+    // Unchanged circuit (only moved nodes or flipped switches)? Reuse the latest version.
+    const latestId = series.definitionIds[series.definitionIds.length - 1];
+    const latest = latestId ? state.project.chipDefinitions.find((item) => item.id === latestId) : null;
+    if (latest && latest.circuitSnapshot && sameCircuit(latest.circuitSnapshot, workspace)) {
+      workspace.meta = {
+        ...workspace.meta,
+        sourceChipSeriesId: series.id,
+        sourceChipDefinitionId: latest.id,
+        sourceChipVersion: latest.version,
+        draftMode: "new-version",
+      };
+      setStatus(t("chipUnchanged", { name: latest.name, version: latest.version }));
+      renderFull();
+      return latest;
     }
 
     const version = series.definitionIds.length + 1;
