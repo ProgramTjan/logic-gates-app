@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 const MARK_GZIP = "p=v1.";
 const MARK_RAW = "p=u1.";
 
@@ -40,7 +41,7 @@ export async function decodeProjectFromUrlHashPayload(payload) {
   if (payload.startsWith(MARK_GZIP)) {
     const raw = base64UrlToUint8(payload.slice(MARK_GZIP.length));
     if (typeof DecompressionStream === "undefined") {
-      throw new Error("Gedeelde link gebruikt compressie; je browser ondersteunt geen DecompressionStream.");
+      throw new Error(t("share.noDecompression"));
     }
     const stream = new DecompressionStream("gzip");
     const writer = stream.writable.getWriter();

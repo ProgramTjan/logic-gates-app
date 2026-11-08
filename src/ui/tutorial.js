@@ -1,19 +1,14 @@
 /**
- * Guided walkthrough for lesson 1 (NAND).
- * UI + state observation only — no sim modules.
+ * Coach: guided, step-by-step walkthrough for a lesson.
+ * Steps come from src/data/coach-scripts.js; this module only interprets them.
+ * UI + state observation only — never touches the simulation.
  */
 
 import { t } from "../i18n/index.js";
 
-const NAND_LESSON_ID = "nand";
-
 function ensureOverlay() {
   let root = document.getElementById("tutorial-root");
   if (root) {
-    const skip = root.querySelector("[data-tutorial-skip]");
-    if (skip) {
-      skip.textContent = t("tutorialSkip");
-    }
     return root;
   }
   root = document.createElement("div");
@@ -22,13 +17,14 @@ function ensureOverlay() {
   root.hidden = true;
   root.innerHTML = `
     <div class="tutorial-spotlight" data-tutorial-spotlight hidden></div>
-    <div class="tutorial-coach" data-tutorial-coach hidden>
+    <div class="tutorial-coach" data-tutorial-coach role="dialog" aria-live="polite" hidden>
       <p class="tutorial-coach-text" data-tutorial-text></p>
       <div class="tutorial-coach-actions">
         <span class="tutorial-step-indicator" data-tutorial-step></span>
-        <button type="button" class="ghost-button tutorial-skip" data-tutorial-skip>${t(
-          "tutorialSkip"
-        )}</button>
+        <span class="tutorial-coach-buttons">
+          <button type="button" class="link-button tutorial-skip" data-tutorial-skip></button>
+          <button type="button" class="primary-button tutorial-ack" data-tutorial-ack hidden></button>
+        </span>
       </div>
     </div>
   `;
@@ -36,186 +32,216 @@ function ensureOverlay() {
   return root;
 }
 
-function findInputPin(workspace, label) {
-  return workspace.nodes.find(
-    (node) => node.type === "input-pin" && String(node.config?.label || "") === label
-  );
-}
-
-function findOutputPin(workspace, label) {
-  return workspace.nodes.find(
-    (node) => node.type === "output-pin" && String(node.config?.label || "") === label
-  );
-}
-
-function findNandGate(workspace) {
-  return workspace.nodes.find(
-    (node) => node.type === "gate" && String(node.config?.gateType || "").toUpperCase() === "NAND"
-  );
-}
-
-function hasWire(workspace, fromId, toId) {
-  return workspace.wires.some(
-    (wire) => wire.fromNodeId === fromId && wire.toNodeId === toId
-  );
-}
-
 export function createTutorial(deps) {
-  const { state, getCurrentWorkspace, setStatus } = deps;
+  const { state, getCurrentWorkspace, getChipDefinition, setStatus, getScript } = deps;
 
   let active = false;
+  let lessonId = null;
+  let steps = [];
   let stepIndex = 0;
+  let acked = new Set();
   let root = null;
+  let repositionFrame = 0;
+  let revealedStep = -1;
 
-  const steps = [
-    {
-      id: "place-nand",
-      textKey: "tutorialPlaceNand",
-      getTarget() {
-        const dropdown = document.querySelector(".parts-dropdown");
-        const nandBtn = document.querySelector('[data-part-type="gate-nand"]');
-        if (dropdown && !dropdown.open) {
-          return dropdown.querySelector("summary");
-        }
-        return nandBtn || dropdown?.querySelector("summary") || null;
-      },
-      isComplete(workspace) {
-        return Boolean(findNandGate(workspace));
-      },
-    },
-    {
-      id: "wire-a",
-      textKey: "tutorialWireA",
-      getTarget() {
-        const workspace = getCurrentWorkspace();
-        const inputA = findInputPin(workspace, "A");
-        if (!inputA) {
-          return null;
-        }
-        return (
-          document.querySelector(
-            `[data-node-id="${inputA.id}"][data-pin-direction="output"]`
-          ) || document.querySelector(`[data-node-id="${inputA.id}"]`)
-        );
-      },
-      isComplete(workspace) {
-        const inputA = findInputPin(workspace, "A");
-        const nand = findNandGate(workspace);
-        return Boolean(inputA && nand && hasWire(workspace, inputA.id, nand.id));
-      },
-    },
-    {
-      id: "wire-out",
-      textKey: "tutorialWireOut",
-      getTarget() {
-        const workspace = getCurrentWorkspace();
-        const nand = findNandGate(workspace);
-        if (!nand) {
-          return null;
-        }
-        return (
-          document.querySelector(
-            `[data-node-id="${nand.id}"][data-pin-direction="output"]`
-          ) || document.querySelector(`[data-node-id="${nand.id}"]`)
-        );
-      },
-      isComplete(workspace) {
-        const nand = findNandGate(workspace);
-        const out = findOutputPin(workspace, "OUT");
-        return Boolean(nand && out && hasWire(workspace, nand.id, out.id));
-      },
-    },
-    {
-      id: "toggle-a",
-      textKey: "tutorialToggleA",
-      getTarget() {
-        const workspace = getCurrentWorkspace();
-        const inputA = findInputPin(workspace, "A");
-        if (!inputA) {
-          return null;
-        }
-        return (
-          document.querySelector(
-            `[data-node-action="toggle-input-pin"][data-node-id="${inputA.id}"]`
-          ) || document.querySelector(`[data-node-id="${inputA.id}"]`)
-        );
-      },
-      isComplete(workspace) {
-        const inputA = findInputPin(workspace, "A");
-        return Boolean(inputA && String(inputA.config?.previewValue || "0").includes("1"));
-      },
-    },
-    {
-      id: "submit",
-      textKey: "tutorialSubmit",
-      getTarget() {
-        return (
-          document.querySelector('[data-submit-challenge="nand"]') ||
-          document.getElementById("challenge-submit-button")
-        );
-      },
-      isComplete() {
-        const completed = state.project.learner?.completedChallengeIds || [];
-        return completed.includes(NAND_LESSON_ID);
-      },
-    },
-  ];
+  // ---------------------------------------------------------------------------
+  // Matching nodes and checking conditions
+  // ---------------------------------------------------------------------------
+  function nodeMatches(node, match) {
+    if (!match || !node) {
+      return false;
+    }
+    if (match.anyOf) {
+      return match.anyOf.some((sub) => nodeMatches(node, sub));
+    }
+    if (match.pin) {
+      return (
+        (node.type === "input-pin" || node.type === "output-pin") &&
+        String(node.config?.label || "").trim() === match.pin
+      );
+    }
+    if (match.gate) {
+      return node.type === "gate" && String(node.config?.gateType || "").toUpperCase() === match.gate;
+    }
+    if (match.chip) {
+      if (node.type !== "chip-instance") {
+        return false;
+      }
+      const definition = getChipDefinition(node.config?.definitionId);
+      return Boolean(definition && String(definition.name || "").toUpperCase() === match.chip);
+    }
+    return false;
+  }
 
-  function getLearner() {
-    if (!state.project.learner) {
-      state.project.learner = {
-        completedChallengeIds: [],
-        unlockedAll: false,
-        quizAnswers: {},
-        tutorialDismissed: false,
+  function findNodes(workspace, match) {
+    return workspace.nodes.filter((node) => nodeMatches(node, match));
+  }
+
+  function nodeById(workspace, id) {
+    return workspace.nodes.find((node) => node.id === id);
+  }
+
+  function isHigh(node) {
+    return Boolean(node && /1/.test(String(node.config?.previewValue || "0")));
+  }
+
+  function conditionHolds(workspace, until, index) {
+    if (!until) {
+      return false;
+    }
+    if (until.ack) {
+      return acked.has(index);
+    }
+    if (until.all) {
+      return until.all.every((sub) => conditionHolds(workspace, sub, index));
+    }
+    if (until.has) {
+      return findNodes(workspace, until.has).length >= (until.count || 1);
+    }
+    if (until.wire) {
+      const [from, to] = until.wire;
+      return workspace.wires.some(
+        (wire) =>
+          nodeMatches(nodeById(workspace, wire.fromNodeId), from) && nodeMatches(nodeById(workspace, wire.toNodeId), to)
+      );
+    }
+    if (until.fed) {
+      const needed = until.pins || 1;
+      const fedNodes = findNodes(workspace, until.fed).filter(
+        (node) => new Set(workspace.wires.filter((wire) => wire.toNodeId === node.id).map((wire) => wire.toPin)).size >= needed
+      );
+      return fedNodes.length >= (until.count || 1);
+    }
+    if (until.high) {
+      return until.high.every((label) => findNodes(workspace, { pin: label }).some(isHigh));
+    }
+    if (until.completed) {
+      return (state.project.learner?.completedChallengeIds || []).includes(lessonId);
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Finding what to point at
+  // ---------------------------------------------------------------------------
+  function visible(el) {
+    if (!el || !el.getBoundingClientRect) {
+      return null;
+    }
+    const rect = el.getBoundingClientRect();
+    return rect.width || rect.height ? el : null;
+  }
+
+  function pinElement(nodeId, direction, freeOnly, workspace) {
+    const pins = [...document.querySelectorAll(`[data-node-id="${nodeId}"][data-pin-direction="${direction}"]`)];
+    if (!freeOnly) {
+      return pins[0] || null;
+    }
+    return (
+      pins.find(
+        (pin) => !workspace.wires.some((wire) => wire.toNodeId === nodeId && wire.toPin === pin.dataset.pinKey)
+      ) || pins[0] || null
+    );
+  }
+
+  function partButton(match) {
+    // Narrow screens: the one-tap parts strip replaces the Parts menu.
+    if (match.gate) {
+      const stripButton = visible(document.querySelector(`#parts-strip [data-strip-part="gate-${match.gate.toLowerCase()}"]`));
+      if (stripButton) {
+        return stripButton;
+      }
+    }
+    const dropdown = document.querySelector(".parts-dropdown");
+    if (dropdown && !dropdown.open) {
+      return dropdown.querySelector("summary");
+    }
+    if (match.gate) {
+      const button = document.querySelector(`#builtin-palette [data-part-type="gate-${match.gate.toLowerCase()}"]`);
+      if (button) {
+        return button;
+      }
+    }
+    return dropdown ? dropdown.querySelector("summary") : null;
+  }
+
+  /** While a wire is being drawn from the step's source, point at a free input of the target. */
+  function pendingWireTarget(workspace, step) {
+    const pending = state.pendingConnection;
+    if (!pending || pending.direction !== "output") {
+      return null;
+    }
+    const source = nodeById(workspace, pending.nodeId);
+    const until = step.until || {};
+    let toMatch = null;
+    if (until.wire && nodeMatches(source, until.wire[0])) {
+      toMatch = until.wire[1];
+    } else if (until.fed) {
+      toMatch = until.fed;
+    } else if (until.all) {
+      const wireCond = until.all.find((sub) => sub.wire && nodeMatches(source, sub.wire[0]));
+      const fedCond = until.all.find((sub) => sub.fed);
+      toMatch = wireCond ? wireCond.wire[1] : fedCond ? fedCond.fed : null;
+    }
+    if (!toMatch) {
+      return null;
+    }
+    const candidates = findNodes(workspace, toMatch).filter((node) => node.id !== source?.id);
+    for (const node of candidates) {
+      const pin = visible(pinElement(node.id, "input", true, workspace));
+      if (pin) {
+        return pin;
+      }
+    }
+    return null;
+  }
+
+  function resolveTarget(workspace, step) {
+    const at = step.at || {};
+    if (at.out) {
+      const pending = pendingWireTarget(workspace, step);
+      if (pending) {
+        return { el: pending, pending: true };
+      }
+      const node = findNodes(workspace, at.out)[0];
+      return { el: node ? visible(pinElement(node.id, "output", false, workspace)) : null };
+    }
+    if (at.part) {
+      return { el: visible(partButton(at.part)) };
+    }
+    if (at.toggle) {
+      const node = findNodes(workspace, { pin: at.toggle })[0];
+      return {
+        el: node ? visible(document.querySelector(`[data-node-action="toggle-input-pin"][data-node-id="${node.id}"]`)) : null,
       };
     }
-    return state.project.learner;
+    if (at.check) {
+      return { el: visible(document.querySelector(`[data-submit-challenge="${lessonId}"]`)) };
+    }
+    if (at.selector) {
+      return { el: visible(document.querySelector(at.selector)) };
+    }
+    return { el: null };
   }
 
-  function shouldAutoStart(challengeId) {
-    if (challengeId !== NAND_LESSON_ID) {
-      return false;
-    }
-    const learner = getLearner();
-    if (learner.tutorialDismissed) {
-      return false;
-    }
-    if ((learner.completedChallengeIds || []).includes(NAND_LESSON_ID)) {
-      return false;
-    }
-    return true;
-  }
-
+  // ---------------------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------------------
   function positionCoach(target) {
-    if (!root) {
-      return;
-    }
     const coach = root.querySelector("[data-tutorial-coach]");
     const spotlight = root.querySelector("[data-tutorial-spotlight]");
-    if (!coach || !spotlight) {
-      return;
-    }
+    const coachWidth = Math.min(320, window.innerWidth - 24);
+    coach.style.width = `${coachWidth}px`;
+    coach.hidden = false;
 
-    if (!target || !target.getBoundingClientRect) {
+    if (!target) {
       spotlight.hidden = true;
-      coach.style.top = "72px";
-      coach.style.left = "50%";
-      coach.style.transform = "translateX(-50%)";
-      coach.hidden = false;
+      coach.style.top = "84px";
+      coach.style.left = `${Math.max(12, (window.innerWidth - coachWidth) / 2)}px`;
       return;
     }
 
     const rect = target.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      spotlight.hidden = true;
-      coach.style.top = "72px";
-      coach.style.left = "50%";
-      coach.style.transform = "translateX(-50%)";
-      coach.hidden = false;
-      return;
-    }
-
     const pad = 6;
     spotlight.hidden = false;
     spotlight.style.top = `${Math.max(0, rect.top - pad)}px`;
@@ -223,22 +249,21 @@ export function createTutorial(deps) {
     spotlight.style.width = `${rect.width + pad * 2}px`;
     spotlight.style.height = `${rect.height + pad * 2}px`;
 
-    const coachWidth = Math.min(320, window.innerWidth - 24);
-    let top = rect.bottom + 12;
-    let left = rect.left;
-    if (top + 120 > window.innerHeight) {
-      top = Math.max(12, rect.top - 120);
+    const coachHeight = coach.offsetHeight || 130;
+    let top = rect.bottom + 14;
+    if (top + coachHeight > window.innerHeight - 8) {
+      top = rect.top - coachHeight - 14;
     }
+    if (top < 8) {
+      // Big target (e.g. the canvas): sit inside it, near the top.
+      top = Math.min(window.innerHeight - coachHeight - 8, Math.max(8, rect.top + 14));
+    }
+    let left = rect.left;
     if (left + coachWidth > window.innerWidth - 12) {
       left = window.innerWidth - coachWidth - 12;
     }
-    left = Math.max(12, left);
-
-    coach.style.transform = "none";
     coach.style.top = `${top}px`;
-    coach.style.left = `${left}px`;
-    coach.style.width = `${coachWidth}px`;
-    coach.hidden = false;
+    coach.style.left = `${Math.max(12, left)}px`;
   }
 
   function renderStep() {
@@ -246,24 +271,42 @@ export function createTutorial(deps) {
       return;
     }
     const step = steps[stepIndex];
-    if (!step) {
+    const workspace = getCurrentWorkspace();
+    if (!step || !workspace) {
       stop();
       return;
     }
+    const { el, pending } = resolveTarget(workspace, step);
+    // Bring the target into view once per step (e.g. the Check button at the bottom of the panel).
+    if (el && revealedStep !== stepIndex) {
+      revealedStep = stepIndex;
+      const rect = el.getBoundingClientRect();
+      if (rect.top < 0 || rect.bottom > window.innerHeight || rect.left < 0 || rect.right > window.innerWidth) {
+        el.scrollIntoView({ block: "center", inline: "center" });
+      }
+    }
     root.hidden = false;
-    const textEl = root.querySelector("[data-tutorial-text]");
-    const stepEl = root.querySelector("[data-tutorial-step]");
-    const skipEl = root.querySelector("[data-tutorial-skip]");
-    if (textEl) {
-      textEl.textContent = t(step.textKey);
+    const textKey = pending ? "coach.wireTo" : step.say;
+    root.querySelector("[data-tutorial-text]").textContent = t(textKey, step.vars || {});
+    root.querySelector("[data-tutorial-step]").textContent = t("tutorialStep", {
+      n: stepIndex + 1,
+      total: steps.length,
+    });
+    root.querySelector("[data-tutorial-skip]").textContent = t("tutorialSkip");
+    const ack = root.querySelector("[data-tutorial-ack]");
+    ack.hidden = !step.until?.ack;
+    ack.textContent = stepIndex === 0 ? t("coach.start") : t("coach.next");
+    positionCoach(el);
+  }
+
+  function scheduleReposition() {
+    if (!active || repositionFrame) {
+      return;
     }
-    if (stepEl) {
-      stepEl.textContent = t("tutorialStep", { n: stepIndex + 1, total: steps.length });
-    }
-    if (skipEl) {
-      skipEl.textContent = t("tutorialSkip");
-    }
-    positionCoach(step.getTarget());
+    repositionFrame = requestAnimationFrame(() => {
+      repositionFrame = 0;
+      renderStep();
+    });
   }
 
   function advanceIfNeeded() {
@@ -271,10 +314,11 @@ export function createTutorial(deps) {
       return;
     }
     const workspace = getCurrentWorkspace();
-    if (!workspace) {
+    if (!workspace || workspace.meta?.challengeId !== lessonId) {
+      stop();
       return;
     }
-    while (stepIndex < steps.length && steps[stepIndex].isComplete(workspace)) {
+    while (stepIndex < steps.length && conditionHolds(workspace, steps[stepIndex].until, stepIndex)) {
       stepIndex += 1;
     }
     if (stepIndex >= steps.length) {
@@ -287,50 +331,79 @@ export function createTutorial(deps) {
     renderStep();
   }
 
-  function onSkipClick(event) {
-    if (!event.target.closest("[data-tutorial-skip]")) {
+  function onRootClick(event) {
+    if (event.target.closest("[data-tutorial-skip]")) {
+      dismiss();
       return;
     }
-    dismiss();
+    if (event.target.closest("[data-tutorial-ack]")) {
+      acked.add(stepIndex);
+      advanceIfNeeded();
+    }
   }
 
-  function start() {
-    root = ensureOverlay();
-    if (!root.dataset.bound) {
-      root.addEventListener("click", onSkipClick);
-      root.dataset.bound = "1";
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+  function getLearner() {
+    const learner = state.project.learner;
+    if (!learner.coachDismissed || typeof learner.coachDismissed !== "object") {
+      learner.coachDismissed = {};
     }
-    active = true;
-    stepIndex = 0;
-    const workspace = getCurrentWorkspace();
-    while (workspace && stepIndex < steps.length && steps[stepIndex].isComplete(workspace)) {
-      stepIndex += 1;
-    }
-    if (stepIndex >= steps.length) {
-      stop();
+    return learner;
+  }
+
+  function hasScript(challengeId) {
+    const script = typeof getScript === "function" ? getScript(challengeId) : null;
+    return Array.isArray(script) && script.length > 0;
+  }
+
+  function shouldAutoStart(challengeId) {
+    const learner = getLearner();
+    return (
+      hasScript(challengeId) &&
+      learner.coachEnabled !== false &&
+      !learner.coachDismissed[challengeId] &&
+      !(learner.completedChallengeIds || []).includes(challengeId)
+    );
+  }
+
+  function start(challengeId) {
+    const id = challengeId || state.selectedChallengeId;
+    if (!hasScript(id)) {
       return;
     }
-    renderStep();
+    root = ensureOverlay();
+    if (!root.dataset.bound) {
+      root.addEventListener("click", onRootClick);
+      window.addEventListener("resize", scheduleReposition);
+      document.addEventListener("scroll", scheduleReposition, true);
+      // Opening/closing the Parts menu moves the target: follow it.
+      document.addEventListener("toggle", scheduleReposition, true);
+      root.dataset.bound = "1";
+    }
+    lessonId = id;
+    steps = getScript(id);
+    stepIndex = 0;
+    revealedStep = -1;
+    acked = new Set();
+    active = true;
+    advanceIfNeeded();
   }
 
   function stop() {
     active = false;
     if (root) {
       root.hidden = true;
-      const coach = root.querySelector("[data-tutorial-coach]");
-      const spotlight = root.querySelector("[data-tutorial-spotlight]");
-      if (coach) {
-        coach.hidden = true;
-      }
-      if (spotlight) {
-        spotlight.hidden = true;
-      }
+      root.querySelector("[data-tutorial-coach]").hidden = true;
+      root.querySelector("[data-tutorial-spotlight]").hidden = true;
     }
   }
 
   function dismiss() {
-    const learner = getLearner();
-    learner.tutorialDismissed = true;
+    if (lessonId) {
+      getLearner().coachDismissed[lessonId] = true;
+    }
     stop();
     if (typeof setStatus === "function") {
       setStatus(t("tutorialSkipped"));
@@ -338,21 +411,15 @@ export function createTutorial(deps) {
   }
 
   function maybeStart(challengeId) {
-    if (!shouldAutoStart(challengeId)) {
-      return;
+    if (shouldAutoStart(challengeId)) {
+      start(challengeId);
     }
-    start();
   }
 
   function onStateChanged() {
-    if (!active) {
-      return;
+    if (active) {
+      advanceIfNeeded();
     }
-    advanceIfNeeded();
-  }
-
-  function isActive() {
-    return active;
   }
 
   return {
@@ -361,6 +428,7 @@ export function createTutorial(deps) {
     stop,
     dismiss,
     onStateChanged,
-    isActive,
+    hasScript,
+    isActive: () => active,
   };
 }

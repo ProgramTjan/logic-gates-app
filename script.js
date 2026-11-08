@@ -46,7 +46,8 @@ import { createTutorial } from "./src/ui/tutorial.js";
 import { createCourseRenderers } from "./src/ui/course.js";
 import { S, t, initLocale, setLocale, applyStaticI18n } from "./src/i18n/index.js";
 import { localizeChallenge } from "./src/i18n/challenges.js";
-import { getOrderedLessonIds } from "./src/data/curriculum.js";
+import { INTRO_LESSON_ID } from "./src/data/curriculum.js";
+import { getCoachScript } from "./src/data/coach-scripts.js";
 import { createUndoManager } from "./src/actions/undo.js";
 import { createCircuitMutations } from "./src/actions/circuit-mutations.js";
 import { createWorkspaceMutations } from "./src/actions/workspace-mutations.js";
@@ -119,6 +120,9 @@ import {
     app: document.getElementById("app"),
     lessonPanel: document.getElementById("lesson-panel"),
     lessonPanelHandle: document.getElementById("lesson-panel-handle"),
+    lessonPeekStatus: document.getElementById("lesson-peek-status"),
+    sandboxPanel: document.getElementById("sandbox-panel"),
+    partsStrip: document.getElementById("parts-strip"),
     lessonPanelHandleLabel: document.getElementById("lesson-panel-handle-label"),
     navSandbox: document.getElementById("nav-sandbox"),
     settingsMenu: document.getElementById("settings-menu"),
@@ -162,7 +166,10 @@ import {
     renderedWorkspaceId: null,
     canvasScroll: {},
     sheetListSignature: "",
-    lessonPanelCollapsed: false,
+    hintsShown: {},
+    inspectorOpenByView: { lesson: false, sandbox: window.innerWidth >= 1024 },
+    theoryOpen: {},
+    sheetByView: { lesson: "half", sandbox: "peek" },
     challengeDetailTab: "theorie",
     lastSubmitFeedback: null,
     openChipSeries: new Set(),
@@ -216,7 +223,9 @@ import {
   const tutorial = createTutorial({
     state,
     getCurrentWorkspace,
+    getChipDefinition,
     setStatus,
+    getScript: getCoachScript,
   });
 
   let renderOrchestrator;
@@ -242,6 +251,27 @@ import {
 
   function renderWorkspace(options) {
     renderOrchestrator.renderWorkspaceView(options);
+    revealPendingNode();
+  }
+
+  /** Scroll a just-placed part into view when no free spot was visible. */
+  function revealPendingNode() {
+    const target = state.pendingReveal;
+    if (!target) {
+      return;
+    }
+    state.pendingReveal = null;
+    const pad = 40;
+    const left = target.x * state.zoom;
+    const top = target.y * state.zoom;
+    const right = (target.x + target.w) * state.zoom;
+    const bottom = (target.y + target.h) * state.zoom;
+    if (left < dom.canvas.scrollLeft || right > dom.canvas.scrollLeft + dom.canvas.clientWidth) {
+      dom.canvas.scrollLeft = Math.max(0, left - pad);
+    }
+    if (top < dom.canvas.scrollTop || bottom > dom.canvas.scrollTop + dom.canvas.clientHeight) {
+      dom.canvas.scrollTop = Math.max(0, top - pad);
+    }
   }
 
   function renderFull() {
@@ -322,6 +352,34 @@ import {
     tutorial,
     stopClockRunner: () => runtimeActions.clockRunner.stop(),
     showCompletionOverlay: null,
+    getVisibleStageRect: () => ({
+      x: dom.canvas.scrollLeft / state.zoom,
+      y: dom.canvas.scrollTop / state.zoom,
+      width: dom.canvas.clientWidth / state.zoom,
+      height: dom.canvas.clientHeight / state.zoom,
+    }),
+    getNodeSize: (nodeId) => {
+      const el = dom.nodeLayer.querySelector(`article[data-node-id="${nodeId}"]`);
+      return el ? { w: el.offsetWidth, h: el.offsetHeight } : null;
+    },
+    getNewNodeSize: () =>
+      window.matchMedia && window.matchMedia("(pointer: coarse)").matches ? { w: 130, h: 100 } : { w: 100, h: 72 },
+    /** Floating overlays (inspector, tools, status) in stage coordinates, so parts aren't placed under them. */
+    getReservedStageRects: () => {
+      const canvasRect = dom.canvas.getBoundingClientRect();
+      return ["#inspector-card", ".canvas-tools", ".canvas-status"]
+        .map((selector) => document.querySelector(selector))
+        .filter((el) => el && !el.hidden && el.offsetParent !== null)
+        .map((el) => {
+          const r = el.getBoundingClientRect();
+          return {
+            x: (r.left - canvasRect.left + dom.canvas.scrollLeft) / state.zoom,
+            y: (r.top - canvasRect.top + dom.canvas.scrollTop) / state.zoom,
+            w: r.width / state.zoom,
+            h: r.height / state.zoom,
+          };
+        });
+    },
   };
   const workspaceMutations = createWorkspaceMutations(workspaceMutationDeps);
 
@@ -451,8 +509,7 @@ import {
     if (learner.unlockedAll) {
       return true;
     }
-    const firstLessonId = getOrderedLessonIds()[0];
-    return (learner.completedChallengeIds || []).includes(firstLessonId);
+    return (learner.completedChallengeIds || []).includes(INTRO_LESSON_ID);
   }
 
   function ensureSandboxWorkspace() {
@@ -546,7 +603,10 @@ import {
     runtimeActions.clockRunner.stop();
     state.selectedChallengeId = challengeId;
     state.lastSubmitFeedback = null;
-    state.lessonPanelCollapsed = false;
+    if (state.sheetByView.lesson === "peek") {
+      state.sheetByView.lesson = "half";
+    }
+    dom.challengeList.scrollTop = 0;
     const existing = fresh ? null : findLatestLessonWorkspace(challengeId);
     if (existing) {
       state.project.currentWorkspaceId = existing.id;
@@ -559,9 +619,13 @@ import {
       }
     } else {
       state.appView = "lesson";
+      // Show the lesson layout first so the new sheet can size itself to the visible canvas.
+      updateViewChrome();
       workspaceMutations.openChallengeWorkspace(challengeId);
     }
+    dom.challengeList.scrollTop = 0;
     window.scrollTo(0, 0);
+    requestAnimationFrame(() => fitToContent({ onlyIfOverflowing: true }));
   }
 
   function nodesNeedClock(nodes, seenDefinitions) {
@@ -589,7 +653,12 @@ import {
     const view = state.appView;
     if (dom.app) {
       dom.app.dataset.view = view;
-      dom.app.classList.toggle("lesson-panel-collapsed", view === "lesson" && state.lessonPanelCollapsed);
+      if (dom.lessonPanel) {
+        dom.lessonPanel.dataset.sheet = state.sheetByView.lesson;
+      }
+      if (dom.sandboxPanel) {
+        dom.sandboxPanel.dataset.sheet = state.sheetByView.sandbox;
+      }
     }
     if (dom.courseView) {
       dom.courseView.hidden = view !== "home";
@@ -597,6 +666,10 @@ import {
     document.querySelectorAll(".appbar-tab").forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.nav === view);
     });
+    const coachToggle = document.getElementById("coach-enabled-toggle");
+    if (coachToggle) {
+      coachToggle.checked = state.project.learner?.coachEnabled !== false;
+    }
     const sandboxUnlocked = isSandboxUnlocked();
     if (dom.navSandbox) {
       dom.navSandbox.classList.toggle("locked", !sandboxUnlocked);
@@ -608,16 +681,21 @@ import {
       if (dom.lessonPanelHandleLabel) {
         dom.lessonPanelHandleLabel.textContent = challenge ? localizeChallenge(challenge).title : "";
       }
-      dom.lessonPanelHandle.setAttribute("aria-expanded", state.lessonPanelCollapsed ? "false" : "true");
-      dom.lessonPanelHandle.title = state.lessonPanelCollapsed ? t("lessonPanelShow") : t("lessonPanelHide");
+      const peek = state.sheetByView.lesson === "peek";
+      dom.lessonPanelHandle.setAttribute("aria-expanded", peek ? "false" : "true");
+      dom.lessonPanelHandle.title = peek ? t("lessonPanelShow") : t("lessonPanelHide");
     }
     updateWorkspaceChrome();
+    updatePeekStatus();
   }
 
   function updateWorkspaceChrome() {
     const workspace = getCurrentWorkspace();
     if (!workspace) {
       return;
+    }
+    if (state.appView === "lesson") {
+      scheduleLiveCheck();
     }
     if (state.appView === "sandbox") {
       const signature = state.project.workspaces
@@ -641,8 +719,19 @@ import {
       }
     }
     if (dom.inspectorCard) {
-      const hasSelection = workspace.nodes.some((node) => node.id === state.selectedNodeId);
-      dom.inspectorCard.hidden = !hasSelection;
+      const selected = workspace.nodes.find((node) => node.id === state.selectedNodeId);
+      dom.inspectorCard.hidden = !selected;
+      // In lessons the inspector starts folded so it never hides pins; one tap opens it.
+      const open = Boolean(state.inspectorOpenByView[state.appView]);
+      dom.inspectorCard.classList.toggle("collapsed", !open);
+      const toggle = document.getElementById("inspector-toggle");
+      if (toggle) {
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+      const nodeLabel = document.getElementById("inspector-toggle-node");
+      if (nodeLabel) {
+        nodeLabel.textContent = selected ? selected.config?.label || selected.type : "";
+      }
     }
     if (dom.checksCard) {
       const errors = state.lastEvaluation ? state.lastEvaluation.errors : [];
@@ -650,9 +739,113 @@ import {
     }
   }
 
-  function toggleLessonPanel() {
-    state.lessonPanelCollapsed = !state.lessonPanelCollapsed;
+  /** Transient chip definition of the current sheet, for live testing without saving. */
+  function buildLiveDefinition() {
+    const workspace = getCurrentWorkspace();
+    if (!workspace) {
+      return null;
+    }
+    const iface = chipDefinitionsService.extractChipInterface(workspace);
+    if (iface.errors.length) {
+      return { error: iface.errors[0].message };
+    }
+    // Only show live results once every output pin is actually driven by the circuit.
+    const outputIds = workspace.nodes.filter((node) => node.type === "output-pin").map((node) => node.id);
+    const allOutputsWired = outputIds.every((id) => workspace.wires.some((wire) => wire.toNodeId === id));
+    if (!allOutputsWired) {
+      return { error: "outputs-unwired" };
+    }
+    return {
+      definition: {
+        id: `live-${workspace.id}`,
+        name: workspace.name,
+        version: 0,
+        inputs: iface.inputs,
+        outputs: iface.outputs,
+        circuitSnapshot: { id: `live-${workspace.id}`, name: workspace.name, nodes: workspace.nodes, wires: workspace.wires, meta: {} },
+      },
+    };
+  }
+
+  const scheduleLiveCheck = debounce(() => {
+    if (state.appView === "lesson") {
+      panelRenderers.refreshLiveCheck();
+      updatePeekStatus();
+    }
+  }, 200);
+
+  /** Short status for the folded bottom sheet: live-check summary or lesson state. */
+  function updatePeekStatus() {
+    if (!dom.lessonPeekStatus) {
+      return;
+    }
+    const source =
+      dom.challengeList.querySelector(".live-check-summary span:last-child") ||
+      dom.challengeList.querySelector(".submit-feedback") ||
+      dom.challengeList.querySelector(".live-check-note");
+    dom.lessonPeekStatus.textContent = source ? source.textContent.trim() : "";
+    const ok = Boolean(dom.challengeList.querySelector(".live-check-summary.ok, .submit-feedback.ok"));
+    dom.lessonPeekStatus.classList.toggle("ok", ok);
+  }
+
+  const SHEET_STATES = ["peek", "half", "full"];
+
+  function setSheetState(view, next) {
+    state.sheetByView[view] = SHEET_STATES.includes(next) ? next : "half";
     updateViewChrome();
+  }
+
+  /** Bottom sheet (narrow screens): tap the grip to fold/unfold, drag it to resize. */
+  function bindSheetGrip(grip) {
+    const view = grip.dataset.sheetGrip;
+    const panel = grip.closest(".lesson-panel, .sandbox-panel");
+    let drag = null;
+
+    grip.addEventListener("pointerdown", (event) => {
+      if (window.innerWidth >= 1024) {
+        return;
+      }
+      drag = { pointerId: event.pointerId, startY: event.clientY, startHeight: panel.getBoundingClientRect().height, moved: false };
+      grip.setPointerCapture(event.pointerId);
+    });
+    grip.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) {
+        return;
+      }
+      const dy = event.clientY - drag.startY;
+      if (Math.abs(dy) > 6) {
+        drag.moved = true;
+      }
+      if (drag.moved) {
+        const max = window.innerHeight - 120;
+        panel.style.height = `${Math.max(56, Math.min(max, drag.startHeight - dy))}px`;
+        panel.style.maxHeight = "none";
+        panel.dataset.sheet = "dragging";
+      }
+    });
+    const finish = (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) {
+        return;
+      }
+      const wasDrag = drag.moved;
+      drag = null;
+      if (!wasDrag) {
+        return;
+      }
+      const ratio = panel.getBoundingClientRect().height / window.innerHeight;
+      panel.style.height = "";
+      panel.style.maxHeight = "";
+      setSheetState(view, ratio < 0.22 ? "peek" : ratio < 0.62 ? "half" : "full");
+    };
+    grip.addEventListener("pointerup", finish);
+    grip.addEventListener("pointercancel", finish);
+    grip.addEventListener("click", () => {
+      if (window.innerWidth >= 1024 || panel.dataset.sheet === "dragging") {
+        return;
+      }
+      const current = state.sheetByView[view];
+      setSheetState(view, current === "peek" ? "half" : current === "full" ? "half" : "peek");
+    });
   }
 
   let courseRenderers;
@@ -689,6 +882,8 @@ import {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    buildLiveDefinition,
+    hasCoach: (challengeId) => tutorial.hasScript(challengeId),
     getActiveChallengeId: () => {
       const challenge = workspaceMutations.getActiveWorkspaceChallenge();
       return challenge ? challenge.id : null;
@@ -797,7 +992,6 @@ import {
       render();
       eventBinder.bindEvents();
       bindShellEvents();
-      projectIo.showOnboardingIfNeeded();
     } catch (error) {
       console.error("Forge Logic bootstrap failed, resetting project.", error);
       state.project = createProject();
@@ -812,12 +1006,93 @@ import {
       render();
       eventBinder.bindEvents();
       bindShellEvents();
-      projectIo.showOnboardingIfNeeded();
       setStatus(t("status.projectReset"));
     }
   }
 
+  /**
+   * Touch: two-finger pinch zooms around the midpoint (and pans with it).
+   * Trackpad / Ctrl+wheel zooms around the pointer.
+   */
+  function bindTouchGestures() {
+    const touches = new Map();
+    let pinch = null;
+
+    function canvasPoint(clientX, clientY) {
+      const rect = dom.canvas.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function pinchMetrics() {
+      const [a, b] = [...touches.values()];
+      return {
+        distance: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        mid: canvasPoint((a.x + b.x) / 2, (a.y + b.y) / 2),
+      };
+    }
+
+    dom.canvas.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (event.pointerType !== "touch") {
+          return;
+        }
+        touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (touches.size === 2) {
+          // Second finger: cancel any single-finger pan/drag/long-press and start pinching.
+          state.panningCanvas = null;
+          state.dragging = null;
+          state.longPress = null;
+          state.longPressWire = null;
+          state.marquee = null;
+          const metrics = pinchMetrics();
+          pinch = { startDistance: metrics.distance, startZoom: state.zoom, lastMid: metrics.mid };
+        }
+      },
+      true
+    );
+
+    document.addEventListener("pointermove", (event) => {
+      if (!touches.has(event.pointerId)) {
+        return;
+      }
+      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (!pinch || touches.size < 2) {
+        return;
+      }
+      const metrics = pinchMetrics();
+      setZoom(pinch.startZoom * (metrics.distance / pinch.startDistance), metrics.mid);
+      // Two-finger pan.
+      dom.canvas.scrollLeft -= metrics.mid.x - pinch.lastMid.x;
+      dom.canvas.scrollTop -= metrics.mid.y - pinch.lastMid.y;
+      pinch.lastMid = metrics.mid;
+    });
+
+    const release = (event) => {
+      touches.delete(event.pointerId);
+      if (touches.size < 2) {
+        pinch = null;
+      }
+    };
+    document.addEventListener("pointerup", release);
+    document.addEventListener("pointercancel", release);
+
+    dom.canvas.addEventListener(
+      "wheel",
+      (event) => {
+        if (!event.ctrlKey && !event.metaKey) {
+          return;
+        }
+        event.preventDefault();
+        const factor = Math.exp(-event.deltaY * 0.01);
+        setZoom(state.zoom * factor, canvasPoint(event.clientX, event.clientY));
+      },
+      { passive: false }
+    );
+  }
+
   function bindShellEvents() {
+    bindTouchGestures();
     document.querySelectorAll(".appbar [data-nav]").forEach((button) => {
       button.addEventListener("click", () => setAppView(button.dataset.nav));
     });
@@ -835,6 +1110,20 @@ import {
           setAppView(navButton.dataset.nav);
           return;
         }
+        const coachButton = event.target.closest("[data-coach-start]");
+        if (coachButton) {
+          event.stopImmediatePropagation();
+          tutorial.start(coachButton.dataset.coachStart);
+          return;
+        }
+        const hintButton = event.target.closest("[data-reveal-hint]");
+        if (hintButton) {
+          event.stopImmediatePropagation();
+          const id = hintButton.dataset.revealHint;
+          state.hintsShown[id] = (state.hintsShown[id] || 0) + 1;
+          panelRenderers.renderChallenges();
+          return;
+        }
         const nextButton = event.target.closest("[data-next-lesson]");
         if (nextButton) {
           event.stopImmediatePropagation();
@@ -843,9 +1132,62 @@ import {
       },
       true
     );
-    if (dom.lessonPanelHandle) {
-      dom.lessonPanelHandle.addEventListener("click", toggleLessonPanel);
+    document.querySelectorAll("[data-sheet-grip]").forEach(bindSheetGrip);
+    dom.chipLibrary.addEventListener(
+      "click",
+      (event) => {
+        if (event.target.closest("[data-empty-snapshot]")) {
+          event.stopImmediatePropagation();
+          dom.saveChipButton.click();
+        }
+      },
+      true
+    );
+    const fitButton = document.getElementById("zoom-fit-button");
+    if (fitButton) {
+      fitButton.addEventListener("click", () => fitToContent({ minZoom: MIN_ZOOM, maxZoom: 1.5 }));
     }
+    document.querySelectorAll("[data-peek-check]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const check = dom.challengeList.querySelector("[data-submit-challenge]");
+        if (check && !check.disabled) {
+          check.click();
+        }
+      })
+    );
+    if (dom.partsStrip) {
+      dom.partsStrip.addEventListener("click", (event) => {
+        const part = event.target.closest("[data-strip-part]");
+        const chip = event.target.closest("[data-strip-chip]");
+        if (!part && !chip) {
+          return;
+        }
+        // Phones: once you start building, fold the lesson sheet so the canvas gets the room.
+        if (window.innerWidth < 640 && state.appView === "lesson" && state.sheetByView.lesson !== "peek") {
+          state.sheetByView.lesson = "peek";
+          updateViewChrome();
+        }
+        if (part) {
+          workspaceMutations.addPartToWorkspace(part.dataset.stripPart);
+        } else {
+          workspaceMutations.addPartToWorkspace("chip-instance", chip.dataset.stripChip);
+        }
+      });
+    }
+    dom.challengeList.addEventListener(
+      "toggle",
+      (event) => {
+        const details = event.target;
+        if (details && details.dataset && details.dataset.theoryToggle) {
+          state.theoryOpen[details.dataset.theoryToggle] = details.open;
+          const summary = details.querySelector("summary");
+          if (summary) {
+            summary.textContent = details.open ? t("theoryHide") : t("theoryRead");
+          }
+        }
+      },
+      true
+    );
     dom.canvas.addEventListener(
       "scroll",
       () => {
@@ -856,7 +1198,27 @@ import {
       },
       { passive: true }
     );
-    // Close popovers (settings, parts) when clicking elsewhere or after picking an action.
+    const inspectorToggle = document.getElementById("inspector-toggle");
+    if (inspectorToggle) {
+      inspectorToggle.addEventListener("click", () => {
+        state.inspectorOpenByView[state.appView] = !state.inspectorOpenByView[state.appView];
+        updateWorkspaceChrome();
+      });
+    }
+    const coachToggle = document.getElementById("coach-enabled-toggle");
+    if (coachToggle) {
+      coachToggle.addEventListener("change", () => {
+        const learner = state.project.learner;
+        learner.coachEnabled = coachToggle.checked;
+        if (coachToggle.checked) {
+          learner.coachDismissed = {};
+        } else {
+          tutorial.stop();
+        }
+        saveProject();
+      });
+    }
+    // Close popovers (settings, help, parts) when clicking elsewhere or after picking an action.
     document.addEventListener("click", (event) => {
       document.querySelectorAll("details.settings-menu[open], details.parts-dropdown[open]").forEach((details) => {
         if (!details.contains(event.target)) {
@@ -951,24 +1313,65 @@ import {
     renderOrchestrator.applyWorkspaceZoom();
   }
 
+  /**
+   * Zoom and scroll so every node is visible. By default only zooms out (never past
+   * `minZoom`, so pins stay tappable) — used when a lesson opens on a narrow screen.
+   */
+  function fitToContent({ minZoom = 0.6, maxZoom = 1, onlyIfOverflowing = false } = {}) {
+    const workspace = getCurrentWorkspace();
+    if (!workspace || !workspace.nodes.length || !dom.canvas.clientWidth) {
+      return;
+    }
+    const boxes = workspace.nodes.map((node) => {
+      const el = dom.nodeLayer.querySelector(`article[data-node-id="${node.id}"]`);
+      return { x: node.x, y: node.y, w: el ? el.offsetWidth : 120, h: el ? el.offsetHeight : 80 };
+    });
+    const minX = Math.min(...boxes.map((b) => b.x));
+    const minY = Math.min(...boxes.map((b) => b.y));
+    const maxX = Math.max(...boxes.map((b) => b.x + b.w));
+    const maxY = Math.max(...boxes.map((b) => b.y + b.h));
+    const pad = 28;
+    const fitsNow =
+      minX * state.zoom >= dom.canvas.scrollLeft &&
+      maxX * state.zoom <= dom.canvas.scrollLeft + dom.canvas.clientWidth &&
+      minY * state.zoom >= dom.canvas.scrollTop &&
+      maxY * state.zoom <= dom.canvas.scrollTop + dom.canvas.clientHeight;
+    if (onlyIfOverflowing && fitsNow) {
+      return;
+    }
+    const zoomX = dom.canvas.clientWidth / (maxX - minX + pad * 2);
+    const zoomY = dom.canvas.clientHeight / (maxY - minY + pad * 2);
+    const target = Math.max(minZoom, Math.min(maxZoom, zoomX, zoomY));
+    state.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(target * 100) / 100));
+    applyWorkspaceZoom();
+    dom.canvas.scrollLeft = Math.max(0, (minX - pad) * state.zoom);
+    dom.canvas.scrollTop = Math.max(0, (minY - pad) * state.zoom);
+    canvasRenderers.renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
+  }
+
   function changeZoom(delta) {
     setZoom(state.zoom + delta);
   }
 
-  function setZoom(nextZoom) {
+  /**
+   * @param {number} nextZoom
+   * @param {{x:number, y:number}} [focus] point in canvas-viewport pixels that stays put
+   *   (pinch midpoint, mouse position); defaults to the viewport centre.
+   */
+  function setZoom(nextZoom, focus) {
     const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(nextZoom * 100) / 100));
     if (clamped === state.zoom) {
       return;
     }
     const previousZoom = state.zoom;
-    const centerX = dom.canvas.scrollLeft + dom.canvas.clientWidth / 2;
-    const centerY = dom.canvas.scrollTop + dom.canvas.clientHeight / 2;
-    const logicalCenterX = centerX / previousZoom;
-    const logicalCenterY = centerY / previousZoom;
+    const focusX = focus ? focus.x : dom.canvas.clientWidth / 2;
+    const focusY = focus ? focus.y : dom.canvas.clientHeight / 2;
+    const logicalX = (dom.canvas.scrollLeft + focusX) / previousZoom;
+    const logicalY = (dom.canvas.scrollTop + focusY) / previousZoom;
     state.zoom = clamped;
     applyWorkspaceZoom();
-    dom.canvas.scrollLeft = Math.max(0, logicalCenterX * state.zoom - dom.canvas.clientWidth / 2);
-    dom.canvas.scrollTop = Math.max(0, logicalCenterY * state.zoom - dom.canvas.clientHeight / 2);
+    dom.canvas.scrollLeft = Math.max(0, logicalX * state.zoom - focusX);
+    dom.canvas.scrollTop = Math.max(0, logicalY * state.zoom - focusY);
     canvasRenderers.renderWires(
       getCurrentWorkspace(),
       state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace())

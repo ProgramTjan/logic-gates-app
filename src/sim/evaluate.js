@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 export function createSimulationEngine(deps) {
   const {
     getNodeSpec,
@@ -124,7 +125,7 @@ export function createSimulationEngine(deps) {
       const targetNode = nodeMap.get(wire.toNodeId);
       if (!sourceNode || !targetNode) {
         errors.push({
-          message: "Een verbinding verwijst naar een ontbrekende node.",
+          message: t("sim.missingNode"),
           wireIds: [wire.id],
           nodeIds: [wire.fromNodeId, wire.toNodeId].filter(Boolean),
         });
@@ -135,7 +136,7 @@ export function createSimulationEngine(deps) {
       const targetPin = getNodeSpec(targetNode).inputs.find((pin) => pin.key === wire.toPin);
       if (!sourcePin || !targetPin) {
         errors.push({
-          message: "Een verbinding gebruikt een ongeldige pin.",
+          message: t("sim.invalidPin"),
           wireIds: [wire.id],
           nodeIds: [wire.fromNodeId, wire.toNodeId],
         });
@@ -144,9 +145,10 @@ export function createSimulationEngine(deps) {
       }
       if (sourcePin.width !== targetPin.width) {
         errors.push({
-          message: `Bitbreedte mismatch tussen ${sourceNode.config.label || sourceNode.type} en ${
-            targetNode.config.label || targetNode.type
-          }.`,
+          message: t("sim.widthMismatch", {
+            from: sourceNode.config.label || sourceNode.type,
+            to: targetNode.config.label || targetNode.type,
+          }),
           wireIds: [wire.id],
           nodeIds: [wire.fromNodeId, wire.toNodeId],
         });
@@ -155,7 +157,7 @@ export function createSimulationEngine(deps) {
       const inputKey = `${wire.toNodeId}:${wire.toPin}`;
       if (incomingWireByPin.has(inputKey)) {
         errors.push({
-          message: `Input ${wire.toPin} van ${targetNode.config.label || targetNode.type} heeft meerdere drivers.`,
+          message: t("sim.multipleDrivers", { pin: wire.toPin, node: targetNode.config.label || targetNode.type }),
           wireIds: [wire.id, incomingWireByPin.get(inputKey).id],
           nodeIds: [wire.toNodeId],
         });
@@ -204,7 +206,7 @@ export function createSimulationEngine(deps) {
 
       if (resolvingNodes.has(nodeId) && node.type !== "register") {
         errors.push({
-          message: `Combinatorische lus gedetecteerd rond ${node.config.label || node.type}.`,
+          message: t("sim.loop", { node: node.config.label || node.type }),
           nodeIds: [nodeId],
         });
         const safeOutputs = makeZeroOutputs(spec.outputs);
@@ -269,13 +271,13 @@ export function createSimulationEngine(deps) {
         const definition = getChipDefinition(node.config.definitionId);
         if (!definition) {
           errors.push({
-            message: `Chipdefinitie ontbreekt voor ${node.config.label || node.type}.`,
+            message: t("sim.missingDefinition", { node: node.config.label || node.type }),
             nodeIds: [node.id],
           });
           outputs = makeZeroOutputs(spec.outputs);
         } else if (recursionTrail.has(definition.id)) {
           errors.push({
-            message: `Recursieve chipdependency gedetecteerd bij ${definition.name}.`,
+            message: t("sim.recursive", { name: definition.name }),
             nodeIds: [node.id],
           });
           outputs = makeZeroOutputs(spec.outputs);

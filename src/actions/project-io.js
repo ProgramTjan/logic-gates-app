@@ -30,7 +30,7 @@ export function createProjectIoActions(deps) {
       return;
     }
     const ok = window.confirm(
-      "Project uit deze link laden? Niet-opgeslagen wijzigingen in dit tabblad worden overschreven; bij opslaan vervang je ook je lokale project in deze browser."
+      t("share.confirmLoad")
     );
     if (!ok) {
       history.replaceState(null, "", `${location.pathname}${location.search}`);
@@ -65,7 +65,7 @@ export function createProjectIoActions(deps) {
 
   async function importShareFromPrompt() {
     const text = window.prompt(
-      "Plak een volledige Forge Logic-URL, of alleen het stuk na # (begint met p=)",
+      t("share.pastePrompt"),
       ""
     );
     if (!text) {

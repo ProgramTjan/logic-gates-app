@@ -1,3 +1,4 @@
+import { sameCircuit } from "../model/circuit-signature.js";
 import { markChallengeCompleted } from "../data/curriculum.js";
 import { t } from "../i18n/index.js";
 import { localizeChallenge } from "../i18n/challenges.js";
@@ -72,16 +73,81 @@ export function createWorkspaceMutations(deps) {
     };
   }
 
+  /**
+   * Where a newly added part goes: a free spot (no overlap with nodes or floating cards),
+   * preferably inside the visible canvas and close to the selected node / the circuit.
+   * Falls back to the nearest free spot outside the view; `pendingReveal` then asks the
+   * caller to scroll it into view.
+   */
   function getSuggestedNodePosition(workspace) {
     const margin = 24;
+    const gap = 14;
+    const newSize = (typeof deps.getNewNodeSize === "function" && deps.getNewNodeSize()) || { w: 150, h: 110 };
+    const sizeOf = (node) =>
+      (typeof deps.getNodeSize === "function" && deps.getNodeSize(node.id)) || { w: 150, h: 110 };
+    const obstacles = [
+      ...workspace.nodes.map((node) => {
+        const size = sizeOf(node);
+        return { x: node.x, y: node.y, w: size.w, h: size.h };
+      }),
+      ...((typeof deps.getReservedStageRects === "function" && deps.getReservedStageRects()) || []),
+    ];
+    const isFree = (x, y) =>
+      obstacles.every(
+        (r) => x + newSize.w + gap <= r.x || x >= r.x + r.w + gap || y + newSize.h + gap <= r.y || y >= r.y + r.h + gap
+      );
+
     const selectedNode = workspace.nodes.find((item) => item.id === state.selectedNodeId);
     const anchor = selectedNode
-      ? { x: selectedNode.x + 110, y: selectedNode.y + 70 }
+      ? { x: selectedNode.x + sizeOf(selectedNode).w + 30, y: selectedNode.y }
       : getWorkspaceClusterAnchor(workspace);
+
+    const view = typeof deps.getVisibleStageRect === "function" ? deps.getVisibleStageRect() : null;
+    const stage = { x: margin, y: margin, w: WORKSPACE_BASE_WIDTH - 2 * margin, h: WORKSPACE_BASE_HEIGHT - 2 * margin };
+    const area = view && view.width > 0 && view.height > 0
+      ? {
+          x: Math.max(stage.x, view.x + 12),
+          y: Math.max(stage.y, view.y + 12),
+          w: Math.max(newSize.w, view.width - 24),
+          h: Math.max(newSize.h, view.height - 24),
+        }
+      : stage;
+    const inside = (x, y, box) => x >= box.x && y >= box.y && x + newSize.w <= box.x + box.w && y + newSize.h <= box.y + box.h;
+    const preferred = inside(anchor.x, anchor.y, area)
+      ? anchor
+      : { x: area.x + area.w * 0.35, y: area.y + area.h * 0.3 };
+
+    const search = (box) => {
+      const step = 20;
+      let best = null;
+      for (let y = box.y; y + newSize.h <= box.y + box.h; y += step) {
+        for (let x = box.x; x + newSize.w <= box.x + box.w; x += step) {
+          if (!isFree(x, y)) {
+            continue;
+          }
+          const distance = Math.hypot(x - preferred.x, y - preferred.y);
+          if (!best || distance < best.distance) {
+            best = { x, y, distance };
+          }
+        }
+      }
+      return best;
+    };
+
+    let spot = search(area);
+    state.pendingReveal = null;
+    if (!spot && area !== stage) {
+      spot = search(stage);
+      if (spot) {
+        state.pendingReveal = { x: spot.x, y: spot.y, w: newSize.w, h: newSize.h };
+      }
+    }
     const stagger = workspace.nodes.length % 4;
+    const x = spot ? spot.x : anchor.x + stagger * 18;
+    const y = spot ? spot.y : anchor.y + stagger * 14;
     return {
-      x: clamp(anchor.x + stagger * 18, margin, WORKSPACE_BASE_WIDTH - 140),
-      y: clamp(anchor.y + stagger * 14, margin, WORKSPACE_BASE_HEIGHT - 110),
+      x: clamp(Math.round(x), margin, WORKSPACE_BASE_WIDTH - 140),
+      y: clamp(Math.round(y), margin, WORKSPACE_BASE_HEIGHT - 110),
     };
   }
 
@@ -125,6 +191,11 @@ export function createWorkspaceMutations(deps) {
     const template = challenge.template || { inputs: [], outputs: [] };
     const inputStep = Math.max(90, Math.floor(420 / Math.max(1, template.inputs.length)));
     const outputStep = Math.max(90, Math.floor(420 / Math.max(1, template.outputs.length)));
+    // Narrow canvas (tablet portrait / phone): pull inputs and outputs closer together.
+    const view = typeof deps.getVisibleStageRect === "function" ? deps.getVisibleStageRect() : null;
+    const viewWidth = view && view.width > 0 ? view.width : 1000;
+    const inputX = viewWidth < 700 ? 30 : 120;
+    const outputX = Math.max(380, Math.min(760, Math.round(viewWidth - 190)));
 
     template.inputs.forEach((item, index) => {
       const label = typeof item === "string" ? item : item.name;
@@ -133,7 +204,7 @@ export function createWorkspaceMutations(deps) {
         chipDefinitionsService.createConfiguredNode(
           state.project,
           "input-pin",
-          { x: 120, y: 120 + index * inputStep },
+          { x: inputX, y: 120 + index * inputStep },
           { label, width, previewValue: "0".repeat(width) }
         )
       );
@@ -146,7 +217,7 @@ export function createWorkspaceMutations(deps) {
         chipDefinitionsService.createConfiguredNode(
           state.project,
           "output-pin",
-          { x: 760, y: 120 + index * outputStep },
+          { x: outputX, y: 120 + index * outputStep },
           { label, width }
         )
       );
@@ -171,7 +242,7 @@ export function createWorkspaceMutations(deps) {
     if (!challenge) {
       return;
     }
-    const workspace = createWorkspace(state.project, `${challenge.title} Draft`, null, {
+    const workspace = createWorkspace(state.project, localizeChallenge(challenge).title, null, {
       challengeId,
     });
     populateChallengeWorkspace(workspace, challenge);
@@ -286,6 +357,22 @@ export function createWorkspaceMutations(deps) {
     if (!series) {
       series = { id: allocateId(state.project, "chip-series"), name: trimmedName, definitionIds: [] };
       state.project.chipSeries.push(series);
+    }
+
+    // Unchanged circuit (only moved nodes or flipped switches)? Reuse the latest version.
+    const latestId = series.definitionIds[series.definitionIds.length - 1];
+    const latest = latestId ? state.project.chipDefinitions.find((item) => item.id === latestId) : null;
+    if (latest && latest.circuitSnapshot && sameCircuit(latest.circuitSnapshot, workspace)) {
+      workspace.meta = {
+        ...workspace.meta,
+        sourceChipSeriesId: series.id,
+        sourceChipDefinitionId: latest.id,
+        sourceChipVersion: latest.version,
+        draftMode: "new-version",
+      };
+      setStatus(t("chipUnchanged", { name: latest.name, version: latest.version }));
+      renderFull();
+      return latest;
     }
 
     const version = series.definitionIds.length + 1;

@@ -147,7 +147,7 @@ const nandChallenge = {
   ],
 };
 
-const verifier = createChallengeVerifier({
+const verifierDeps = {
   deepClone: (x) => JSON.parse(JSON.stringify(x)),
   parseBits,
   formatBits,
@@ -160,7 +160,8 @@ const verifier = createChallengeVerifier({
   setRuntimeRegisterStates: (next) => {
     registerStates = next;
   },
-});
+};
+const verifier = createChallengeVerifier(verifierDeps);
 
 const nandResult = verifier.evaluateChallengeResult(nandChallenge, [nandDefinition]);
 assert("NAND challenge: done=true", nandResult.done === true);
@@ -447,7 +448,8 @@ import {
 } from "../src/data/curriculum.js";
 import { CHALLENGES as REAL_CHALLENGES } from "../src/data/challenges.js";
 
-assert("nand prerequisites = []", getPrerequisites("nand").length === 0);
+assert("intro-light prerequisites = []", getPrerequisites("intro-light").length === 0);
+assert("nand komt na les 0 (intro-light)", getPrerequisites("nand")[0] === "intro-light");
 assert("not prerequisites = [nand]", getPrerequisites("not").length === 1 && getPrerequisites("not")[0] === "nand");
 assert(
   "half-adder prerequisites = last poorten les (dmux8way)",
@@ -457,7 +459,8 @@ assert("not16 komt na dmux in curriculum", getPrerequisites("not16")[0] === "dmu
 assert("or8way komt na dmux4way", getPrerequisites("or8way")[0] === "dmux4way");
 
 const freshLearner = createDefaultLearner();
-assert("verse learner: nand unlocked", isLessonUnlocked("nand", freshLearner) === true);
+assert("verse learner: les 0 unlocked", isLessonUnlocked("intro-light", freshLearner) === true);
+assert("verse learner: nand nog op slot", isLessonUnlocked("nand", freshLearner) === false);
 assert("verse learner: not locked", isLessonUnlocked("not", freshLearner) === false);
 assert(
   "na nand completed: not unlocked",
@@ -991,7 +994,7 @@ const computerResult = computerVerifier.runChallengeVerification(computerChallen
 assert("referentie Computer verified", computerResult.done === true);
 assert(
   "referentie Computer summary",
-  computerResult.done && /script-stappen geslaagd/.test(computerResult.summary)
+  computerResult.done && /script (steps passed|-stappen geslaagd)/.test(computerResult.summary)
 );
 
 // --- 15. Combo chip-instance cache + nest-benchmark ---
@@ -1350,6 +1353,117 @@ setLocale("nl", { storage: memStore, persist: false });
 const nandNl = localizeChallenge(nand, "nl");
 assert("nand NL description", /eigen NAND-chip/i.test(nandNl.description));
 setLocale("en", { storage: memStore });
+
+// ─── Lesson palette (UX fase B) ───────────────────────────────────────────
+console.log("\nSectie: lesson palette");
+import { getLessonPartTypes, getPartsUnlockedBy } from "../src/model/lesson-palette.js";
+
+const lpNot = REAL_CHALLENGES.find((c) => c.id === "not");
+const lpAnd = REAL_CHALLENGES.find((c) => c.id === "and");
+const lpXorNand = REAL_CHALLENGES.find((c) => c.id === "xor-nand-only");
+const lpRam = REAL_CHALLENGES.find((c) => c.verification === "sequential-script");
+const lpWide = REAL_CHALLENGES.find((c) =>
+  [...(c.template?.inputs || []), ...(c.template?.outputs || [])].some((p) => typeof p === "object" && p.width > 1)
+);
+
+const fresh = getLessonPartTypes(lpNot, { completedChallengeIds: ["nand"] });
+assert("palette: NOT-les biedt NAND", fresh.available.includes("gate-nand"));
+assert("palette: NOT-les biedt geen NOT", !fresh.available.includes("gate-not"));
+assert("palette: AND nog vergrendeld", fresh.locked.some((l) => l.type === "gate-and"));
+assert("palette: geen schakelaar/lamp in les", !fresh.available.includes("switch") && !fresh.available.includes("lamp"));
+assert("palette: geen klok in combinatorische les", !fresh.available.includes("clock"));
+
+const afterNot = getLessonPartTypes(lpAnd, { completedChallengeIds: ["nand", "not"] });
+assert("palette: NOT vrij na les NOT", afterNot.available.includes("gate-not"));
+assert("palette: AND-les biedt geen AND", !afterNot.available.includes("gate-and"));
+
+const xn = getLessonPartTypes(lpXorNand, { completedChallengeIds: ["nand", "not", "and", "or", "xor"] });
+assert("palette: alleen-NAND-les toont geen AND/OR", !xn.available.includes("gate-and") && !xn.available.includes("gate-or"));
+assert("palette: alleen-NAND-les biedt NAND", xn.available.includes("gate-nand"));
+
+assert("palette: sequentiële les biedt klok+register", getLessonPartTypes(lpRam, {}).available.includes("register"));
+assert("palette: brede les biedt splitter/joiner", getLessonPartTypes(lpWide, {}).available.includes("splitter"));
+assert("palette: vrije modus biedt alle poorten", getLessonPartTypes(lpNot, { unlockedAll: true }).available.includes("gate-and"));
+assert("palette: computer-les biedt ROM", getLessonPartTypes(REAL_CHALLENGES.find((c) => c.id === "computer"), {}).available.includes("rom"));
+assert("palette: les OR ontgrendelt OR en NOR", getPartsUnlockedBy("or").includes("gate-or") && getPartsUnlockedBy("or").includes("gate-nor"));
+
+// ─── Les 0 + coach-velden (UX fase C) ─────────────────────────────────────
+console.log("\nSectie: les 0 en coach");
+import { INTRO_LESSON_ID, normalizeLearner as normalizeLearnerC } from "../src/data/curriculum.js";
+const migratedC = normalizeLearnerC({ completedChallengeIds: ["nand", "not"], tutorialDismissed: true });
+assert("migratie: bestaande voortgang krijgt les 0", migratedC.completedChallengeIds[0] === INTRO_LESSON_ID);
+assert("migratie: oude walkthrough-skip → coach NAND gedismissed", migratedC.coachDismissed.nand === true);
+assert("migratie: coach standaard aan", migratedC.coachEnabled === true);
+const freshNorm = normalizeLearnerC({ completedChallengeIds: [] });
+assert("verse learner krijgt les 0 niet cadeau", freshNorm.completedChallengeIds.length === 0);
+const introLesson = REAL_CHALLENGES.find((c) => c.id === INTRO_LESSON_ID);
+assert("les 0 palet biedt AND", getLessonPartTypes(introLesson, {}).available.includes("gate-and"));
+assert("les 0 palet: AND niet als 'later'", !getLessonPartTypes(introLesson, {}).locked.some((l) => l.type === "gate-and"));
+
+// ─── Afwerking (UX fase E) ────────────────────────────────────────────────
+console.log("\nSectie: afwerking");
+import { circuitSignature, sameCircuit } from "../src/model/circuit-signature.js";
+import { setLocale as setLocaleE } from "../src/i18n/index.js";
+
+const sigBase = {
+  nodes: [
+    { id: "n1", type: "input-pin", x: 10, y: 10, config: { label: "A", previewValue: "0" } },
+    { id: "n2", type: "gate", x: 50, y: 10, config: { gateType: "NOT" } },
+  ],
+  wires: [{ id: "w1", fromNodeId: "n1", fromPin: "OUT", toNodeId: "n2", toPin: "A" }],
+};
+const moved = JSON.parse(JSON.stringify(sigBase));
+moved.nodes[1].x = 400;
+moved.nodes[0].config.previewValue = "1";
+assert("signature: verplaatsen/schakelen telt niet als wijziging", sameCircuit(sigBase, moved));
+const rewired = JSON.parse(JSON.stringify(sigBase));
+rewired.wires = [];
+assert("signature: draad weg = wijziging", !sameCircuit(sigBase, rewired));
+const regated = JSON.parse(JSON.stringify(sigBase));
+regated.nodes[1].config.gateType = "AND";
+assert("signature: ander poorttype = wijziging", circuitSignature(sigBase) !== circuitSignature(regated));
+
+// Meldingen volgen de taal.
+setLocaleE("en", { persist: false });
+const enSummary = verifier.runChallengeVerification(
+  REAL_CHALLENGES.find((c) => c.id === "nand"),
+  { id: "x", name: "NAND", inputs: [], outputs: [], circuitSnapshot: { nodes: [], wires: [] } }
+).summary;
+assert("EN: verificatie-samenvatting in het Engels", !/geslaagd|opgeslagen/.test(enSummary));
+setLocaleE("nl", { persist: false });
+const nlSummary = verifier.runChallengeVerification(
+  REAL_CHALLENGES.find((c) => c.id === "nand"),
+  { id: "x", name: "NAND", inputs: [], outputs: [], circuitSnapshot: { nodes: [], wires: [] } }
+).summary;
+assert("NL: verificatie-samenvatting in het Nederlands", nlSummary !== enSummary);
+setLocaleE("en", { persist: false });
+
+// Starter-chip mag de les die hem bouwt niet oplossen.
+const starterHalf = {
+  id: "starter-ha",
+  name: "Half Adder",
+  description: "Starter half adder met SUM en CARRY.",
+  inputs: [{ name: "A" }, { name: "B" }],
+  outputs: [{ name: "SUM" }, { name: "CARRY" }],
+  circuitSnapshot: { nodes: [], wires: [], meta: { isStarter: true } },
+};
+const starterVerifier = createChallengeVerifier({
+  ...verifierDeps,
+  getChipDefinition: (id) => (id === "starter-ha" ? starterHalf : null),
+});
+const wrapper = {
+  id: "mine",
+  name: "Half Adder",
+  inputs: [{ name: "A" }, { name: "B" }],
+  outputs: [{ name: "SUM" }, { name: "CARRY" }],
+  circuitSnapshot: {
+    nodes: [{ id: "c1", type: "chip-instance", config: { definitionId: "starter-ha" } }],
+    wires: [],
+  },
+};
+const halfAdderChallenge = REAL_CHALLENGES.find((c) => c.id === "half-adder");
+const shortcut = starterVerifier.runChallengeVerification(halfAdderChallenge, wrapper);
+assert("starter-chip als oplossing van zijn eigen les wordt geweigerd", !shortcut.done && /starter/i.test(shortcut.summary));
 
 console.log("\n" + "-".repeat(44));
 console.log("Totaal: " + passed + " geslaagd, " + failed + " mislukt");

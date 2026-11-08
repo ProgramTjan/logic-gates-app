@@ -64,28 +64,38 @@ Inhoudelijk is de app ver (40 lessen, unlock-gating, quiz, walkthrough les 1, kl
 ---
 
 ### Bevindingen tijdens fase A (meenemen in latere fases)
-- Nieuwe onderdelen landen op een vaste positie, soms buiten beeld als het canvas gescrold is → **B.2**: plaats nieuwe onderdelen in het zichtbare deel van het canvas.
-- Elke "Controleer" maakt een nieuwe chipversie; de chipbibliotheek groeit snel → **E**: alleen een nieuwe versie bij een gewijzigde schakeling.
-- NL-strings in EN-modus: `Nog geen eigen oplossing opgeslagen`, `functionele tests geslaagd` (verificatiesamenvatting) → **E**.
+- ~~Nieuwe onderdelen landen op een vaste positie, soms buiten beeld~~ → opgelost in B.2.
+- ~~Elke "Controleer" maakt een nieuwe chipversie~~ → opgelost in E.
+- ~~NL-strings in EN-modus~~ → opgelost in E.
 
 ---
 
-## FASE B — Lesmodus als stappenflow
+## FASE B — Lesmodus als stappenflow ✅ gedaan 2026-11-04
 
 ### Stap B.1: Lespaneel in stappen
 Vervang tabs (Theorie/Hints/Tests) door een verticale flow: **Doel → Snap het (theorie, kort) → Bouw → Controleer → Begrepen? (quiz) → Volgende les**. Eén primaire knop per stap. Theorie inklapbaar na de eerste keer. Na geslaagd: "Volgende les →" + "Terug naar overzicht".
 
 ### Stap B.2: Gefilterd onderdelenpalet
-Challenge-schema krijgt `palette: string[]` (part-types + toegestane chips). Lesson-view toont alleen die onderdelen; default afgeleid uit `gateConstraint` + eerder voltooide chips. Sandbox toont alles.
+Lesson-view toont alleen relevante onderdelen; sandbox toont alles. Uitgewerkt in `src/model/lesson-palette.js` (pure functie, getest in `scripts/verify.js`):
+- Altijd: Input, Output, NAND (tenzij `gateConstraint` anders zegt).
+- Ingebouwde poorten komen vrij zodra je de les hebt afgerond die ze bouwt (NOT na "not", AND na "and", OR/NOR na "or", XOR na "xor"); de poort die je in de les zelf bouwt nooit. Vrije modus biedt alles. Nog niet beschikbare poorten staan als "Leer je later" in het palet.
+- Splitter/Joiner bij brede pins, Clock/Register bij sequentiële lessen, plus node-types uit `template.nodes` (ROM/Screen in de computer-les).
+- Chips: alleen je eigen chips; starter-chips (NAND/Half/Full Adder) alleen in Vrij bouwen.
+- Nieuwe onderdelen landen op een vrije plek binnen het zichtbare canvas.
 
 ### Stap B.3: Live controle
 "Controleer" toont de testtabel inline (groen/rood per rij) in de Controleer-stap; geen aparte Tests-tab. Bij falen: eerste falende rij uitgelicht + bijbehorende hint.
 
-**Acceptatie:** les 1–3 doorlopen zonder ooit de pagina te scrollen op 1440×900; geen tabs meer.
+**Acceptatie:** les 1–3 doorlopen zonder ooit de pagina te scrollen op 1440×900 (lespaneel scrollt intern); geen tabs meer.
+
+### Bevindingen tijdens fase B (meenemen in latere fases)
+- ~~Inspector-kaart is op staande tablet te groot~~ → inklapbaar sinds C, standaard dicht op smalle schermen sinds D.
+- ~~NL-beschrijvingen van onderdelen in EN-modus~~ → opgelost in E.
+- ~~Starter-chips als oplossing van hun eigen les~~ → verificatie weigert dit sinds E.
 
 ---
 
-## FASE C — Begeleiding
+## FASE C — Begeleiding ✅ gedaan 2026-11-05
 
 ### Stap C.1: Coach-engine data-gedreven
 Generaliseer `src/ui/tutorial.js`: stappen komen uit `challenge.coach: [{ textKey, target, until }]` met een kleine set predicaten (`hasNode(type)`, `hasWire(from,to)`, `toggled(label)`, `submitted`). Les 1-walkthrough herschrijven als data.
@@ -98,9 +108,20 @@ Les 0–5: volledige coach. Daarna een hintladder (hint 1 → hint 2 → aanwijz
 
 **Acceptatie:** verse gebruiker komt zonder tekstmuur in les 0 en voltooit die zonder voorkennis; e2e dekt les 0.
 
+**Uitgevoerd (afwijkingen/aanvullingen):**
+- Coach-scripts in `src/data/coach-scripts.js` voor les 0 t/m 5 (intro-light, nand, not, and, or, xor); engine in `src/ui/tutorial.js`. Bij draadstappen wijst de coach eerst de bron-pin aan en na het kiezen een vrije ingang van het doel.
+- Overslaan geldt per les (`learner.coachDismissed`); "Laat zien hoe" in de Bouw-stap start de coach altijd opnieuw; ⚙ → Begeleiding zet de coach aan/uit.
+- Les 0 krijgt een eigen module "0. Start"; bestaande voortgang krijgt les 0 automatisch (migratie in `normalizeLearner`). Vrij bouwen gaat open na les 0.
+- Welkomst-overlay verwijderd; het startscherm verwelkomt nieuwe gebruikers. Hulp en sneltoetsen in een `?`-menu in de app-balk (teksten herschreven voor de nieuwe flow).
+- Inspector in lessen standaard ingeklapt tot een label, zodat hij geen pins afdekt.
+- Les-sheets krijgen de (vertaalde) lestitel als naam.
+
+### Bevindingen tijdens fase C (meenemen in latere fases)
+- ~~Telefoon: Parts-menu loopt rechts buiten beeld; canvas is erg klein~~ → opgelost in D.
+
 ---
 
-## FASE D — Tablet eerst
+## FASE D — Tablet eerst ✅ gedaan 2026-11-05
 
 1. Onderpaneel (bottom sheet) met drie standen: ingeklapt (titel + primaire actie), half, vol; sleepbaar.
 2. Pin-hitboxen ≥ 32px op touch (`@media (pointer: coarse)`), pinch-zoom op canvas, geen hover-afhankelijke bediening.
@@ -109,13 +130,31 @@ Les 0–5: volledige coach. Daarna een hintladder (hint 1 → hint 2 → aanwijz
 
 **Acceptatie:** geen horizontale overflow ≤ 390px; les 0 volledig op touch-viewport te doorlopen.
 
+**Uitgevoerd:**
+- `@media (pointer: coarse)`: nodes 124px breed, pins ≥ 26px met onzichtbare tikzone van 32px die van de node af wijst, grotere toggles, bredere draad-tikzone, 40px canvasknoppen.
+- Eigen gebaren op het canvas (`touch-action: none`): één vinger pant, twee vingers pinchen rond het middelpunt en pannen mee; Ctrl/⌘ + scroll (trackpad) zoomt rond de cursor. Knop ⤢ maakt passend.
+- Onderpaneel (< 1024px) met drie standen — opgevouwen (titel, live-status, Controleer), half, vol — tik op de greep vouwt, slepen kiest de dichtstbijzijnde stand. Ook voor het sandbox-paneel ("Sheets & chips", standaard opgevouwen). Op een telefoon vouwt het lespaneel op zodra je een onderdeel plaatst.
+- Onderdelenstrip (< 1024px) onder het canvas i.p.v. het Parts-menu; de coach wijst daar de knop aan.
+- Plaatsing van onderdelen rekent met echte node-maten, ontwijkt zwevende kaarten, kiest de vrije plek het dichtst bij de vorige node en scrollt mee als het zichtbare deel vol is.
+- Lessen op een smal canvas krijgen een compactere indeling en passen zich bij openen in beeld (niet kleiner dan 60%).
+- Inspector ook in Vrij bouwen ingeklapt op smalle schermen.
+- E2E `e2e/touch.spec.js`: 820×1180, 1180×820 en 390×844 met touch-emulatie.
+
 ---
 
-## FASE E — Afwerking
+## FASE E — Afwerking ✅ gedaan 2026-11-08
 
 - Hardcoded strings naar i18n (o.a. `Nog geen eigen oplossing opgeslagen`, `poorten:`/`verboden:` in de kicker).
 - Legacy "Project N"-label vervangen door module + lesnummer ("Poorten · les 1/19").
 - Lege staten met één concrete actie; consistente knophiërarchie (één primaire knop per scherm).
+
+**Uitgevoerd:**
+- Alle hardcoded NL-teksten naar `src/i18n/en.js` + `nl.js`: verbindingsfouten, simulatiefouten (`src/sim/evaluate.js`), chip-interfacefouten, verificatie-samenvattingen, deel-dialogen, beschrijvingen van onderdelen (`partCopy.*`) en starter-chips (weergave in de huidige taal). Controle: een scan van alle schermen in EN vindt geen Nederlands meer.
+- Nieuwe chipversie alleen bij een gewijzigde schakeling (`src/model/circuit-signature.js`: verplaatsen en schakelen tellen niet mee).
+- Verificatie weigert de starter-chip als oplossing van de les die die chip bouwt (`checkStarterShortcut`).
+- Lege staten: chipbibliotheek met knop "Sla deze sheet op als chip"; palet-tekst verschilt tussen les en Vrij bouwen.
+- Knophiërarchie: één primaire knop per scherm — "Ga verder/Start" op het overzicht (module met de volgende les krijgt een accentrand), "Controleer" in de les; Parts is een sterke secundaire knop.
+- Legacy "Project N"-label was al in fase B verdwenen.
 
 ---
 

@@ -1,3 +1,4 @@
+import { t } from "../i18n/index.js";
 export function createChipDefinitionsService(deps) {
   function ensureStarterChips(project) {
     ensureStarterChip(project, "NAND", buildStarterNandDefinition);
@@ -168,25 +169,25 @@ export function createChipDefinitionsService(deps) {
     const errors = [];
 
     if (!inputs.length) {
-      errors.push({ message: "Een chip heeft minimaal één Input node nodig." });
+      errors.push({ message: t("chip.needInput") });
     }
     if (!outputs.length) {
-      errors.push({ message: "Een chip heeft minimaal één Output node nodig." });
+      errors.push({ message: t("chip.needOutput") });
     }
 
     const duplicateInputNames = findDuplicateNames(inputs.map((item) => item.name));
     const duplicateOutputNames = findDuplicateNames(outputs.map((item) => item.name));
     if (duplicateInputNames.length) {
-      errors.push({ message: `Dubbele inputnamen: ${duplicateInputNames.join(", ")}` });
+      errors.push({ message: t("chip.dupInputs", { names: duplicateInputNames.join(", ") }) });
     }
     if (duplicateOutputNames.length) {
-      errors.push({ message: `Dubbele outputnamen: ${duplicateOutputNames.join(", ")}` });
+      errors.push({ message: t("chip.dupOutputs", { names: duplicateOutputNames.join(", ") }) });
     }
     if (inputs.some((item) => !item.name)) {
-      errors.push({ message: "Elke Input node heeft een naam nodig." });
+      errors.push({ message: t("chip.inputNameRequired") });
     }
     if (outputs.some((item) => !item.name)) {
-      errors.push({ message: "Elke Output node heeft een naam nodig." });
+      errors.push({ message: t("chip.outputNameRequired") });
     }
 
     return { inputs, outputs, errors };
