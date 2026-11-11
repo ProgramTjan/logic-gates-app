@@ -367,17 +367,6 @@ export function createPanelRenderers(deps) {
     </div>`;
   }
 
-  function formatPins(pins) {
-    return (pins || [])
-      .map((pin) => {
-        if (pin && typeof pin === "object") {
-          return pin.width && pin.width > 1 ? `${pin.name}[${pin.width}]` : pin.name;
-        }
-        return String(pin);
-      })
-      .join(", ");
-  }
-
   function formatAssignments(values) {
     return Object.entries(values || {})
       .map(([k, v]) => `${k}=${v}`)
@@ -570,11 +559,12 @@ export function createPanelRenderers(deps) {
     const expandedEntry = state.expandedStep && state.expandedStep[challenge.id];
     const isExpanded = (key) => Boolean(expandedEntry && expandedEntry.step === key && expandedEntry.current === currentKey);
 
-    const theoryOpen =
-      state.theoryOpen && state.theoryOpen[challenge.id] !== undefined
-        ? state.theoryOpen[challenge.id]
-        : !lessonCompleted;
-    const theoryParagraphs = (localized.theory || [])
+    // Intro shows only the first paragraph; the rest sits behind "More background" (closed by default).
+    const theoryList = Array.isArray(localized.theory) ? localized.theory : [];
+    const theoryOpen = Boolean(state.theoryOpen && state.theoryOpen[challenge.id]);
+    const theoryLeadHtml = theoryList.length ? `<p class="theory-paragraph">${escapeHtml(theoryList[0])}</p>` : "";
+    const theoryMoreParagraphs = theoryList
+      .slice(1)
       .map((paragraph) => `<p class="theory-paragraph">${escapeHtml(paragraph)}</p>`)
       .join("");
 
@@ -584,12 +574,14 @@ export function createPanelRenderers(deps) {
             .map((concept) => `<span class="lesson-concept">${escapeHtml(concept)}</span>`)
             .join("")}</div>`
         : "";
-    const theoryHtml = theoryParagraphs
-      ? `<details class="lesson-theory" data-theory-toggle="${challenge.id}"${theoryOpen ? " open" : ""}>
-            <summary>${escapeHtml(theoryOpen ? t("theoryHide") : t("theoryRead"))}</summary>
-            <div class="theory-body">${theoryParagraphs}</div>
+    const theoryHtml = `${theoryLeadHtml}${
+      theoryMoreParagraphs
+        ? `<details class="lesson-theory" data-theory-toggle="${challenge.id}"${theoryOpen ? " open" : ""}>
+            <summary>${escapeHtml(t("theoryMore"))}</summary>
+            <div class="theory-body">${theoryMoreParagraphs}</div>
           </details>`
-      : "";
+        : ""
+    }`;
 
     const feedbackHtml =
       feedback && !feedback.ok ? `<p class="submit-feedback bad">${escapeHtml(feedback.message)}</p>` : "";
@@ -620,9 +612,6 @@ export function createPanelRenderers(deps) {
         stepState("build"),
         t("stepBuild"),
         `<p class="lesson-step-copy">${escapeHtml(t("buildInstruction"))}</p>
-        <p class="lesson-interface"><span>${escapeHtml(formatPins(template.inputs))}</span> → <span>${escapeHtml(
-          formatPins(template.outputs)
-        )}</span></p>
         ${
           unlocked && typeof deps.hasCoach === "function" && deps.hasCoach(challenge.id)
             ? `<button type="button" class="ghost-button coach-button" data-coach-start="${challenge.id}">▶ ${escapeHtml(

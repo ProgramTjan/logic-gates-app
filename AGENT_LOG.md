@@ -511,3 +511,27 @@
 - De spec noemt `--challenge-card-bg` (bruine lestint) nog; staat in fase J/H.
 
 **Resultaat:** groen, `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 22/22 (20 bestaande + 2 nieuwe). Alle drie de thema's (dark, light, neon) visueel gecontroleerd op 1440×900, 1180×820 en 820×1180 (touch).
+
+---
+
+## 2026-11-11 — UX fase G: les, één stap tegelijk
+
+### G.4 taak 4 — inventaris: lessen waarvan `theory[0]` de bouwwijze verklapt (NL, alleen genoteerd, niets herschreven)
+
+Beoordeeld op: noemt de eerste theorie-alinea welke poorten/chips je gebruikt of hoe je ze verbindt.
+
+Verklapt duidelijk (6):
+- `add4` — "rijgt vier adders aaneen … ripple-carry adder, carry rimpelt van rechts naar links".
+- `add16` — "dezelfde structuur als Add4: zestien Full Adders … met carry tussen de posities".
+- `register16` — "Bit × 16: één LOAD en één CLK sturen alle bits tegelijk".
+- `alu-with-registers` — "A en D voeden de ALU; de ALU-uitkomst kan terug naar D".
+- `cpu` — noemt alle onderdelen (PC, registers, ALU, geheugen) en hun rol.
+- `computer` — noemt de onderdelen (ROM, CPU, Screen).
+
+Grensgevallen (3 groepen):
+- `xor-nand-only` — noemt de beperking (alleen NAND), niet de opbouw.
+- `half-adder`, `inc4` — "berekent beide bits apart" / "chain van carries van rechts naar links" geven een richting, geen onderdelen.
+- `ram64`, `ram512`, `ram4k`, `ram16k` — "dezelfde LOAD/ADDR/CLK-interface als RAM8, maar meer adresbits"; verwijst naar de opbouw via RAM8 en bevat letterlijk de titel ("Build RAM64 is een grotere …", vier keer vrijwel dezelfde tekst).
+
+Verklapt niet (rest): `intro-light`, `nand`, `not`, `and`, `or`, `xor` (de NAND-formule staat in alinea 3, nu achter "Meer uitleg"), `mux`, `dmux`, `not16`, `and16`, `or16`, `mux16`, `or4way`, `mux4way`, `dmux4way`, `or8way`, `mux4way16`, `mux8way16`, `dmux8way`, `full-adder`, `inc16`, `dff`, `register-chip`, `pc`, `alu`, `instruction-decoder`, `ram8`, `mod4-counter`.
+Totaal 41 lessen bekeken (6 duidelijk, 7 grensgeval, 28 niet) (zelfde tekst als in `src/data/challenges.js`; de EN-teksten zijn niet apart beoordeeld).

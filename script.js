@@ -1218,10 +1218,6 @@ import {
         const details = event.target;
         if (details && details.dataset && details.dataset.theoryToggle) {
           state.theoryOpen[details.dataset.theoryToggle] = details.open;
-          const summary = details.querySelector("summary");
-          if (summary) {
-            summary.textContent = details.open ? t("theoryHide") : t("theoryRead");
-          }
         }
       },
       true

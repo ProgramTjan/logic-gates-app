@@ -143,6 +143,20 @@ test.describe("Leerapp smoke", () => {
     await expect(playButton).not.toHaveClass(/is-running/);
   });
 
+  test("intro toont alleen de eerste theorie-alinea; de rest staat achter Meer uitleg", async ({ page }) => {
+    await enableFreeMode(page);
+    await openLessonFromHome(page, "xor");
+    await skipTutorial(page);
+    const intro = page.locator('[data-lesson-step="intro"]');
+    await expect(intro.locator(".theory-paragraph")).toHaveCount(3);
+    await expect(intro.locator(".theory-paragraph:visible")).toHaveCount(1);
+    await expect(page.locator(".lesson-theory")).not.toHaveAttribute("open", "");
+    await expect(page.getByText("NAND(A,B) gives helper H", { exact: false })).toBeHidden();
+    await expect(page.locator(".lesson-interface")).toHaveCount(0);
+    await page.locator(".lesson-theory summary").click();
+    await expect(page.getByText("NAND(A,B) gives helper H", { exact: false })).toBeVisible();
+  });
+
   test("lespaneel: stappen, hints, gefilterd palet en live controle", async ({ page }) => {
     await enableFreeMode(page);
     await openLessonFromHome(page, "not");

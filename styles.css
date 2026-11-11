@@ -3438,17 +3438,6 @@ h2 {
   color: var(--muted);
 }
 
-.lesson-interface {
-  margin: 0 0 0.55rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.lesson-interface span {
-  color: var(--ink);
-}
-
 .lesson-theory > summary {
   cursor: pointer;
   font-size: 0.84rem;
