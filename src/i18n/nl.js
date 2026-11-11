@@ -90,8 +90,8 @@ export default {
   homeWelcomeLead: "Begin met een korte casus: doe een lamp aan. Je wordt stap voor stap begeleid.",
   homeWelcomeStart: "Start: {title}",
   // Lesson flow (UX fase B)
-  stepGoal: "Doel",
-  stepTheory: "Snap het",
+  stepIntro: "Intro",
+  introStart: "Aan de slag",
   stepBuild: "Bouw",
   stepCheck: "Controleer",
   stepQuiz: "Begrepen?",

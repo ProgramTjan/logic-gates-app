@@ -20,6 +20,7 @@ export function createPanelRenderers(deps) {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    getCurrentWorkspace,
   } = deps;
 
   const challengesById = new Map(CHALLENGES.map((challenge) => [challenge.id, challenge]));
@@ -502,11 +503,29 @@ export function createPanelRenderers(deps) {
         : null;
     const lastCheckFailed = Boolean(feedback && !feedback.ok);
 
-    // Step states: done ✓ · current (accent) · upcoming (muted).
-    const buildState = lessonCompleted ? "is-done" : lastCheckFailed ? "" : "is-current";
-    const checkState = lessonCompleted ? "is-done" : lastCheckFailed ? "is-current" : "";
-    const quizState = !quizItems.length ? "" : quizAnswered ? "is-done" : lessonCompleted ? "is-current" : "";
-    const nextState = lessonCompleted && (!quizItems.length || quizAnswered) ? "is-current" : "";
+    // Four steps: intro → build → quiz → next. Only steps before the current one are done.
+    const template = challenge.template || { inputs: [], outputs: [] };
+    const workspace = typeof getCurrentWorkspace === "function" ? getCurrentWorkspace() : null;
+    const templateNodeCount = (template.inputs || []).length + (template.outputs || []).length;
+    const introDone =
+      lessonCompleted ||
+      Boolean(state.introSeen && state.introSeen[challenge.id]) ||
+      Boolean(workspace && workspace.nodes.length > templateNodeCount);
+    const hasQuiz = quizItems.length > 0;
+    let currentKey = "next";
+    if (!introDone) {
+      currentKey = "intro";
+    } else if (!lessonCompleted) {
+      currentKey = "build";
+    } else if (hasQuiz && !quizAnswered) {
+      currentKey = "quiz";
+    }
+    const stepOrder = hasQuiz ? ["intro", "build", "quiz", "next"] : ["intro", "build", "next"];
+    const stepState = (key) => {
+      const index = stepOrder.indexOf(key);
+      const currentIndex = stepOrder.indexOf(currentKey);
+      return index < currentIndex ? "is-done" : index === currentIndex ? "is-current" : "";
+    };
 
     const theoryOpen =
       state.theoryOpen && state.theoryOpen[challenge.id] !== undefined
@@ -516,44 +535,48 @@ export function createPanelRenderers(deps) {
       .map((paragraph) => `<p class="theory-paragraph">${escapeHtml(paragraph)}</p>`)
       .join("");
 
-    const template = challenge.template || { inputs: [], outputs: [] };
     const conceptsHtml =
       Array.isArray(learning.concepts) && learning.concepts.length
         ? `<div class="lesson-concepts">${learning.concepts
             .map((concept) => `<span class="lesson-concept">${escapeHtml(concept)}</span>`)
             .join("")}</div>`
         : "";
+    const theoryHtml = theoryParagraphs
+      ? `<details class="lesson-theory" data-theory-toggle="${challenge.id}"${theoryOpen ? " open" : ""}>
+            <summary>${escapeHtml(theoryOpen ? t("theoryHide") : t("theoryRead"))}</summary>
+            <div class="theory-body">${theoryParagraphs}</div>
+          </details>`
+      : "";
+
+    const feedbackHtml = feedback
+      ? `<p class="submit-feedback ${feedback.ok ? "ok" : "bad"}">${escapeHtml(feedback.message)}</p>`
+      : "";
+    const sequentialFailures = isSequentialChallenge(challenge) ? renderFailedCasesTable(result) : "";
 
     const steps = [];
     let n = 1;
     steps.push(
       renderStep(
         n++,
-        "goal",
-        "is-done",
-        t("stepGoal"),
-        `<p class="lesson-goal-text">${escapeHtml(learning.goal || localized.description || "")}</p>${conceptsHtml}`
+        "intro",
+        stepState("intro"),
+        t("stepIntro"),
+        `<p class="lesson-goal-text">${escapeHtml(learning.goal || localized.description || "")}</p>${conceptsHtml}
+        ${theoryHtml}
+        ${
+          unlocked
+            ? `<button type="button" class="primary-button lesson-intro-button" data-intro-done="${challenge.id}">${escapeHtml(
+                t("introStart")
+              )}</button>`
+            : ""
+        }`
       )
     );
-    if (theoryParagraphs) {
-      steps.push(
-        renderStep(
-          n++,
-          "theory",
-          "is-done",
-          t("stepTheory"),
-          `<details class="lesson-theory" data-theory-toggle="${challenge.id}"${theoryOpen ? " open" : ""}>
-            <summary>${escapeHtml(theoryOpen ? t("theoryHide") : t("theoryRead"))}</summary>
-            <div class="theory-body">${theoryParagraphs}</div>
-          </details>`
-        )
-      );
-    }
     steps.push(
       renderStep(
         n++,
         "build",
-        buildState,
+        stepState("build"),
         t("stepBuild"),
         `<p class="lesson-step-copy">${escapeHtml(t("buildInstruction"))}</p>
         <p class="lesson-interface"><span>${escapeHtml(formatPins(template.inputs))}</span> → <span>${escapeHtml(
@@ -566,21 +589,8 @@ export function createPanelRenderers(deps) {
               )}</button>`
             : ""
         }
-        ${renderHintLadder(challenge, localized)}`
-      )
-    );
-
-    const feedbackHtml = feedback
-      ? `<p class="submit-feedback ${feedback.ok ? "ok" : "bad"}">${escapeHtml(feedback.message)}</p>`
-      : "";
-    const sequentialFailures = isSequentialChallenge(challenge) ? renderFailedCasesTable(result) : "";
-    steps.push(
-      renderStep(
-        n++,
-        "check",
-        checkState,
-        t("stepCheck"),
-        `${unlocked ? `<div class="live-check" data-live-check="${challenge.id}">${renderLiveCheckInner(challenge)}</div>` : ""}
+        ${renderHintLadder(challenge, localized)}
+        ${unlocked ? `<div class="live-check" data-live-check="${challenge.id}">${renderLiveCheckInner(challenge)}</div>` : ""}
         ${feedbackHtml}
         ${sequentialFailures}
         <button class="${lessonCompleted ? "ghost-button" : "primary-button"} lesson-check-button" type="button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
@@ -590,7 +600,7 @@ export function createPanelRenderers(deps) {
     );
 
     if (quizHtml) {
-      steps.push(renderStep(n++, "quiz", quizState, t("stepQuiz"), quizHtml));
+      steps.push(renderStep(n++, "quiz", stepState("quiz"), t("stepQuiz"), quizHtml));
     }
 
     const unlockedParts = getPartsUnlockedBy(challenge.id)
@@ -614,7 +624,7 @@ export function createPanelRenderers(deps) {
           }
         </div>`
       : `<p class="lesson-step-copy muted">${escapeHtml(t("nextLocked"))}</p>`;
-    steps.push(renderStep(n++, "next", nextState, t("stepNext"), nextBody));
+    steps.push(renderStep(n++, "next", stepState("next"), t("stepNext"), nextBody));
 
     const lockNotice = !unlocked
       ? `<p class="challenge-lock-notice">${escapeHtml(t("lockNotice", { required: requiredTitle || t("locked") }))}</p>`

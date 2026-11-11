@@ -169,6 +169,8 @@ import {
     hintsShown: {},
     inspectorOpenByView: { lesson: false, sandbox: window.innerWidth >= 1024 },
     theoryOpen: {},
+    introSeen: {},
+    expandedStep: {},
     sheetByView: { lesson: "half", sandbox: "peek" },
     challengeDetailTab: "theorie",
     lastSubmitFeedback: null,
@@ -882,6 +884,7 @@ import {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    getCurrentWorkspace,
     buildLiveDefinition,
     hasCoach: (challengeId) => tutorial.hasScript(challengeId),
     getActiveChallengeId: () => {
@@ -1125,6 +1128,13 @@ import {
           event.stopImmediatePropagation();
           const id = hintButton.dataset.revealHint;
           state.hintsShown[id] = (state.hintsShown[id] || 0) + 1;
+          panelRenderers.renderChallenges();
+          return;
+        }
+        const introButton = event.target.closest("[data-intro-done]");
+        if (introButton) {
+          event.stopImmediatePropagation();
+          state.introSeen[introButton.dataset.introDone] = true;
           panelRenderers.renderChallenges();
           return;
         }

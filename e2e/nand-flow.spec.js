@@ -79,7 +79,7 @@ test.describe("Leerflow nieuwe gebruiker", () => {
 
     await page.locator('[data-submit-challenge="intro-light"]').click();
     await expect(coach).toBeHidden();
-    await expect(page.locator('[data-lesson-step="check"]')).toHaveClass(/is-done/);
+    await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-done/);
     await expect(page.locator("#nav-sandbox")).not.toHaveClass(/locked/);
 
     // Door naar les 1 (NAND).

@@ -90,8 +90,8 @@ export default {
   homeWelcomeLead: "Start with a short case: switch on a lamp. You'll be guided step by step.",
   homeWelcomeStart: "Start: {title}",
   // Lesson flow (UX fase B)
-  stepGoal: "Goal",
-  stepTheory: "Understand it",
+  stepIntro: "Intro",
+  introStart: "Let's build",
   stepBuild: "Build",
   stepCheck: "Check",
   stepQuiz: "Did it click?",

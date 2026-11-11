@@ -150,6 +150,12 @@ test.describe("Leerapp smoke", () => {
 
     const steps = page.locator(".lesson-flow [data-lesson-step]");
     await expect(steps.first()).toBeVisible();
+    // Nieuwe les opent op Intro zonder vinkjes; "Aan de slag" vinkt Intro af en maakt Bouw actief.
+    await expect(steps).toHaveCount(4);
+    await expect(page.locator('[data-lesson-step="intro"]')).toHaveClass(/is-current/);
+    await expect(page.locator(".lesson-flow .lesson-step.is-done")).toHaveCount(0);
+    await page.locator("[data-intro-done]").click();
+    await expect(page.locator('[data-lesson-step="intro"]')).toHaveClass(/is-done/);
     await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-current/);
 
     // Hintladder: één hint per klik.
@@ -184,7 +190,7 @@ test.describe("Leerapp smoke", () => {
 
     await expect(page.locator(".live-check-summary")).toHaveClass(/ok/);
     await page.locator('[data-submit-challenge="not"]').click();
-    await expect(page.locator('[data-lesson-step="check"]')).toHaveClass(/is-done/);
+    await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-done/);
     await expect(page.locator(".lesson-unlocked-parts")).toContainText("NOT");
   });
 
