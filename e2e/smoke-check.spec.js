@@ -143,6 +143,16 @@ test.describe("Leerapp smoke", () => {
     await expect(playButton).not.toHaveClass(/is-running/);
   });
 
+  test("coach: ballon naast het lespaneel, niet over de lestekst", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    const coach = page.locator("[data-tutorial-coach]");
+    await expect(coach).toBeVisible();
+    await expect(coach).toHaveAttribute("data-arrow", "left");
+    const panelBox = await page.locator("#lesson-panel").boundingBox();
+    const coachBox = await coach.boundingBox();
+    expect(coachBox.x).toBeGreaterThanOrEqual(panelBox.x + panelBox.width);
+  });
+
   test("intro toont alleen de eerste theorie-alinea; de rest staat achter Meer uitleg", async ({ page }) => {
     await enableFreeMode(page);
     await openLessonFromHome(page, "xor");

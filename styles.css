@@ -4050,3 +4050,29 @@ h2 {
   margin-left: auto;
   padding: 0.55rem 1.1rem;
 }
+
+/* —— Coach balloon arrow (UX fase G.5) —— */
+.tutorial-coach[data-arrow="left"]::before,
+.tutorial-coach[data-arrow="down"]::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--parts-menu-bg);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--panel-border));
+  transform: rotate(45deg);
+}
+
+.tutorial-coach[data-arrow="left"]::before {
+  left: -7px;
+  top: calc(var(--coach-arrow, 28px) - 6px);
+  border-right: none;
+  border-top: none;
+}
+
+.tutorial-coach[data-arrow="down"]::before {
+  bottom: -7px;
+  left: calc(var(--coach-arrow, 28px) - 6px);
+  border-left: none;
+  border-top: none;
+}
