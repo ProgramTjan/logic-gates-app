@@ -2468,73 +2468,101 @@ h2 {
 
 .course-modules {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  max-width: 720px;
+  justify-self: center;
+  gap: 0.5rem;
 }
 
 .course-module-card {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.85rem;
-  align-items: start;
-  padding: 0.9rem;
   border: 1px solid var(--panel-border);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--panel-bg, #111) 92%, transparent);
+  background: var(--panel);
 }
 
-.course-ring {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: conic-gradient(var(--accent, #3d8bfd) var(--progress, 0deg), rgba(127, 127, 127, 0.25) 0);
+.course-module-card.locked {
+  background: transparent;
+  color: var(--muted);
+}
+
+.course-module-card.locked .course-module-row {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.course-module-row {
   display: grid;
-  place-items: center;
-}
-
-.course-ring::before {
-  content: "";
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--panel-bg, #161616);
-  grid-area: 1 / 1;
-}
-
-.course-ring-label {
-  grid-area: 1 / 1;
-  position: relative;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.course-module-head {
-  display: flex;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "num title badge count"
+    ". bar bar bar";
   align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
+  column-gap: 0.65rem;
+  row-gap: 0.4rem;
+  padding: 0.7rem 0.9rem;
+  list-style: none;
+  cursor: pointer;
 }
 
-.course-module-head h3 {
-  margin: 0;
-  font-size: 0.98rem;
+.course-module-row::-webkit-details-marker {
+  display: none;
+}
+
+.course-module-card.locked .course-module-row {
+  grid-template-areas: "num title lock";
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+}
+
+.course-module-num {
+  grid-area: num;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.course-module-title {
+  grid-area: title;
+  font-size: 1rem;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.course-module-lock {
+  grid-area: lock;
+  font-size: 0.85rem;
+}
+
+.course-module-count {
+  grid-area: count;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.course-module-row .course-badge {
+  grid-area: badge;
+}
+
+.course-module-row .course-bar {
+  grid-area: bar;
+}
+
+.course-module-card.has-badge .course-bar > span {
+  background: var(--ok);
 }
 
 .course-badge {
-  color: var(--accent, #3d8bfd);
-  font-size: 1.1rem;
+  color: var(--ok);
+  font-size: 1rem;
+  line-height: 1;
 }
 
-.course-module-copy,
-.course-module-meta {
+.course-module-copy {
   margin: 0.35rem 0;
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.4;
-}
-
-.course-module-start {
-  margin-top: 0.35rem;
 }
 
 .failed-cases-table {
@@ -2804,54 +2832,18 @@ h2 {
   padding: 0.75rem 1.3rem;
 }
 
-.home-view .course-modules {
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  align-items: start;
-}
-
-.home-view .course-module-card {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.7rem;
-}
-
-.course-module-lock {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-
-.course-module-top {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.85rem;
-  align-items: start;
-}
-
-.home-view .course-module-start {
-  margin: 0;
-}
-
-.course-module-card.locked {
-  opacity: 0.72;
-}
-
-.course-lessons > summary {
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 0.82rem;
-  padding: 0.15rem 0;
-}
-
 .course-lesson-list {
   list-style: none;
-  margin: 0.45rem 0 0;
-  padding: 0;
+  margin: 0;
+  padding: 0 0.5rem 0.6rem;
   display: grid;
   gap: 0.15rem;
-  max-height: 280px;
-  overflow: auto;
+}
+
+.course-lesson-arrow {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .course-lesson {
@@ -2902,6 +2894,9 @@ h2 {
 }
 
 .course-sandbox-card {
+  width: 100%;
+  max-width: 720px;
+  justify-self: center;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2936,7 +2931,9 @@ h2 {
 }
 
 .course-free-mode {
-  justify-self: start;
+  width: 100%;
+  max-width: 720px;
+  justify-self: center;
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -3374,10 +3371,6 @@ h2 {
 
   .home-view .course-continue {
     width: 100%;
-  }
-
-  .home-view .course-modules {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .course-sandbox-card {
@@ -3909,12 +3902,6 @@ h2 {
   display: grid;
   gap: 0.5rem;
   justify-items: start;
-}
-
-.course-module-start.is-next {
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--ghost-border));
-  color: var(--accent);
-  font-weight: 600;
 }
 
 /* —— Lesson progress and one-step-at-a-time flow (UX fase G.2) —— */

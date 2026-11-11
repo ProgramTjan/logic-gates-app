@@ -119,7 +119,9 @@ test.describe("Leerapp smoke", () => {
   });
 
   test("vrije modus unlockt lessen; computer-les opent met ROM en Screen", async ({ page }) => {
-    await expect(page.locator('.course-lesson[data-course-lesson="computer"]')).toBeDisabled();
+    // Vergrendelde module: één gedimde rij zonder lessenlijst, dus de les is niet te starten.
+    await expect(page.locator('.course-lesson[data-course-lesson="computer"]')).toHaveCount(0);
+    await expect(page.locator('[data-course-module="computer"]')).toHaveClass(/locked/);
     await enableFreeMode(page);
     await openLessonFromHome(page, "computer");
     await skipTutorial(page);
