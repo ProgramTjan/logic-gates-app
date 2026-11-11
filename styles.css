@@ -2902,8 +2902,7 @@ h2 {
   align-content: start;
 }
 
-.sheet-head,
-.parts-strip {
+.sheet-head {
   display: none;
 }
 
@@ -3260,36 +3259,6 @@ h2 {
   .lesson-panel[data-sheet="peek"] .sheet-peek-status,
   .lesson-panel[data-sheet="peek"] .sheet-peek-check {
     display: block;
-  }
-
-  /* —— One-tap parts strip replaces the Parts menu —— */
-  .app .parts-dropdown {
-    display: none;
-  }
-
-  .parts-strip {
-    display: flex;
-    gap: 0.4rem;
-    overflow-x: auto;
-    padding: 0.5rem 0.6rem;
-    border-top: 1px solid var(--panel-border);
-    scrollbar-width: thin;
-  }
-
-  .parts-strip-button {
-    flex: none;
-    min-height: 40px;
-    padding: 0.4rem 0.85rem;
-    border-radius: 10px;
-    background: var(--ghost-bg);
-    color: var(--ink);
-    border: 1px solid var(--ghost-border);
-    font-weight: 600;
-    font-size: 0.85rem;
-  }
-
-  .parts-strip-button.is-chip {
-    border-style: dashed;
   }
 }
 
@@ -4016,4 +3985,115 @@ h2 {
   left: calc(var(--coach-arrow, 28px) - 6px);
   border-left: none;
   border-top: none;
+}
+
+/* —— Parts strip: the one palette on every screen size (UX fase H.1) —— */
+.app .parts-dropdown {
+  display: none;
+}
+
+.parts-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.5rem 0.6rem;
+  border-top: 1px solid var(--panel-border);
+  scrollbar-width: thin;
+}
+
+.parts-strip-button {
+  flex: none;
+  min-width: 3.6rem;
+  min-height: 48px;
+  padding: 0.3rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  border-radius: 10px;
+  background: var(--ghost-bg);
+  color: var(--ink);
+  border: 1px solid var(--ghost-border);
+  font-weight: 600;
+  font-size: 0.78rem;
+  line-height: 1.15;
+}
+
+.parts-strip-button.is-chip {
+  border-style: dashed;
+}
+
+.parts-strip-button.is-locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.parts-strip-symbol {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.parts-strip-button.is-locked .parts-strip-symbol {
+  color: inherit;
+}
+
+.parts-strip-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parts-strip-sep {
+  flex: none;
+  align-self: stretch;
+  width: 1px;
+  margin: 0.1rem 0.15rem;
+  background: var(--panel-border);
+}
+
+@media (min-width: 1024px) {
+  /* Wide: vertical strip on the left edge of the canvas, beside it, so it never covers the circuit. */
+  .app .workspace-frame {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .app .workspace-frame > .workspace-header {
+    grid-column: 1 / -1;
+  }
+
+  .app .workspace-frame > .workspace-body {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .app .workspace-frame > .parts-strip {
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.5rem 0.4rem;
+    gap: 0.35rem;
+    border-top: 1px solid var(--panel-border);
+    border-right: 1px solid var(--panel-border);
+  }
+
+  .parts-strip-button {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .parts-strip-sep {
+    align-self: auto;
+    width: auto;
+    height: 1px;
+    margin: 0.15rem 0.2rem;
+  }
 }

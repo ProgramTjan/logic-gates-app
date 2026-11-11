@@ -145,24 +145,26 @@ export function createTutorial(deps) {
   }
 
   function partButton(match) {
-    // Narrow screens: the one-tap parts strip replaces the Parts menu.
+    // The parts strip is the one palette on every screen size.
+    const strip = document.querySelector("#parts-strip");
+    if (!strip) {
+      return null;
+    }
+    let button = null;
     if (match.gate) {
-      const stripButton = visible(document.querySelector(`#parts-strip [data-strip-part="gate-${match.gate.toLowerCase()}"]`));
-      if (stripButton) {
-        return stripButton;
+      button = visible(strip.querySelector(`[data-strip-part="gate-${match.gate.toLowerCase()}"]`));
+      if (!button) {
+        // Not a built-in in this lesson: it is the chip you made yourself.
+        button = [...strip.querySelectorAll("[data-strip-chip]")].find(
+          (el) => el.textContent.trim().toLowerCase() === match.gate.toLowerCase()
+        );
+        button = visible(button);
       }
     }
-    const dropdown = document.querySelector(".parts-dropdown");
-    if (dropdown && !dropdown.open) {
-      return dropdown.querySelector("summary");
+    if (button && button.scrollIntoView) {
+      button.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
-    if (match.gate) {
-      const button = document.querySelector(`#builtin-palette [data-part-type="gate-${match.gate.toLowerCase()}"]`);
-      if (button) {
-        return button;
-      }
-    }
-    return dropdown ? dropdown.querySelector("summary") : null;
+    return button || visible(strip);
   }
 
   /** While a wire is being drawn from the step's source, point at a free input of the target. */
@@ -454,7 +456,6 @@ export function createTutorial(deps) {
       root.addEventListener("click", onRootClick);
       window.addEventListener("resize", scheduleReposition);
       document.addEventListener("scroll", scheduleReposition, true);
-      // Opening/closing the Parts menu moves the target: follow it.
       document.addEventListener("toggle", scheduleReposition, true);
       root.dataset.bound = "1";
     }

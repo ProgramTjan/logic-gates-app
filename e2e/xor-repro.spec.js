@@ -21,12 +21,7 @@ test.describe("XOR met NAND repro", () => {
   });
 
   async function placePart(page, type) {
-    const dropdown = page.locator(".parts-dropdown");
-    const open = await dropdown.evaluate((el) => el.open);
-    if (!open) {
-      await page.locator(".parts-dropdown summary").click();
-    }
-    await page.locator(`[data-part-type="${type}"]`).click();
+    await page.locator(`#parts-strip [data-strip-part="${type}"]`).click();
   }
 
   async function clickLabelOutput(page, label) {

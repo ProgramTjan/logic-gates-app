@@ -370,9 +370,14 @@ import {
     /** Floating overlays (inspector, tools, status) in stage coordinates, so parts aren't placed under them. */
     getReservedStageRects: () => {
       const canvasRect = dom.canvas.getBoundingClientRect();
-      return ["#inspector-card", ".canvas-tools", ".canvas-status"]
+      // The parts strip sits beside/below the canvas; it only counts when it actually overlaps it.
+      const overlapsCanvas = (el) => {
+        const r = el.getBoundingClientRect();
+        return r.left < canvasRect.right && r.right > canvasRect.left && r.top < canvasRect.bottom && r.bottom > canvasRect.top;
+      };
+      return ["#inspector-card", ".canvas-tools", ".canvas-status", "#parts-strip"]
         .map((selector) => document.querySelector(selector))
-        .filter((el) => el && !el.hidden && el.offsetParent !== null)
+        .filter((el) => el && !el.hidden && el.offsetParent !== null && (el.id !== "parts-strip" || overlapsCanvas(el)))
         .map((el) => {
           const r = el.getBoundingClientRect();
           return {
@@ -911,6 +916,7 @@ import {
     escapeHtml,
     getCurrentWorkspace,
     buildLiveDefinition,
+    getNodeSymbol: (node) => canvasRenderers.getNodeSymbol(node),
     hasCoach: (challengeId) => tutorial.hasScript(challengeId),
     getActiveChallengeId: () => {
       const challenge = workspaceMutations.getActiveWorkspaceChallenge();

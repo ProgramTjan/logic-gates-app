@@ -121,19 +121,52 @@ export function createPanelRenderers(deps) {
         : "";
 
     if (dom.partsStrip) {
-      // Compact one-tap strip for narrow screens (shown via CSS below 1024px).
-      dom.partsStrip.innerHTML = [
-        ...visibleParts.map(
-          (part) =>
-            `<button type="button" class="parts-strip-button" data-strip-part="${part.type}">${escapeHtml(part.label)}</button>`
-        ),
-        ...latestDefinitions.map(
+      // The one palette on every screen size: label + symbol per part, thin separators between groups.
+      const symbolFor = (type) => {
+        if (typeof deps.getNodeSymbol !== "function") {
+          return "";
+        }
+        return type.startsWith("gate-")
+          ? deps.getNodeSymbol({ type: "gate", config: { gateType: type.slice(5).toUpperCase() } })
+          : deps.getNodeSymbol({ type, config: {} });
+      };
+      const copyFor = (part) => (t(`partCopy.${part.type}`) === `partCopy.${part.type}` ? part.copy : t(`partCopy.${part.type}`));
+      const stripButton = (part) =>
+        `<button type="button" class="parts-strip-button" data-strip-part="${part.type}" title="${escapeHtml(
+          copyFor(part)
+        )}"><span class="parts-strip-symbol" aria-hidden="true">${escapeHtml(symbolFor(part.type))}</span><span class="parts-strip-label">${escapeHtml(
+          part.label
+        )}</span></button>`;
+      const ioTypes = ["switch", "lamp", "input-pin", "output-pin"];
+      const groups = [
+        visibleParts.filter((part) => ioTypes.includes(part.type)),
+        visibleParts.filter((part) => part.type.startsWith("gate-")),
+        visibleParts.filter((part) => !ioTypes.includes(part.type) && !part.type.startsWith("gate-")),
+        latestDefinitions.map(
           (definition) =>
-            `<button type="button" class="parts-strip-button is-chip" data-strip-chip="${definition.id}">${escapeHtml(
-              definition.name
-            )}</button>`
+            `<button type="button" class="parts-strip-button is-chip" data-strip-chip="${definition.id}" title="${escapeHtml(
+              `${definition.inputs.length} in • ${definition.outputs.length} out • v${definition.version}`
+            )}"><span class="parts-strip-symbol" aria-hidden="true">${escapeHtml(
+              symbolFor("chip-instance")
+            )}</span><span class="parts-strip-label">${escapeHtml(definition.name)}</span></button>`
         ),
-      ].join("");
+        lessonParts
+          ? lessonParts.locked.map(({ type, lessonId }) => {
+              const teaching = challengesById.get(lessonId);
+              const title = teaching ? localizeChallenge(teaching).title : lessonId;
+              return `<button type="button" class="parts-strip-button is-locked" disabled title="${escapeHtml(
+                t("paletteLockedTitle", { title })
+              )}"><span class="parts-strip-symbol" aria-hidden="true">🔒</span><span class="parts-strip-label">${escapeHtml(
+                partLabel(type)
+              )}</span></button>`;
+            })
+          : [],
+      ]
+        .map((group) => group.map((item) => (typeof item === "string" ? item : stripButton(item))))
+        .filter((group) => group.length);
+      dom.partsStrip.innerHTML = groups
+        .map((group) => group.join(""))
+        .join('<span class="parts-strip-sep" role="separator" aria-hidden="true"></span>');
     }
 
     dom.builtinPalette.innerHTML = `

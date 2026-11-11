@@ -187,11 +187,10 @@ test.describe("Leerapp smoke", () => {
     await expect(page.locator(".hint-list li")).toHaveCount(1);
 
     // Palet: NAND wel, de NOT die je bouwt niet.
-    await page.locator(".parts-dropdown summary").click();
-    await expect(page.locator('#builtin-palette [data-part-type="gate-nand"]')).toBeVisible();
-    await expect(page.locator('#builtin-palette [data-part-type="gate-not"]')).toHaveCount(0);
-    await expect(page.locator('#builtin-palette [data-part-type="switch"]')).toHaveCount(0);
-    await page.locator('#builtin-palette [data-part-type="gate-nand"]').click();
+    await expect(page.locator('#parts-strip [data-strip-part="gate-nand"]')).toBeVisible();
+    await expect(page.locator('#parts-strip [data-strip-part="gate-not"]')).toHaveCount(0);
+    await expect(page.locator('#parts-strip [data-strip-part="switch"]')).toHaveCount(0);
+    await page.locator('#parts-strip [data-strip-part="gate-nand"]').click();
 
     // Live controle: nog geen score zolang OUT niet verbonden is.
     await expect(page.locator(".live-check .live-check-note")).toBeVisible();

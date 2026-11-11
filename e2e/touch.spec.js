@@ -77,8 +77,7 @@ test.describe("Liggende tablet (1180×820, touch)", () => {
     const canvasBox = await page.locator("#workspace-canvas").boundingBox();
     expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(canvasBox.x);
 
-    await page.locator(".parts-dropdown summary").tap();
-    await page.locator('[data-part-type="gate-and"]').tap();
+    await page.locator('#parts-strip [data-strip-part="gate-and"]').tap();
     await expect(page.locator("#inspector-card")).toHaveClass(/collapsed/);
   });
 });

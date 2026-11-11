@@ -449,6 +449,7 @@ export function createCanvasRenderers(deps) {
   return {
     renderNode,
     renderWires,
+    getNodeSymbol,
     updateConnectionStatus,
     updateWirePreview,
     clearWirePreview,

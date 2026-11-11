@@ -49,8 +49,7 @@ test.describe("Leerflow nieuwe gebruiker", () => {
 
     // Coach wijst naar Parts → AND plaatsen.
     await expect(coachText).toContainText("AND");
-    await page.locator(".parts-dropdown summary").click();
-    await page.locator('[data-part-type="gate-and"]').click();
+    await page.locator('#parts-strip [data-strip-part="gate-and"]').click();
     await expect(page.locator("article.gate-and")).toHaveCount(1);
 
     // Draden; na het kiezen van de bron schakelt de coach naar "klik een input".
@@ -86,8 +85,7 @@ test.describe("Leerflow nieuwe gebruiker", () => {
     await answerQuiz(page);
     await page.locator('[data-next-lesson="nand"]').click();
     await skipTutorial(page);
-    await page.locator(".parts-dropdown summary").click();
-    await page.locator('[data-part-type="gate-nand"]').click();
+    await page.locator('#parts-strip [data-strip-part="gate-nand"]').click();
     await clickOutput(page, "A");
     await page.locator('article.gate-nand [data-pin-key="A"][data-pin-direction="input"]').click();
     await clickOutput(page, "B");
@@ -115,8 +113,7 @@ test.describe("Leerflow nieuwe gebruiker", () => {
     await page.locator("[data-course-continue]").click();
     await skipTutorial(page);
     await page.locator("[data-intro-done]").click();
-    await page.locator(".parts-dropdown summary").click();
-    await page.locator('[data-part-type="gate-and"]').click();
+    await page.locator('#parts-strip [data-strip-part="gate-and"]').click();
     await clickOutput(page, "DOOR");
     await page.locator('article.gate-and [data-pin-key="A"][data-pin-direction="input"]').click();
     await clickOutput(page, "ALARM");
