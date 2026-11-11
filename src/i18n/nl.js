@@ -91,7 +91,8 @@ export default {
   homeWelcomeStart: "Start: {title}",
   // Lesson flow (UX fase B)
   stepIntro: "Intro",
-  lessonProgress: "Voortgang",
+  quizSkip: "Sla over",
+  quizStillOpen: "Nog te doen",
   introStart: "Aan de slag",
   stepBuild: "Bouw",
   stepQuiz: "Begrepen?",

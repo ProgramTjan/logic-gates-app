@@ -111,6 +111,43 @@ test.describe("Leerflow nieuwe gebruiker", () => {
     expect(await countDefinitions()).toBe(versionsBefore);
   });
 
+  test("quiz overslaan: naar de volgende les; quiz blijft 'Nog te doen' en is alsnog te beantwoorden", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    await skipTutorial(page);
+    await page.locator("[data-intro-done]").click();
+    await page.locator(".parts-dropdown summary").click();
+    await page.locator('[data-part-type="gate-and"]').click();
+    await clickOutput(page, "DOOR");
+    await page.locator('article.gate-and [data-pin-key="A"][data-pin-direction="input"]').click();
+    await clickOutput(page, "ALARM");
+    await page.locator('article.gate-and [data-pin-key="B"][data-pin-direction="input"]').click();
+    await page.locator('article.gate-and [data-pin-key="OUT"][data-pin-direction="output"]').click();
+    await clickOutputPinInput(page, "LAMP");
+    for (const label of ["DOOR", "ALARM"]) {
+      await page
+        .locator("article.node")
+        .filter({ has: page.locator(".node-label", { hasText: new RegExp(`^${label}$`) }) })
+        .locator('[data-node-action="toggle-input-pin"]')
+        .click();
+    }
+    await page.locator('[data-submit-challenge="intro-light"]').click();
+    await expect(page.locator('[data-lesson-step="quiz"]')).toHaveClass(/is-current/);
+    await expect(page.locator(".lesson-progress")).toHaveCount(0);
+
+    await page.locator('[data-quiz-skip="intro-light"]').click();
+    await expect(page.locator('[data-lesson-step="next"]')).toHaveClass(/is-current/);
+    const quizRow = page.locator('[data-lesson-step="quiz"]');
+    await expect(quizRow).not.toHaveClass(/is-done/);
+    await expect(quizRow.locator(".lesson-step-note")).toHaveText(/Nog te doen|Still open/);
+    await expect(page.locator('[data-next-lesson="nand"]')).toBeVisible();
+
+    // De quiz is nog te openen en te beantwoorden; daarna krijgt hij zijn vinkje.
+    await quizRow.locator("[data-expand-step]").click();
+    await answerQuiz(page);
+    await expect(quizRow).toHaveClass(/is-done/);
+    await expect(quizRow.locator(".lesson-step-note")).toHaveCount(0);
+  });
+
   test("Laat zien hoe start de coach opnieuw na overslaan", async ({ page }) => {
     await page.locator("[data-course-continue]").click();
     await expect(page.locator("[data-tutorial-coach]")).toBeVisible();

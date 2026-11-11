@@ -128,5 +128,6 @@ test.describe("XOR met NAND repro", () => {
 
     await page.locator('[data-open-challenge="xor"]').click();
     await expect(page.locator("article.gate-nand")).toHaveCount(0);
+    await expect(page.locator('[data-lesson-step="intro"]')).toHaveClass(/is-current/);
   });
 });

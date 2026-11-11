@@ -170,6 +170,7 @@ import {
     inspectorOpenByView: { lesson: false, sandbox: window.innerWidth >= 1024 },
     theoryOpen: {},
     introSeen: {},
+    quizSkipped: {},
     expandedStep: {},
     sheetByView: { lesson: "half", sandbox: "peek" },
     challengeDetailTab: "theorie",
@@ -605,12 +606,29 @@ import {
     runtimeActions.clockRunner.stop();
     state.selectedChallengeId = challengeId;
     state.lastSubmitFeedback = null;
+    if (fresh) {
+      // "Restart": the lesson opens at the intro again, with the quiz offered again.
+      state.introSeen[challengeId] = false;
+      delete state.quizSkipped[challengeId];
+    }
     if (state.sheetByView.lesson === "peek") {
       state.sheetByView.lesson = "half";
     }
     dom.challengeList.scrollTop = 0;
     const existing = fresh ? null : findLatestLessonWorkspace(challengeId);
     if (existing) {
+      // Reopening a finished lesson whose quiz is unanswered: go on to "Next", quiz stays open as "Still open".
+      const quizItems = challenge.learning?.quiz;
+      const learner = state.project.learner || {};
+      const answers = learner.quizAnswers?.[challengeId] || {};
+      if (
+        Array.isArray(quizItems) &&
+        quizItems.length &&
+        (learner.completedChallengeIds || []).includes(challengeId) &&
+        !quizItems.every((_, index) => answers[String(index)] !== undefined)
+      ) {
+        state.quizSkipped[challengeId] = true;
+      }
       state.project.currentWorkspaceId = existing.id;
       state.selectedNodeId = null;
       state.selectedNodeIds = [];
@@ -1156,6 +1174,14 @@ import {
         if (introButton) {
           event.stopImmediatePropagation();
           state.introSeen[introButton.dataset.introDone] = true;
+          panelRenderers.renderChallenges();
+          updatePeekStatus();
+          return;
+        }
+        const skipButton = event.target.closest("[data-quiz-skip]");
+        if (skipButton) {
+          event.stopImmediatePropagation();
+          state.quizSkipped[skipButton.dataset.quizSkip] = true;
           panelRenderers.renderChallenges();
           updatePeekStatus();
           return;
