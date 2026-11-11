@@ -5,227 +5,237 @@
 :root,
 [data-theme="dark"] {
   /* Core palette */
-  --panel: #161b27;
-  --panel-border: #2d333b;
-  --ink: #c9d1d9;
-  --muted: #8b949e;
-  --accent: #58a6ff;
-  --accent-strong: #388bfd;
-  --accent-soft: #1c2d4a;
-  --signal-off: #484f58;
-  --signal-high: #3fb950;
-  --warning: #f85149;
-  --shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  --panel: #1c1e22;
+  --panel-border: #353a41;
+  --ink: #ecebe7;
+  --muted: #a6a59f;
+  --accent: #ecebe7;
+  --accent-strong: #ffffff;
+  --accent-soft: #2b2e34;
+  --accent-ink: #141518;
+  --signal-off: #565b63;
+  --signal-high: #f5b942;
+  --ok: #7fd39a;
+  --warning: #f47067;
+  --shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
   --radius: 14px;
   --node-radius: 12px;
-  --grid: rgba(88, 166, 255, 0.06);
+  --grid: rgba(236, 235, 231, 0.05);
   --font-display: "Trebuchet MS", "Gill Sans", sans-serif;
   --font-body: "Trebuchet MS", "Gill Sans", sans-serif;
 
   /* Body */
-  --body-bg:
-    radial-gradient(circle at top left, rgba(88, 166, 255, 0.07), transparent 35%),
-    radial-gradient(circle at bottom right, rgba(63, 185, 80, 0.05), transparent 35%),
-    linear-gradient(180deg, #0d1117 0%, #080c14 100%);
+  --body-bg: #141518;
 
   /* Ghost button */
-  --ghost-bg: #21262d;
-  --ghost-hover: #30363d;
-  --ghost-border: #30363d;
+  --ghost-bg: #24272c;
+  --ghost-hover: #2e3238;
+  --ghost-border: #353a41;
 
-  /* Surface gradients */
-  --brand-bg: linear-gradient(180deg, rgba(28, 45, 74, 0.95), rgba(18, 32, 58, 0.95));
-  --brand-border: rgba(88, 166, 255, 0.22);
-  --left-bg: linear-gradient(180deg, rgba(26, 22, 14, 0.97), rgba(20, 17, 11, 0.97));
-  --right-bg: linear-gradient(180deg, rgba(17, 22, 36, 0.98), rgba(13, 17, 28, 0.98));
-  --toolbar-bg: linear-gradient(180deg, rgba(22, 27, 42, 0.98), rgba(17, 22, 34, 0.98));
-  --toolbar-border: rgba(45, 51, 59, 0.9);
-  --workspace-bg: linear-gradient(180deg, rgba(13, 17, 26, 0.99), rgba(10, 13, 22, 0.99));
-  --canvas-bg: linear-gradient(180deg, #0a0e18 0%, #080c14 100%);
-  --parts-menu-bg: linear-gradient(180deg, rgba(22, 28, 42, 0.99), rgba(17, 22, 35, 0.99));
-  --parts-menu-border: rgba(88, 166, 255, 0.15);
+  /* Surfaces: one flat panel colour */
+  --brand-bg: #1c1e22;
+  --brand-border: #353a41;
+  --left-bg: #1c1e22;
+  --right-bg: #1c1e22;
+  --toolbar-bg: #1c1e22;
+  --toolbar-border: #353a41;
+  --workspace-bg: #141518;
+  --canvas-bg: #141518;
+  --parts-menu-bg: #1c1e22;
+  --parts-menu-border: #353a41;
 
   /* Misc surfaces */
-  --input-bg: #21262d;
-  --connection-chip-bg: #21262d;
-  --empty-state-bg: rgba(22, 27, 42, 0.9);
-  --empty-state-border: rgba(88, 166, 255, 0.25);
-  --state-pill-bg: rgba(13, 17, 23, 0.72);
+  --input-bg: #24272c;
+  --connection-chip-bg: #24272c;
+  --empty-state-bg: #1c1e22;
+  --empty-state-border: #353a41;
+  --state-pill-bg: rgba(20, 21, 24, 0.72);
   --inspector-divider: rgba(255, 255, 255, 0.07);
-  --error-bg: rgba(248, 81, 73, 0.1);
+  --error-bg: rgba(244, 112, 103, 0.1);
 
   /* Cards */
-  --workspace-card-bg: linear-gradient(180deg, rgba(26, 20, 10, 0.96), rgba(20, 16, 8, 0.96));
-  --workspace-card-border: rgba(180, 130, 60, 0.2);
-  --workspace-card-active-bg: linear-gradient(180deg, rgba(17, 32, 52, 0.98), rgba(13, 26, 44, 0.98));
-  --workspace-card-active-border: rgba(88, 166, 255, 0.42);
-  --chip-card-bg: linear-gradient(180deg, rgba(10, 26, 18, 0.98), rgba(8, 20, 14, 0.98));
-  --chip-card-border: rgba(63, 185, 80, 0.2);
-  --challenge-card-bg: linear-gradient(180deg, rgba(28, 22, 12, 0.98), rgba(22, 17, 9, 0.98));
-  --challenge-card-done-bg: linear-gradient(180deg, rgba(10, 28, 18, 0.98), rgba(8, 22, 14, 0.98));
-  --challenge-card-done-border: rgba(63, 185, 80, 0.28);
-  --challenge-card-selected-bg: linear-gradient(180deg, rgba(17, 32, 52, 0.98), rgba(13, 26, 44, 0.98));
-  --challenge-card-selected-border: rgba(88, 166, 255, 0.42);
-  --challenge-status-bg: #21262d;
-  --challenge-status-done-bg: rgba(63, 185, 80, 0.15);
-  --challenge-status-done-color: #3fb950;
-  --palette-btn-bg: linear-gradient(180deg, rgba(22, 30, 48, 0.96), rgba(17, 24, 38, 0.96));
-  --palette-btn-border: rgba(88, 166, 255, 0.15);
-  --palette-btn-hover-bg: linear-gradient(180deg, rgba(32, 46, 68, 1), rgba(26, 38, 58, 1));
+  --workspace-card-bg: #212327;
+  --workspace-card-border: #353a41;
+  --workspace-card-active-bg: #2b2e34;
+  --workspace-card-active-border: rgba(236, 235, 231, 0.45);
+  --chip-card-bg: #212327;
+  --chip-card-border: #353a41;
+  --challenge-card-bg: #1c1e22;
+  --challenge-card-done-bg: #1c221f;
+  --challenge-card-done-border: rgba(127, 211, 154, 0.3);
+  --challenge-card-selected-bg: #2b2e34;
+  --challenge-card-selected-border: rgba(236, 235, 231, 0.45);
+  --challenge-status-bg: #24272c;
+  --challenge-status-done-bg: rgba(127, 211, 154, 0.14);
+  --challenge-status-done-color: #7fd39a;
+  --palette-btn-bg: #24272c;
+  --palette-btn-border: #353a41;
+  --palette-btn-hover-bg: #2e3238;
 
-  /* Nodes */
-  --node-bg: linear-gradient(180deg, rgba(30, 36, 52, 0.98), rgba(22, 27, 40, 0.98));
-  --node-border: #2d333b;
-  --node-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --node-face-bg: linear-gradient(180deg, rgba(22, 28, 44, 0.92), rgba(16, 20, 34, 0.92));
-  --node-face-border: #2d333b;
-  --switch-bg: linear-gradient(180deg, rgba(40, 28, 8, 0.98), rgba(30, 22, 6, 0.98));
-  --switch-border: rgba(210, 160, 50, 0.32);
-  --lamp-bg: linear-gradient(180deg, rgba(44, 32, 4, 0.98), rgba(34, 25, 3, 0.98));
-  --lamp-border: rgba(230, 190, 30, 0.32);
-  --io-bg: linear-gradient(180deg, rgba(14, 26, 48, 0.98), rgba(10, 20, 38, 0.98));
-  --io-border: rgba(88, 166, 255, 0.28);
-  --reg-bg: linear-gradient(180deg, rgba(8, 28, 18, 0.98), rgba(6, 22, 14, 0.98));
-  --reg-border: rgba(63, 185, 80, 0.28);
-  --not-xor-bg: linear-gradient(180deg, rgba(28, 20, 56, 0.98), rgba(22, 16, 44, 0.98));
-  --not-xor-border: rgba(148, 102, 246, 0.3);
-  --and-nand-bg: linear-gradient(180deg, rgba(8, 30, 16, 0.98), rgba(6, 24, 12, 0.98));
-  --and-nand-border: rgba(63, 185, 80, 0.28);
-  --or-nor-bg: linear-gradient(180deg, rgba(42, 20, 6, 0.98), rgba(32, 15, 4, 0.98));
-  --or-nor-border: rgba(230, 130, 60, 0.28);
-  --node-selected-border: rgba(88, 166, 255, 0.55);
-  --node-selected-glow: rgba(88, 166, 255, 0.15);
-  --node-invalid-border: rgba(248, 81, 73, 0.55);
+  /* Nodes: one neutral body, state shown by signal colour */
+  --node-bg: #24272c;
+  --node-border: #3d424a;
+  --node-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --node-face-bg: #1a1c20;
+  --node-face-border: #353a41;
+  --switch-bg: #24272c;
+  --switch-border: #3d424a;
+  --lamp-bg: #24272c;
+  --lamp-border: #3d424a;
+  --io-bg: #24272c;
+  --io-border: #3d424a;
+  --reg-bg: #24272c;
+  --reg-border: #3d424a;
+  --not-xor-bg: #24272c;
+  --not-xor-border: #3d424a;
+  --and-nand-bg: #24272c;
+  --and-nand-border: #3d424a;
+  --or-nor-bg: #24272c;
+  --or-nor-border: #3d424a;
+  --node-selected-border: rgba(236, 235, 231, 0.85);
+  --node-selected-glow: rgba(236, 235, 231, 0.12);
+  --node-invalid-border: rgba(244, 112, 103, 0.55);
   --delete-btn: #b91c1c;
   --delete-btn-hover: #991b1b;
-  --delete-btn-border: rgba(248, 81, 73, 0.4);
+  --delete-btn-border: rgba(244, 112, 103, 0.55);
 
   /* Pins */
-  --pin-badge-border: #30363d;
-  --pin-hover-border: rgba(88, 166, 255, 0.42);
-  --pin-hover-bg: rgba(88, 166, 255, 0.08);
-  --pin-high-border: #2ea043;
-  --pin-low-bg: #484f58;
-  --pin-low-border: #6e7681;
+  --pin-badge-border: #4a5058;
+  --pin-hover-border: rgba(236, 235, 231, 0.45);
+  --pin-hover-bg: rgba(236, 235, 231, 0.12);
+  --pin-high-border: #d99a1f;
+  --pin-low-bg: #565b63;
+  --pin-low-border: #7a808a;
 
   /* Wires */
-  --wire-stroke: rgba(139, 148, 158, 0.35);
-  --wire-high: rgba(63, 185, 80, 0.9);
-  --wire-low: rgba(110, 118, 129, 0.75);
-  --wire-invalid: rgba(248, 81, 73, 0.9);
+  --wire-stroke: rgba(166, 165, 159, 0.35);
+  --wire-high: rgba(245, 185, 66, 0.95);
+  --wire-low: rgba(122, 128, 138, 0.75);
+  --wire-invalid: rgba(244, 112, 103, 0.9);
 
   /* Lamp indicator */
-  --lamp-off-border: #30363d;
-  --lamp-on-bg: #f0c942;
-  --lamp-on-border: #d4aa00;
-  --lamp-on-glow: rgba(240, 201, 66, 0.6);
+  --lamp-off-border: #4a5058;
+  --lamp-on-bg: #f5b942;
+  --lamp-on-border: #d99a1f;
+  --lamp-on-glow: rgba(245, 185, 66, 0.55);
 }
 
 [data-theme="light"] {
-  --panel: #ffffff;
-  --panel-border: #d0d7de;
-  --ink: #1c2128;
-  --muted: #57606a;
-  --accent: #0969da;
-  --accent-strong: #0550ae;
-  --accent-soft: #ddf4ff;
-  --signal-off: #afb8c1;
-  --signal-high: #1a7f37;
-  --warning: #cf222e;
-  --shadow: 0 10px 26px rgba(36, 41, 47, 0.1);
-  --grid: rgba(36, 41, 47, 0.06);
+  /* Core palette */
+  --panel: #fbf9f4;
+  --panel-border: #d6d0c3;
+  --ink: #1f1d1a;
+  --muted: #635e54;
+  --accent: #1f1d1a;
+  --accent-strong: #000000;
+  --accent-soft: #ebe6da;
+  --accent-ink: #fbf9f4;
+  --signal-off: #b5ae9f;
+  --signal-high: #0b7a75;
+  --ok: #2f7d32;
+  --warning: #c0392b;
+  --shadow: 0 10px 26px rgba(31, 29, 26, 0.1);
+  --grid: rgba(31, 29, 26, 0.07);
 
-  --body-bg:
-    radial-gradient(circle at top left, rgba(9, 105, 218, 0.06), transparent 35%),
-    radial-gradient(circle at bottom right, rgba(26, 127, 55, 0.04), transparent 35%),
-    linear-gradient(180deg, #f6f8fa 0%, #eef2f6 100%);
+  /* Body */
+  --body-bg: #f3f0e8;
 
-  --ghost-bg: #f3f4f6;
-  --ghost-hover: #e8eaed;
-  --ghost-border: #d0d7de;
+  /* Ghost button */
+  --ghost-bg: #f0ece2;
+  --ghost-hover: #e6e1d5;
+  --ghost-border: #d6d0c3;
 
-  --brand-bg: linear-gradient(180deg, rgba(9, 105, 218, 0.1), rgba(9, 105, 218, 0.05));
-  --brand-border: rgba(9, 105, 218, 0.2);
-  --left-bg: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(252, 247, 234, 0.98));
-  --right-bg: linear-gradient(180deg, rgba(245, 250, 255, 0.98), rgba(238, 246, 252, 0.98));
-  --toolbar-bg: linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(252, 248, 240, 0.98));
-  --toolbar-border: rgba(200, 175, 115, 0.2);
-  --workspace-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.99));
-  --canvas-bg: linear-gradient(180deg, #f8fafc 0%, #f0f4f8 100%);
-  --parts-menu-bg: linear-gradient(180deg, rgba(245, 250, 255, 0.99), rgba(238, 246, 252, 0.99));
-  --parts-menu-border: rgba(9, 105, 218, 0.15);
+  /* Surfaces: one flat panel colour */
+  --brand-bg: #fbf9f4;
+  --brand-border: #d6d0c3;
+  --left-bg: #fbf9f4;
+  --right-bg: #fbf9f4;
+  --toolbar-bg: #fbf9f4;
+  --toolbar-border: #d6d0c3;
+  --workspace-bg: #f3f0e8;
+  --canvas-bg: #f3f0e8;
+  --parts-menu-bg: #fbf9f4;
+  --parts-menu-border: #d6d0c3;
 
+  /* Misc surfaces */
   --input-bg: #ffffff;
-  --connection-chip-bg: #f3f4f6;
-  --empty-state-bg: rgba(255, 255, 255, 0.92);
-  --empty-state-border: rgba(9, 105, 218, 0.3);
+  --connection-chip-bg: #f0ece2;
+  --empty-state-bg: #fbf9f4;
+  --empty-state-border: #d6d0c3;
   --state-pill-bg: rgba(255, 255, 255, 0.8);
-  --inspector-divider: rgba(36, 41, 47, 0.1);
-  --error-bg: rgba(207, 34, 46, 0.08);
+  --inspector-divider: rgba(31, 29, 26, 0.1);
+  --error-bg: rgba(192, 57, 43, 0.08);
 
-  --workspace-card-bg: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(252, 247, 234, 0.98));
-  --workspace-card-border: rgba(180, 140, 70, 0.22);
-  --workspace-card-active-bg: linear-gradient(180deg, #f0f7ff, #e6f0fb);
-  --workspace-card-active-border: rgba(9, 105, 218, 0.38);
-  --chip-card-bg: linear-gradient(180deg, rgba(246, 254, 248, 0.98), rgba(236, 250, 240, 0.98));
-  --chip-card-border: rgba(26, 127, 55, 0.2);
-  --challenge-card-bg: linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(252, 248, 238, 0.98));
-  --challenge-card-done-bg: linear-gradient(180deg, #f0faf4, #e6f6ec);
-  --challenge-card-done-border: rgba(26, 127, 55, 0.28);
-  --challenge-card-selected-bg: linear-gradient(180deg, #f0f7ff, #e6f0fb);
-  --challenge-card-selected-border: rgba(9, 105, 218, 0.38);
-  --challenge-status-bg: #f3f4f6;
-  --challenge-status-done-bg: rgba(26, 127, 55, 0.12);
-  --challenge-status-done-color: #1a7f37;
-  --palette-btn-bg: linear-gradient(180deg, rgba(245, 250, 255, 0.96), rgba(236, 244, 252, 0.96));
-  --palette-btn-border: rgba(9, 105, 218, 0.15);
-  --palette-btn-hover-bg: linear-gradient(180deg, rgba(225, 242, 255, 1), rgba(214, 236, 252, 1));
+  /* Cards */
+  --workspace-card-bg: #ffffff;
+  --workspace-card-border: #d6d0c3;
+  --workspace-card-active-bg: #ebe6da;
+  --workspace-card-active-border: rgba(31, 29, 26, 0.45);
+  --chip-card-bg: #ffffff;
+  --chip-card-border: #d6d0c3;
+  --challenge-card-bg: #fbf9f4;
+  --challenge-card-done-bg: #f1f5ec;
+  --challenge-card-done-border: rgba(47, 125, 50, 0.3);
+  --challenge-card-selected-bg: #ebe6da;
+  --challenge-card-selected-border: rgba(31, 29, 26, 0.45);
+  --challenge-status-bg: #f0ece2;
+  --challenge-status-done-bg: rgba(47, 125, 50, 0.12);
+  --challenge-status-done-color: #2f7d32;
+  --palette-btn-bg: #f0ece2;
+  --palette-btn-border: #d6d0c3;
+  --palette-btn-hover-bg: #e6e1d5;
 
-  --node-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 253, 0.98));
-  --node-border: #c8d0d9;
-  --node-shadow: 0 4px 12px rgba(36, 41, 47, 0.1);
-  --node-face-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.93), rgba(245, 248, 252, 0.93));
-  --node-face-border: #c8d0d9;
-  --switch-bg: linear-gradient(180deg, rgba(255, 244, 220, 0.98), rgba(252, 234, 196, 0.98));
-  --switch-border: rgba(180, 140, 60, 0.3);
-  --lamp-bg: linear-gradient(180deg, rgba(255, 250, 215, 0.98), rgba(252, 242, 186, 0.98));
-  --lamp-border: rgba(200, 165, 30, 0.32);
-  --io-bg: linear-gradient(180deg, rgba(234, 245, 255, 0.98), rgba(222, 238, 253, 0.98));
-  --io-border: rgba(9, 105, 218, 0.25);
-  --reg-bg: linear-gradient(180deg, rgba(240, 252, 244, 0.98), rgba(226, 247, 232, 0.98));
-  --reg-border: rgba(26, 127, 55, 0.25);
-  --not-xor-bg: linear-gradient(180deg, rgba(246, 240, 255, 0.98), rgba(236, 226, 253, 0.98));
-  --not-xor-border: rgba(130, 80, 220, 0.28);
-  --and-nand-bg: linear-gradient(180deg, rgba(234, 252, 237, 0.98), rgba(220, 248, 226, 0.98));
-  --and-nand-border: rgba(26, 127, 55, 0.26);
-  --or-nor-bg: linear-gradient(180deg, rgba(255, 242, 228, 0.98), rgba(252, 230, 210, 0.98));
-  --or-nor-border: rgba(200, 110, 50, 0.26);
-  --node-selected-border: rgba(9, 105, 218, 0.5);
-  --node-selected-glow: rgba(9, 105, 218, 0.12);
-  --node-invalid-border: rgba(207, 34, 46, 0.5);
+  /* Nodes: one neutral body, state shown by signal colour */
+  --node-bg: #ffffff;
+  --node-border: #cfc8b9;
+  --node-shadow: 0 4px 12px rgba(31, 29, 26, 0.08);
+  --node-face-bg: #f6f3ec;
+  --node-face-border: #d6d0c3;
+  --switch-bg: #ffffff;
+  --switch-border: #cfc8b9;
+  --lamp-bg: #ffffff;
+  --lamp-border: #cfc8b9;
+  --io-bg: #ffffff;
+  --io-border: #cfc8b9;
+  --reg-bg: #ffffff;
+  --reg-border: #cfc8b9;
+  --not-xor-bg: #ffffff;
+  --not-xor-border: #cfc8b9;
+  --and-nand-bg: #ffffff;
+  --and-nand-border: #cfc8b9;
+  --or-nor-bg: #ffffff;
+  --or-nor-border: #cfc8b9;
+  --node-selected-border: rgba(31, 29, 26, 0.85);
+  --node-selected-glow: rgba(31, 29, 26, 0.08);
+  --node-invalid-border: rgba(192, 57, 43, 0.5);
   --delete-btn: #b91c1c;
   --delete-btn-hover: #991b1b;
-  --delete-btn-border: rgba(207, 34, 46, 0.4);
+  --delete-btn-border: rgba(192, 57, 43, 0.5);
 
-  --pin-badge-border: #afb8c1;
-  --pin-hover-border: rgba(9, 105, 218, 0.38);
-  --pin-hover-bg: rgba(9, 105, 218, 0.06);
-  --pin-high-border: #157832;
-  --pin-low-bg: #afb8c1;
-  --pin-low-border: #8c959f;
+  /* Pins */
+  --pin-badge-border: #b5ae9f;
+  --pin-hover-border: rgba(31, 29, 26, 0.45);
+  --pin-hover-bg: rgba(31, 29, 26, 0.08);
+  --pin-high-border: #075e5a;
+  --pin-low-bg: #b5ae9f;
+  --pin-low-border: #8f8878;
 
-  --wire-stroke: rgba(80, 90, 100, 0.38);
-  --wire-high: rgba(26, 127, 55, 0.86);
-  --wire-low: rgba(140, 149, 159, 0.85);
-  --wire-invalid: rgba(207, 34, 46, 0.9);
+  /* Wires */
+  --wire-stroke: rgba(99, 94, 84, 0.4);
+  --wire-high: rgba(11, 122, 117, 0.92);
+  --wire-low: rgba(143, 136, 120, 0.85);
+  --wire-invalid: rgba(192, 57, 43, 0.9);
 
-  --lamp-off-border: #afb8c1;
-  --lamp-on-bg: #f0c942;
-  --lamp-on-border: #c89600;
-  --lamp-on-glow: rgba(240, 201, 66, 0.35);
+  /* Lamp indicator */
+  --lamp-off-border: #b5ae9f;
+  --lamp-on-bg: #0b7a75;
+  --lamp-on-border: #075e5a;
+  --lamp-on-glow: rgba(11, 122, 117, 0.35);
 }
 
 [data-theme="neon"] {
+  --accent-ink: #ffffff;
+  --ok: #00ff66;
   --panel: #061009;
   --panel-border: #0e2e18;
   --ink: #80ffa4;
@@ -416,8 +426,8 @@
   border-color: rgba(0, 0, 0, 0.2);
 }
 
-.theme-btn-dark  { background: #1c2128; color: #58a6ff; }
-.theme-btn-light { background: #f6f8fa; color: #0969da; }
+.theme-btn-dark  { background: #1c1e22; color: #f5b942; }
+.theme-btn-light { background: #fbf9f4; color: #0b7a75; }
 .theme-btn-neon  { background: #061009; color: #00e05a; }
 
 /* =============================================
@@ -447,7 +457,7 @@ button {
   border: 1px solid transparent;
   border-radius: 10px;
   background: var(--accent);
-  color: white;
+  color: var(--accent-ink);
   padding: 0.5rem 0.8rem;
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
@@ -949,7 +959,7 @@ h2 {
 .challenge-progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--signal-high);
+  background: var(--ok);
   transition: width 0.3s;
 }
 
@@ -1026,8 +1036,8 @@ h2 {
 }
 
 .challenge-picker-item.done .challenge-picker-dot {
-  background: var(--signal-high);
-  border-color: var(--signal-high);
+  background: var(--ok);
+  border-color: var(--ok);
 }
 
 .challenge-picker-dot {
@@ -1046,7 +1056,7 @@ h2 {
 .challenge-picker-check {
   flex: 0 0 auto;
   font-size: 0.75rem;
-  color: var(--signal-high);
+  color: var(--ok);
   font-weight: 700;
 }
 
@@ -1102,7 +1112,7 @@ h2 {
 }
 
 .challenge-result-summary {
-  color: var(--signal-high);
+  color: var(--ok);
 }
 
 .submit-feedback {
@@ -1115,9 +1125,9 @@ h2 {
 }
 
 .submit-feedback.ok {
-  color: var(--signal-high);
-  border-color: color-mix(in srgb, var(--signal-high) 45%, transparent);
-  background: color-mix(in srgb, var(--signal-high) 12%, transparent);
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
 }
 
 .submit-feedback.bad {
@@ -1706,7 +1716,7 @@ h2 {
 }
 
 [data-theme="light"] .node-switch-toggle:not([aria-pressed="true"]) {
-  color: #1c2128;
+  color: #1f1d1a;
 }
 
 .lamp-indicator {
@@ -2017,7 +2027,7 @@ h2 {
   font-weight: 600;
   cursor: pointer;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .app-modal-overlay {
@@ -2147,7 +2157,7 @@ h2 {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: var(--accent);
-  color: var(--bg, #0d1117);
+  color: var(--accent-ink);
 }
 
 .lesson-concepts {
@@ -2205,7 +2215,7 @@ h2 {
 }
 
 .quiz-option.correct {
-  border-color: var(--signal-high);
+  border-color: var(--ok);
   background: var(--challenge-status-done-bg);
   color: var(--challenge-status-done-color);
 }
@@ -2831,8 +2841,8 @@ h2 {
 }
 
 .course-lesson.done .course-lesson-marker {
-  background: color-mix(in srgb, var(--signal-high) 22%, transparent);
-  color: var(--signal-high);
+  background: color-mix(in srgb, var(--ok) 22%, transparent);
+  color: var(--ok);
 }
 
 .course-lesson.next {
@@ -2841,7 +2851,7 @@ h2 {
 
 .course-lesson.next .course-lesson-marker {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .course-sandbox-card {
@@ -3262,7 +3272,7 @@ h2 {
   }
 
   .sheet-peek-status.ok {
-    color: var(--signal-high);
+    color: var(--ok);
   }
 
   .sheet-peek-check {
@@ -3397,13 +3407,13 @@ h2 {
 }
 
 .lesson-step.is-done .lesson-step-marker {
-  color: var(--signal-high);
-  background: color-mix(in srgb, var(--signal-high) 16%, transparent);
-  border-color: color-mix(in srgb, var(--signal-high) 45%, transparent);
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
 }
 
 .lesson-step.is-current .lesson-step-marker {
-  color: #fff;
+  color: var(--accent-ink);
   background: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
@@ -3477,7 +3487,7 @@ h2 {
 }
 
 .live-check-summary.ok {
-  color: var(--signal-high);
+  color: var(--ok);
 }
 
 .live-check-meter {
@@ -3486,7 +3496,7 @@ h2 {
   height: 0.4rem;
   border-radius: 999px;
   background:
-    linear-gradient(90deg, var(--signal-high) calc(var(--ratio, 0) * 100%), transparent 0),
+    linear-gradient(90deg, var(--ok) calc(var(--ratio, 0) * 100%), transparent 0),
     var(--ghost-bg);
 }
 
@@ -3524,7 +3534,7 @@ h2 {
 }
 
 .live-check-table tr.ok .live-mark {
-  color: var(--signal-high);
+  color: var(--ok);
 }
 
 .live-check-table tr.bad .live-mark {
@@ -3542,7 +3552,7 @@ h2 {
 .lesson-unlocked-parts {
   margin: 0 0 0.5rem;
   font-size: 0.85rem;
-  color: var(--signal-high);
+  color: var(--ok);
 }
 
 .lesson-next-actions {
@@ -3874,8 +3884,8 @@ h2 {
   place-items: center;
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--signal-high);
-  background: color-mix(in srgb, var(--signal-high) 16%, transparent);
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
 }
 
 /* Done steps are one line; upcoming steps are one dimmed line. */
@@ -3973,7 +3983,7 @@ h2 {
 }
 
 .lesson-actionbar-status.ok {
-  color: var(--signal-high);
+  color: var(--ok);
 }
 
 .lesson-actionbar .primary-button {

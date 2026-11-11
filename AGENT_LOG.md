@@ -590,3 +590,18 @@ Groen: `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 24/24 (22 best
 - Brede 16-bit invoer en 62%-zoom in de ALU-les (uit fase F) ongewijzigd.
 
 **Resultaat:** groen, `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 26/26 (24 bestaande + 2 nieuwe: quiz overslaan in H.0, Inspector in les in H.4). Schermafdrukken op 1440×900, 1180×820, 820×1180 (touch) van start, les 0 (intro, bouw, bedraad, live ok, quiz met "Sla over", overgeslagen, heropend), een sequentiële les (Build Bit), Vrij bouwen en Not16 met de Inspector; dark op alle drie, light en neon op desktop/tablet steekproefsgewijs. Coach van les 0 volledig doorlopen op 1440×900 en 820×1180.
+
+---
+
+## 2026-11-11 — Kleurstelling: Grafiet & amber (donker) en Papier & inkt (licht)
+
+**Besluit eigenaar:** uit vijf opties gekozen voor A (donker) en E (licht). Neon blijft zoals het was.
+
+**Uitgevoerd:**
+- `styles.css`: themablokken `dark` en `light` herschreven. Eén vlakke paneelkleur (geen verlopen, geen bruine les- en werkbladkaarten), alle onderdelen één neutrale kleur; toestand is alleen nog signaalkleur. Donker: stroom = amber `#f5b942`, hoofdknop gebroken wit. Licht: stroom = petrol `#0b7a75`, hoofdknop zwart.
+- Twee nieuwe variabelen in alle drie de thema's: `--accent-ink` (tekst op de accentkleur; verving hardcoded wit) en `--ok` ("klopt"/afgerond; losgekoppeld van `--signal-high`, dat nu alleen op het canvas wordt gebruikt).
+- `index.html` en `manifest.webmanifest`: `theme-color`/`background_color` naar `#141518`. Themaknoppen in ⚙ tonen de nieuwe kleuren.
+
+**Gevolg voor fase J:** J.2 taak 1 (bruine tint weg) en taak 4 (één accent, groen alleen voor "klopt") zijn hiermee gedaan voor donker en licht. Rest van J.2 (geneste kaders, app-balk) en J.1/J.3 staan nog open.
+
+**Resultaat:** groen, `npm test` 169/169, `npm run check` OK, e2e 26/26. Schermafdrukken bekeken: donker en licht op 1440×900 en 820×1180 (start, intro, gebouwd, quiz, Vrij bouwen), neon op 1440×900 (ongewijzigd).
