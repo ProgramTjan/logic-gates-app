@@ -49,8 +49,7 @@ test.describe("Leerflow nieuwe gebruiker", () => {
 
     // Coach wijst naar Parts → AND plaatsen.
     await expect(coachText).toContainText("AND");
-    await page.locator(".parts-dropdown summary").click();
-    await page.locator('[data-part-type="gate-and"]').click();
+    await page.locator('#parts-strip [data-strip-part="gate-and"]').click();
     await expect(page.locator("article.gate-and")).toHaveCount(1);
 
     // Draden; na het kiezen van de bron schakelt de coach naar "klik een input".
@@ -86,8 +85,7 @@ test.describe("Leerflow nieuwe gebruiker", () => {
     await answerQuiz(page);
     await page.locator('[data-next-lesson="nand"]').click();
     await skipTutorial(page);
-    await page.locator(".parts-dropdown summary").click();
-    await page.locator('[data-part-type="gate-nand"]').click();
+    await page.locator('#parts-strip [data-strip-part="gate-nand"]').click();
     await clickOutput(page, "A");
     await page.locator('article.gate-nand [data-pin-key="A"][data-pin-direction="input"]').click();
     await clickOutput(page, "B");
@@ -109,6 +107,42 @@ test.describe("Leerflow nieuwe gebruiker", () => {
     await page.locator('[data-submit-challenge="nand"]').click();
     await page.waitForTimeout(600);
     expect(await countDefinitions()).toBe(versionsBefore);
+  });
+
+  test("quiz overslaan: naar de volgende les; quiz blijft 'Nog te doen' en is alsnog te beantwoorden", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    await skipTutorial(page);
+    await page.locator("[data-intro-done]").click();
+    await page.locator('#parts-strip [data-strip-part="gate-and"]').click();
+    await clickOutput(page, "DOOR");
+    await page.locator('article.gate-and [data-pin-key="A"][data-pin-direction="input"]').click();
+    await clickOutput(page, "ALARM");
+    await page.locator('article.gate-and [data-pin-key="B"][data-pin-direction="input"]').click();
+    await page.locator('article.gate-and [data-pin-key="OUT"][data-pin-direction="output"]').click();
+    await clickOutputPinInput(page, "LAMP");
+    for (const label of ["DOOR", "ALARM"]) {
+      await page
+        .locator("article.node")
+        .filter({ has: page.locator(".node-label", { hasText: new RegExp(`^${label}$`) }) })
+        .locator('[data-node-action="toggle-input-pin"]')
+        .click();
+    }
+    await page.locator('[data-submit-challenge="intro-light"]').click();
+    await expect(page.locator('[data-lesson-step="quiz"]')).toHaveClass(/is-current/);
+    await expect(page.locator(".lesson-progress")).toHaveCount(0);
+
+    await page.locator('[data-quiz-skip="intro-light"]').click();
+    await expect(page.locator('[data-lesson-step="next"]')).toHaveClass(/is-current/);
+    const quizRow = page.locator('[data-lesson-step="quiz"]');
+    await expect(quizRow).not.toHaveClass(/is-done/);
+    await expect(quizRow.locator(".lesson-step-note")).toHaveText(/Nog te doen|Still open/);
+    await expect(page.locator('[data-next-lesson="nand"]')).toBeVisible();
+
+    // De quiz is nog te openen en te beantwoorden; daarna krijgt hij zijn vinkje.
+    await quizRow.locator("[data-expand-step]").click();
+    await answerQuiz(page);
+    await expect(quizRow).toHaveClass(/is-done/);
+    await expect(quizRow.locator(".lesson-step-note")).toHaveCount(0);
   });
 
   test("Laat zien hoe start de coach opnieuw na overslaan", async ({ page }) => {

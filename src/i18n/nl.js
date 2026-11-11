@@ -61,9 +61,9 @@ export default {
   "coach.next": "Begrepen",
   "coach.intro.welcome": "Welkom! In deze eerste casus bouw je de schakeling voor een buitenlamp. Ik wijs je elke stap — het duurt een paar minuten.",
   "coach.intro.canvas": "Dit is je canvas. DOOR en ALARM links zijn inputs (schakelaars); LAMP rechts is de output.",
-  "coach.place": "Open Parts en plaats een {part}-poort op het canvas.",
+  "coach.place": "Tik in de onderdelenstrook op {part} om de poort op het canvas te plaatsen.",
   "coach.placeOwn": "Plaats een {part} — die heb je zelf gebouwd, dus hij staat nu in je onderdelen.",
-  "coach.placeTwo": "Plaats twee {part}-poorten — open Parts twee keer.",
+  "coach.placeTwo": "Plaats twee {part}-poorten — tik twee keer op {part} in de onderdelenstrook.",
   "coach.wireFrom": "Verbind {from} met {to}: klik op de output-pin van {from}…",
   "coach.wireTo": "…klik nu op een vrije input-pin om de draad af te maken.",
   "coach.wireInputs": "Verbind A en B met de twee ingangen van {to}.",
@@ -91,13 +91,14 @@ export default {
   homeWelcomeStart: "Start: {title}",
   // Lesson flow (UX fase B)
   stepIntro: "Intro",
-  lessonProgress: "Voortgang",
+  quizSkip: "Sla over",
+  quizStillOpen: "Nog te doen",
   introStart: "Aan de slag",
   stepBuild: "Bouw",
   stepQuiz: "Begrepen?",
   stepNext: "Verder",
   theoryMore: "Meer uitleg",
-  buildInstruction: "Je inputs en outputs staan al op het canvas. Voeg onderdelen toe via Parts en verbind ze.",
+  buildInstruction: "Je inputs en outputs staan al op het canvas. Voeg onderdelen toe via de onderdelenstrook en verbind ze.",
   hintShow: "Toon een hint ({n}/{total})",
   liveColNow: "Nu",
   livePassing: "{passed} van {total} rijen kloppen — bouw verder.",
@@ -179,7 +180,7 @@ export default {
   quickAdd: "Snel toevoegen",
   connectionHint: "Klik output, klik input.",
   emptyState:
-    "Open `Parts` en voeg componenten toe. Gebruik `Input` en `Output` om van deze sheet een chip te maken.",
+    "Kies een onderdeel in de strook en voeg componenten toe. Gebruik `Input` en `Output` om van deze sheet een chip te maken.",
   challenges: "Lessen",
   startSelected: "Start geselecteerd",
   submitCurrent: "Dien in",
@@ -238,7 +239,7 @@ export default {
   howTo1:
     "<strong>1. Lessen</strong> — het startscherm. <em>Ga verder</em> opent je volgende les; elke les houdt zijn eigen sheet.",
   howTo2:
-    "<strong>2. Bouwen</strong> — open <em>Parts</em> en plaats onderdelen. Klik op een output-pin en daarna op een input-pin om een draad te trekken.",
+    "<strong>2. Bouwen</strong> — open <em>de onderdelenstrook</em> en plaats onderdelen. Klik op een output-pin en daarna op een input-pin om een draad te trekken.",
   howTo3:
     "<strong>3. Live testen</strong> — zet inputs om met hun toggle-knop. Het lespaneel toont een live testtabel: ✓ per rij die al klopt.",
   howTo4:
@@ -262,7 +263,7 @@ export default {
   chipLibraryEmpty:
     "Nog geen chips opgeslagen.",
   chipLibraryHint:
-    "Je opgeslagen chips. Plaatsen kan ook via <em>Parts → Saved Chips</em> (altijd de nieuwste versie); hier beheer je versies.",
+    "Je opgeslagen chips. Plaatsen kan ook via de <em>onderdelenstrook</em> (altijd de nieuwste versie); hier beheer je versies.",
   chipLatest: "nieuwste",
   chipPlace: "Plaats",
   chipNewVersion: "Nieuwe versie",
@@ -279,7 +280,7 @@ export default {
   onboardingTitle: "Welkom bij Forge Logic",
   onboardingLead: "Leren door te bouwen — elke les neemt je mee:",
   onboardingStep1: "<strong>Ga verder</strong> op het overzicht opent je volgende les.",
-  onboardingStep2: "Voeg onderdelen toe via <strong>Parts</strong>.",
+  onboardingStep2: "Voeg onderdelen toe via de <strong>onderdelenstrook</strong>.",
   onboardingStep3: "Klik een <strong>output-pin</strong>, daarna een <strong>input-pin</strong> om te verbinden.",
   onboardingStep4: "<strong>Controleer</strong> — geslaagd ontgrendelt de volgende les.",
   onboardingShortcuts:
@@ -311,7 +312,7 @@ export default {
 
   tutorialSkip: "Overslaan",
   tutorialStep: "Stap {n}/{total}",
-  tutorialPlaceNand: "Open Parts en plaats een NAND-gate op het canvas.",
+  tutorialPlaceNand: "Tik in de onderdelenstrook op NAND om de gate op het canvas te plaatsen.",
   tutorialWireA:
     "Verbind Input A met de NAND-gate: klik eerst de output-pin van A, daarna een input-pin van de gate.",
   tutorialWireOut: "Verbind de NAND-gate met OUT: klik de gate-output, daarna de input-pin van OUT.",

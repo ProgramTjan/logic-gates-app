@@ -61,9 +61,9 @@ export default {
   "coach.next": "Got it",
   "coach.intro.welcome": "Welcome! In this first case you build the circuit for a porch lamp. I'll show you each step — it takes about two minutes.",
   "coach.intro.canvas": "This is your canvas. DOOR and ALARM on the left are inputs (switches); LAMP on the right is the output.",
-  "coach.place": "Open Parts and place a {part} gate on the canvas.",
+  "coach.place": "Tap {part} in the parts strip to place the gate on the canvas.",
   "coach.placeOwn": "Place a {part} — you built it yourself, so it's in your parts now.",
-  "coach.placeTwo": "Place two {part} gates — open Parts twice.",
+  "coach.placeTwo": "Place two {part} gates — tap {part} in the parts strip twice.",
   "coach.wireFrom": "Connect {from} to {to}: click the output pin of {from}…",
   "coach.wireTo": "…now click a free input pin to finish the wire.",
   "coach.wireInputs": "Connect A and B to the two inputs of {to}.",
@@ -91,13 +91,14 @@ export default {
   homeWelcomeStart: "Start: {title}",
   // Lesson flow (UX fase B)
   stepIntro: "Intro",
-  lessonProgress: "Progress",
+  quizSkip: "Skip",
+  quizStillOpen: "Still open",
   introStart: "Let's build",
   stepBuild: "Build",
   stepQuiz: "Did it click?",
   stepNext: "Next",
   theoryMore: "More background",
-  buildInstruction: "Your inputs and outputs are already on the canvas. Add parts via Parts and wire them up.",
+  buildInstruction: "Your inputs and outputs are already on the canvas. Add parts from the parts strip and wire them up.",
   hintShow: "Show a hint ({n}/{total})",
   liveColNow: "Now",
   livePassing: "{passed} of {total} rows correct — keep building.",
@@ -180,7 +181,7 @@ export default {
   quickAdd: "Quick add",
   connectionHint: "Click output, click input.",
   emptyState:
-    "Open Parts and add components. Use Input and Output to turn this sheet into a chip.",
+    "Pick a part in the strip and add components. Use Input and Output to turn this sheet into a chip.",
   challenges: "Lessons",
   startSelected: "Start selected",
   submitCurrent: "Submit",
@@ -240,7 +241,7 @@ export default {
   howTo1:
     "<strong>1. Lessons</strong> — the start screen. <em>Continue</em> opens your next lesson; each lesson keeps its own sheet.",
   howTo2:
-    "<strong>2. Build</strong> — open <em>Parts</em> and place components. Click an output pin, then an input pin to draw a wire.",
+    "<strong>2. Build</strong> — use <em>the parts strip</em> to place components. Click an output pin, then an input pin to draw a wire.",
   howTo3:
     "<strong>3. Test live</strong> — switch inputs with their toggle button. The lesson panel shows a live test table: ✓ per row that already matches.",
   howTo4:
@@ -265,7 +266,7 @@ export default {
   chipLibraryEmpty:
     "No chips saved yet.",
   chipLibraryHint:
-    "Your saved chips. Placing also works via <em>Parts → Saved Chips</em> (always the latest version); manage versions here.",
+    "Your saved chips. Placing also works via the <em>parts strip</em> (always the latest version); manage versions here.",
   chipLatest: "latest",
   chipPlace: "Place",
   chipNewVersion: "New version",
@@ -283,7 +284,7 @@ export default {
   onboardingTitle: "Welcome to Forge Logic",
   onboardingLead: "Learn by building — every lesson walks you through it:",
   onboardingStep1: "<strong>Continue</strong> on the overview opens your next lesson.",
-  onboardingStep2: "Add components from <strong>Parts</strong>.",
+  onboardingStep2: "Add components from the <strong>parts strip</strong>.",
   onboardingStep3: "Click an <strong>output pin</strong>, then an <strong>input pin</strong> to connect.",
   onboardingStep4: "<strong>Check</strong> — passing unlocks the next lesson.",
   onboardingShortcuts:
@@ -317,7 +318,7 @@ export default {
   // Tutorial
   tutorialSkip: "Skip",
   tutorialStep: "Step {n}/{total}",
-  tutorialPlaceNand: "Open Parts and place a NAND gate on the canvas.",
+  tutorialPlaceNand: "Tap NAND in the parts strip to place the gate on the canvas.",
   tutorialWireA: "Connect Input A to the NAND gate: click A's output pin, then a gate input pin.",
   tutorialWireOut: "Connect the NAND gate to OUT: click the gate output, then OUT's input pin.",
   tutorialToggleA: "Toggle Input A and watch the lamp / signals change.",

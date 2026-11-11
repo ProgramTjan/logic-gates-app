@@ -187,11 +187,10 @@ test.describe("Leerapp smoke", () => {
     await expect(page.locator(".hint-list li")).toHaveCount(1);
 
     // Palet: NAND wel, de NOT die je bouwt niet.
-    await page.locator(".parts-dropdown summary").click();
-    await expect(page.locator('#builtin-palette [data-part-type="gate-nand"]')).toBeVisible();
-    await expect(page.locator('#builtin-palette [data-part-type="gate-not"]')).toHaveCount(0);
-    await expect(page.locator('#builtin-palette [data-part-type="switch"]')).toHaveCount(0);
-    await page.locator('#builtin-palette [data-part-type="gate-nand"]').click();
+    await expect(page.locator('#parts-strip [data-strip-part="gate-nand"]')).toBeVisible();
+    await expect(page.locator('#parts-strip [data-strip-part="gate-not"]')).toHaveCount(0);
+    await expect(page.locator('#parts-strip [data-strip-part="switch"]')).toHaveCount(0);
+    await page.locator('#parts-strip [data-strip-part="gate-nand"]').click();
 
     // Live controle: nog geen score zolang OUT niet verbonden is.
     await expect(page.locator(".live-check .live-check-note")).toBeVisible();
@@ -216,6 +215,18 @@ test.describe("Leerapp smoke", () => {
     await page.locator('[data-submit-challenge="not"]').click();
     await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-done/);
     await expect(page.locator(".lesson-unlocked-parts")).toContainText("NOT");
+  });
+
+  test("lessen: Inspector alleen bij onderdelen met eigenschappen (splitter wel, poort niet)", async ({ page }) => {
+    await enableFreeMode(page);
+    await openLessonFromHome(page, "not16");
+    await skipTutorial(page);
+    await placePart(page, "gate-nand");
+    await expect(page.locator("article.gate-nand")).toHaveCount(1);
+    await expect(page.locator("#inspector-card")).toBeHidden();
+    await placePart(page, "splitter");
+    await expect(page.locator("article.node-splitter")).toHaveCount(1);
+    await expect(page.locator("#inspector-card")).toBeVisible();
   });
 
   test("hulpmenu toont sneltoetsen; coach uitzetten in instellingen", async ({ page }) => {

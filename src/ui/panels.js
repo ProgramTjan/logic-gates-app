@@ -121,19 +121,52 @@ export function createPanelRenderers(deps) {
         : "";
 
     if (dom.partsStrip) {
-      // Compact one-tap strip for narrow screens (shown via CSS below 1024px).
-      dom.partsStrip.innerHTML = [
-        ...visibleParts.map(
-          (part) =>
-            `<button type="button" class="parts-strip-button" data-strip-part="${part.type}">${escapeHtml(part.label)}</button>`
-        ),
-        ...latestDefinitions.map(
+      // The one palette on every screen size: label + symbol per part, thin separators between groups.
+      const symbolFor = (type) => {
+        if (typeof deps.getNodeSymbol !== "function") {
+          return "";
+        }
+        return type.startsWith("gate-")
+          ? deps.getNodeSymbol({ type: "gate", config: { gateType: type.slice(5).toUpperCase() } })
+          : deps.getNodeSymbol({ type, config: {} });
+      };
+      const copyFor = (part) => (t(`partCopy.${part.type}`) === `partCopy.${part.type}` ? part.copy : t(`partCopy.${part.type}`));
+      const stripButton = (part) =>
+        `<button type="button" class="parts-strip-button" data-strip-part="${part.type}" title="${escapeHtml(
+          copyFor(part)
+        )}"><span class="parts-strip-symbol" aria-hidden="true">${escapeHtml(symbolFor(part.type))}</span><span class="parts-strip-label">${escapeHtml(
+          part.label
+        )}</span></button>`;
+      const ioTypes = ["switch", "lamp", "input-pin", "output-pin"];
+      const groups = [
+        visibleParts.filter((part) => ioTypes.includes(part.type)),
+        visibleParts.filter((part) => part.type.startsWith("gate-")),
+        visibleParts.filter((part) => !ioTypes.includes(part.type) && !part.type.startsWith("gate-")),
+        latestDefinitions.map(
           (definition) =>
-            `<button type="button" class="parts-strip-button is-chip" data-strip-chip="${definition.id}">${escapeHtml(
-              definition.name
-            )}</button>`
+            `<button type="button" class="parts-strip-button is-chip" data-strip-chip="${definition.id}" title="${escapeHtml(
+              `${definition.inputs.length} in • ${definition.outputs.length} out • v${definition.version}`
+            )}"><span class="parts-strip-symbol" aria-hidden="true">${escapeHtml(
+              symbolFor("chip-instance")
+            )}</span><span class="parts-strip-label">${escapeHtml(definition.name)}</span></button>`
         ),
-      ].join("");
+        lessonParts
+          ? lessonParts.locked.map(({ type, lessonId }) => {
+              const teaching = challengesById.get(lessonId);
+              const title = teaching ? localizeChallenge(teaching).title : lessonId;
+              return `<button type="button" class="parts-strip-button is-locked" disabled title="${escapeHtml(
+                t("paletteLockedTitle", { title })
+              )}"><span class="parts-strip-symbol" aria-hidden="true">🔒</span><span class="parts-strip-label">${escapeHtml(
+                partLabel(type)
+              )}</span></button>`;
+            })
+          : [],
+      ]
+        .map((group) => group.map((item) => (typeof item === "string" ? item : stripButton(item))))
+        .filter((group) => group.length);
+      dom.partsStrip.innerHTML = groups
+        .map((group) => group.join(""))
+        .join('<span class="parts-strip-sep" role="separator" aria-hidden="true"></span>');
     }
 
     dom.builtinPalette.innerHTML = `
@@ -481,14 +514,20 @@ export function createPanelRenderers(deps) {
    */
   function renderStep(number, key, stateClass, title, body, { expanded = false } = {}) {
     const done = stateClass === "is-done";
-    const open = stateClass === "is-current" || (done && expanded);
+    // A skipped quiz is "pending": not ticked, one line "Still open" that opens on click.
+    const pending = stateClass === "is-pending";
+    const collapsible = done || pending;
+    const open = stateClass === "is-current" || (collapsible && expanded);
     const marker = `<span class="lesson-step-marker">${done ? "✓" : number}</span>`;
-    const heading = done
+    const heading = collapsible
       ? `<h4 class="lesson-step-title"><button type="button" class="lesson-step-toggle" data-expand-step="${key}" aria-expanded="${
           expanded ? "true" : "false"
-        }">${escapeHtml(title)}</button></h4>`
+        }">${escapeHtml(title)}${
+          pending ? ` <span class="lesson-step-note">${escapeHtml(t("quizStillOpen"))}</span>` : ""
+        }</button></h4>`
       : `<h4 class="lesson-step-title">${escapeHtml(title)}</h4>`;
-    const mode = stateClass === "is-current" ? "" : done ? (expanded ? " is-expanded" : " is-collapsed") : " is-upcoming";
+    const mode =
+      stateClass === "is-current" ? "" : collapsible ? (expanded ? " is-expanded" : " is-collapsed") : " is-upcoming";
     return `<li class="lesson-step ${stateClass}${mode}" data-lesson-step="${key}">
       ${marker}
       <div class="lesson-step-body">
@@ -496,20 +535,6 @@ export function createPanelRenderers(deps) {
         ${open ? body : ""}
       </div>
     </li>`;
-  }
-
-  function renderLessonProgress(stepOrder, titles, currentKey) {
-    const currentIndex = stepOrder.indexOf(currentKey);
-    return `<ol class="lesson-progress" aria-label="${escapeHtml(t("lessonProgress"))}">${stepOrder
-      .map((key, index) => {
-        const cls = index < currentIndex ? "is-done" : index === currentIndex ? "is-current" : "is-upcoming";
-        return `<li class="lesson-progress-item ${cls}"${
-          index === currentIndex ? ' aria-current="step"' : ""
-        }><span class="lesson-progress-dot">${index < currentIndex ? "✓" : index + 1}</span><span class="lesson-progress-label">${escapeHtml(
-          titles[key]
-        )}</span></li>`;
-      })
-      .join("")}</ol>`;
   }
 
   function renderChallengeDetail(challenge, result) {
@@ -540,20 +565,25 @@ export function createPanelRenderers(deps) {
     if (workspace && workspace.nodes.length > templateNodeCount) {
       state.introSeen[challenge.id] = true; // once you build, the intro stays behind you
     }
-    const introDone = lessonCompleted || Boolean(state.introSeen[challenge.id]);
+    // "Restart" sets introSeen to false explicitly, so even a finished lesson opens at the intro again.
+    const introDone = state.introSeen[challenge.id] === false ? false : lessonCompleted || Boolean(state.introSeen[challenge.id]);
+    const quizSkipped = Boolean(state.quizSkipped && state.quizSkipped[challenge.id]);
     const hasQuiz = quizItems.length > 0;
     let currentKey = "next";
     if (!introDone) {
       currentKey = "intro";
     } else if (!lessonCompleted) {
       currentKey = "build";
-    } else if (hasQuiz && !quizAnswered) {
+    } else if (hasQuiz && !quizAnswered && !quizSkipped) {
       currentKey = "quiz";
     }
     const stepOrder = hasQuiz ? ["intro", "build", "quiz", "next"] : ["intro", "build", "next"];
     const stepState = (key) => {
       const index = stepOrder.indexOf(key);
       const currentIndex = stepOrder.indexOf(currentKey);
+      if (key === "quiz" && index < currentIndex && !quizAnswered) {
+        return "is-pending";
+      }
       return index < currentIndex ? "is-done" : index === currentIndex ? "is-current" : "";
     };
     const expandedEntry = state.expandedStep && state.expandedStep[challenge.id];
@@ -657,11 +687,6 @@ export function createPanelRenderers(deps) {
       unlockedParts && lessonCompleted && (currentKey === "quiz" || currentKey === "next")
         ? `<p class="lesson-unlocked-parts">✨ ${escapeHtml(t("unlockedParts", { parts: unlockedParts }))}</p>`
         : "";
-    const progressHtml = renderLessonProgress(
-      stepOrder,
-      { intro: t("stepIntro"), build: t("stepBuild"), quiz: t("stepQuiz"), next: t("stepNext") },
-      currentKey
-    );
 
     const lockNotice = !unlocked
       ? `<p class="challenge-lock-notice">${escapeHtml(t("lockNotice", { required: requiredTitle || t("locked") }))}</p>`
@@ -683,6 +708,9 @@ export function createPanelRenderers(deps) {
       )}</button>`;
     } else if (currentKey === "quiz") {
       barStatus = t("barQuiz");
+      barButton = `<button type="button" class="ghost-button lesson-skip-button" data-quiz-skip="${challenge.id}">${escapeHtml(
+        t("quizSkip")
+      )}</button>`;
     } else {
       barStatus = t("barDone");
       barOk = true;
@@ -710,7 +738,6 @@ export function createPanelRenderers(deps) {
       </div>
       <p class="challenge-copy">${escapeHtml(localized.description)}</p>
       ${lockNotice}
-      ${progressHtml}
       ${passedFeedbackHtml}
       ${unlockedPartsHtml}
       <ol class="lesson-steps">${steps.join("")}</ol>

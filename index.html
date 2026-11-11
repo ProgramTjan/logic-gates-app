@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#58a6ff" />
+    <meta name="theme-color" content="#141518" />
     <meta name="description" content="Build logic gates and chips, from NAND to a working computer — locally in your browser." />
     <title>Forge Logic</title>
     <link rel="manifest" href="./manifest.webmanifest" />
@@ -34,6 +34,7 @@
             <span data-i18n="navSandbox">Free build</span>
             <span class="appbar-lock" aria-hidden="true">🔒</span>
           </button>
+          <span class="appbar-sheet" id="appbar-sheet"></span>
         </nav>
         <details class="settings-menu help-menu" id="help-menu">
           <summary class="ghost-button settings-summary" data-i18n-title="helpTitle" title="Help &amp; shortcuts">
@@ -169,7 +170,7 @@
               </div>
             </div>
             <div id="empty-state" class="empty-state" data-i18n="emptyState">
-              Open Parts and add components. Use Input and Output to turn this sheet into a chip.
+              Pick a part in the strip and add components. Use Input and Output to turn this sheet into a chip.
             </div>
           </div>
 
@@ -191,7 +192,7 @@
           <div class="canvas-overlay canvas-overlay-bottom">
             <div class="canvas-status">
               <p id="connection-status" class="connection-status" data-i18n="connectionHint">Click output, click input.</p>
-              <p id="status-line" class="status-line" data-i18n="statusDefault">Local storage is active. Project changes are saved automatically in this browser.</p>
+              <p id="status-line" class="status-line" role="status" aria-live="polite"></p>
             </div>
             <div class="canvas-tools">
               <button id="undo-button" class="ghost-button icon-button" type="button" data-i18n-title="undoTitle" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↩</button>

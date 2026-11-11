@@ -192,7 +192,7 @@ Fase A–E hebben de structuur goed gezet (drie schermen, les 0, coach, gefilter
 
 ## Volgorde
 
-F.1 → F.2 → F.3 → F.4 → F.5 → F.6 → G.1 → G.2 → G.3 → G.4 → G.5 → H.1 → H.2 → H.3 → H.4 → I.1 → I.2 → I.3 → J.1 → J.2 → J.3.
+F.1 → F.2 → F.3 → F.4 → F.5 → F.6 → G.1 → G.2 → G.3 → G.4 → G.5 → H.0 → H.1 → H.2 → H.3 → H.4 → I.1 → I.2 → I.3 → J.1 → J.2 → J.3.
 Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit per stap.
 
 ---
@@ -369,7 +369,21 @@ Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit pe
 
 ---
 
-## FASE H — Rust op het scherm
+## FASE H — Rust op het scherm ✅ gedaan 2026-11-11
+
+### Stap H.0: Voortgangsrij weg, quiz overslaan mag (besluit eigenaar 2026-11-11)
+
+**Bestanden:** `src/ui/panels.js`, `script.js` (state), `styles.css`, `src/i18n/nl.js`, `src/i18n/en.js`, e2e waar nodig.
+
+**Taken:**
+1. Verwijder de horizontale voortgangsrij `.lesson-progress` bovenaan het lespaneel (markup + CSS). De verticale staplijst blijft de enige stapweergave.
+2. Quiz overslaan: in de quiz-stap toont de actiebalk een secundaire (ghost) knop "Sla over" / "Skip" (`data-quiz-skip="<challengeId>"`). Daarna is de huidige stap `next` en is "Volgende les →" bereikbaar.
+3. De quiz blijft aangeboden: een overgeslagen quiz-stap is NIET afgevinkt; hij blijft als regel in de staplijst staan met het label "Nog te doen" / "Still open" en klapt open bij een klik, zodat de vraag alsnog beantwoord kan worden. Na beantwoorden krijgt hij zijn vinkje.
+4. State: `state.quizSkipped = {}` per `challenge.id`, in het geheugen (niet opslaan). Bij het heropenen van een voltooide les met onbeantwoorde quiz: huidige stap is `next`, quiz-regel toont "Nog te doen".
+5. "Opnieuw beginnen" (`data-open-challenge` met fresh) zet `state.introSeen` en `state.quizSkipped` voor die les terug, zodat de les weer bij Intro opent.
+6. E2E: de helper `answerQuiz` blijft; één test slaat de quiz over, gaat naar de volgende les en ziet dat de quiz-regel "Nog te doen" toont.
+
+**Acceptatie:** geen dubbele stapweergave meer; met "Sla over" kom je bij "Volgende les"; de quiz is daarna nog te openen en te beantwoorden.
 
 ### Stap H.1: Palet als vaste strook op elk scherm
 

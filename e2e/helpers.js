@@ -46,12 +46,7 @@ export async function skipTutorial(page) {
 }
 
 export async function placePart(page, type) {
-  const dropdown = page.locator(".parts-dropdown");
-  const open = await dropdown.evaluate((el) => el.open);
-  if (!open) {
-    await page.locator(".parts-dropdown summary").click();
-  }
-  await page.locator(`[data-part-type="${type}"]`).click();
+  await page.locator(`#parts-strip [data-strip-part="${type}"]`).click();
 }
 
 /** Beantwoordt alle quizvragen van de huidige les (eerste optie); de quiz gaat vóór "Verder". */

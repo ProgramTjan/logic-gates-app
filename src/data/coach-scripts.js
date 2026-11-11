@@ -5,7 +5,7 @@
  *   say:   i18n key for the coach text; `vars` fills {placeholders}.
  *   at:    where to point
  *            { selector }          any element
- *            { part: match }       the Parts button (or the Parts menu itself while closed)
+ *            { part: match }       the matching button in the parts strip
  *            { out: match }        first output pin of a matching node
  *            { toggle: "LABEL" }   toggle button of an input pin
  *            { check: true }       the "Check" button

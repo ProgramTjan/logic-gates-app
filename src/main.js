@@ -56,9 +56,11 @@ function notifyUpdateAvailable() {
     import("./i18n/index.js")
       .then(({ t }) => {
         statusLine.textContent = t("status.updateAvailable");
+        statusLine.classList.add("is-visible");
       })
       .catch(() => {
         statusLine.textContent = "New version available — refresh the page.";
+        statusLine.classList.add("is-visible");
       });
   }
 }

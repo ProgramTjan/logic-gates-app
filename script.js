@@ -127,6 +127,7 @@ import {
     navSandbox: document.getElementById("nav-sandbox"),
     settingsMenu: document.getElementById("settings-menu"),
     simControls: document.getElementById("sim-controls"),
+    appbarSheet: document.getElementById("appbar-sheet"),
     inspectorCard: document.getElementById("inspector-card"),
     checksCard: document.getElementById("checks-card"),
   };
@@ -170,6 +171,7 @@ import {
     inspectorOpenByView: { lesson: false, sandbox: window.innerWidth >= 1024 },
     theoryOpen: {},
     introSeen: {},
+    quizSkipped: {},
     expandedStep: {},
     sheetByView: { lesson: "half", sandbox: "peek" },
     challengeDetailTab: "theorie",
@@ -218,8 +220,17 @@ import {
 
   const appModals = createAppModals({ dom });
 
+  // The status line is a toast: the text stays in the DOM, the class fades it in for 4 seconds.
+  let statusTimer = null;
   function setStatus(message) {
     dom.statusLine.textContent = message;
+    clearTimeout(statusTimer);
+    if (!message) {
+      dom.statusLine.classList.remove("is-visible");
+      return;
+    }
+    dom.statusLine.classList.add("is-visible");
+    statusTimer = setTimeout(() => dom.statusLine.classList.remove("is-visible"), 4000);
   }
 
   const tutorial = createTutorial({
@@ -369,9 +380,14 @@ import {
     /** Floating overlays (inspector, tools, status) in stage coordinates, so parts aren't placed under them. */
     getReservedStageRects: () => {
       const canvasRect = dom.canvas.getBoundingClientRect();
-      return ["#inspector-card", ".canvas-tools", ".canvas-status"]
+      // The parts strip sits beside/below the canvas; it only counts when it actually overlaps it.
+      const overlapsCanvas = (el) => {
+        const r = el.getBoundingClientRect();
+        return r.left < canvasRect.right && r.right > canvasRect.left && r.top < canvasRect.bottom && r.bottom > canvasRect.top;
+      };
+      return ["#inspector-card", ".canvas-tools", ".canvas-status", "#parts-strip"]
         .map((selector) => document.querySelector(selector))
-        .filter((el) => el && !el.hidden && el.offsetParent !== null)
+        .filter((el) => el && !el.hidden && el.offsetParent !== null && (el.id !== "parts-strip" || overlapsCanvas(el)))
         .map((el) => {
           const r = el.getBoundingClientRect();
           return {
@@ -605,12 +621,29 @@ import {
     runtimeActions.clockRunner.stop();
     state.selectedChallengeId = challengeId;
     state.lastSubmitFeedback = null;
+    if (fresh) {
+      // "Restart": the lesson opens at the intro again, with the quiz offered again.
+      state.introSeen[challengeId] = false;
+      delete state.quizSkipped[challengeId];
+    }
     if (state.sheetByView.lesson === "peek") {
       state.sheetByView.lesson = "half";
     }
     dom.challengeList.scrollTop = 0;
     const existing = fresh ? null : findLatestLessonWorkspace(challengeId);
     if (existing) {
+      // Reopening a finished lesson whose quiz is unanswered: go on to "Next", quiz stays open as "Still open".
+      const quizItems = challenge.learning?.quiz;
+      const learner = state.project.learner || {};
+      const answers = learner.quizAnswers?.[challengeId] || {};
+      if (
+        Array.isArray(quizItems) &&
+        quizItems.length &&
+        (learner.completedChallengeIds || []).includes(challengeId) &&
+        !quizItems.every((_, index) => answers[String(index)] !== undefined)
+      ) {
+        state.quizSkipped[challengeId] = true;
+      }
       state.project.currentWorkspaceId = existing.id;
       state.selectedNodeId = null;
       state.selectedNodeIds = [];
@@ -721,9 +754,22 @@ import {
         runtimeActions.clockRunner.stop();
       }
     }
+    // The bar above the canvas exists only to hold the clock buttons.
+    if (dom.simControls && dom.simControls.parentElement) {
+      const header = dom.simControls.closest(".workspace-header");
+      if (header) {
+        header.classList.toggle("has-sim", showSim);
+      }
+    }
+    // Free build: the active sheet's name sits in the app bar next to the tabs.
+    if (dom.appbarSheet && dom.appbarSheet.textContent !== workspace.name) {
+      dom.appbarSheet.textContent = workspace.name;
+    }
     if (dom.inspectorCard) {
       const selected = workspace.nodes.find((node) => node.id === state.selectedNodeId);
-      dom.inspectorCard.hidden = !selected;
+      // In lessons the properties card only appears for parts that have properties worth editing.
+      const quietInLesson = new Set(["gate", "switch", "lamp", "input-pin", "output-pin", "chip-instance"]);
+      dom.inspectorCard.hidden = !selected || (state.appView === "lesson" && quietInLesson.has(selected.type));
       // In lessons the inspector starts folded so it never hides pins; one tap opens it.
       const open = Boolean(state.inspectorOpenByView[state.appView]);
       dom.inspectorCard.classList.toggle("collapsed", !open);
@@ -893,6 +939,7 @@ import {
     escapeHtml,
     getCurrentWorkspace,
     buildLiveDefinition,
+    getNodeSymbol: (node) => canvasRenderers.getNodeSymbol(node),
     hasCoach: (challengeId) => tutorial.hasScript(challengeId),
     getActiveChallengeId: () => {
       const challenge = workspaceMutations.getActiveWorkspaceChallenge();
@@ -1156,6 +1203,14 @@ import {
         if (introButton) {
           event.stopImmediatePropagation();
           state.introSeen[introButton.dataset.introDone] = true;
+          panelRenderers.renderChallenges();
+          updatePeekStatus();
+          return;
+        }
+        const skipButton = event.target.closest("[data-quiz-skip]");
+        if (skipButton) {
+          event.stopImmediatePropagation();
+          state.quizSkipped[skipButton.dataset.quizSkip] = true;
           panelRenderers.renderChallenges();
           updatePeekStatus();
           return;
