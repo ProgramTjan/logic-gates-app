@@ -341,7 +341,8 @@ export default {
   keyboardListening: "listening…",
   keyboardClickListen: "click = listen",
   missingChipDef: "Missing chip definition",
-  toggle: "toggle",
+  toggle: "Toggle",
+  toggleShort: "toggle",
   deleteAria: "Delete",
 
   // Curriculum modules

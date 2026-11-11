@@ -1618,6 +1618,78 @@ h2 {
   border-radius: 6px;
 }
 
+/* Inverting gates (NOT, NAND, NOR): small bubble right of the face. */
+.gate-face.is-inverting {
+  position: relative;
+}
+
+.gate-face.is-inverting::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: var(--node-bg);
+}
+
+/* Switch for single-bit toggles: 44x24 pill, off = grey, on = signal green. */
+.node-switch-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.2rem;
+  box-sizing: border-box;
+  width: 44px;
+  height: 24px;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  border: 1px solid var(--pin-low-border);
+  background: var(--pin-low-bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.node-switch-toggle::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--ink);
+}
+
+.node-switch-toggle[aria-pressed="true"] {
+  background: var(--signal-high);
+  border-color: var(--pin-high-border);
+  color: var(--switch-on-ink, #04110a);
+}
+
+.node-switch-toggle[aria-pressed="true"]::before {
+  order: 2;
+  background: var(--switch-on-ink, #04110a);
+}
+
+[data-theme="light"] .node-switch-toggle[aria-pressed="true"] {
+  --switch-on-ink: #ffffff;
+}
+
+[data-theme="light"] .node-switch-toggle::before {
+  background: #ffffff;
+}
+
+[data-theme="light"] .node-switch-toggle:not([aria-pressed="true"]) {
+  color: #1c2128;
+}
+
 .lamp-indicator {
   width: 8px;
   height: 8px;
@@ -3726,6 +3798,17 @@ h2 {
     min-width: 44px;
     padding: 0.2rem 0.45rem;
     font-size: 0.66rem;
+  }
+
+  .node-switch-toggle {
+    width: 56px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+
+  .node-switch-toggle::before {
+    width: 22px;
+    height: 22px;
   }
 
   .node-state-pill,

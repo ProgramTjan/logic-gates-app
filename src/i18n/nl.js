@@ -335,7 +335,8 @@ export default {
   keyboardListening: "luistert…",
   keyboardClickListen: "klik = luister",
   missingChipDef: "Missing chip definition",
-  toggle: "toggle",
+  toggle: "Omschakelen",
+  toggleShort: "wissel",
   deleteAria: "Verwijderen",
 
   "curriculum.start.title": "0. Start",

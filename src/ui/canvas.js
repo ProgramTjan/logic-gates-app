@@ -64,7 +64,7 @@ export function createCanvasRenderers(deps) {
       <div class="node-shell" data-drag-surface="true" data-node-id="${node.id}">
         <div class="node-caption">
           <span class="node-label">${escapeHtml(spec.title)}</span>
-          <span class="node-state-pill">${escapeHtml(getNodeTag(node))}</span>
+          ${shouldShowStatePill(node, spec) ? `<span class="node-state-pill">${escapeHtml(getNodeTag(node))}</span>` : ""}
         </div>
         <div class="node-core">
           <div class="pin-stack">
@@ -103,35 +103,20 @@ export function createCanvasRenderers(deps) {
       return `<div class="node-center"><div class="gate-face">
         <span class="gate-symbol">${escapeHtml(symbol)}</span>
       </div>
-      <div class="gate-meta">
-        <span>${escapeHtml(node.config.value)}</span>
-        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-switch" data-node-id="${node.id}">${escapeHtml(
-          t("toggle")
-        )}</button>
-      </div></div>`;
+      <div class="gate-meta">${renderToggleControl("toggle-switch", node.id, node.config.value)}</div></div>`;
     }
     if (node.type === "input-pin") {
       const isOn = /1/.test(node.config.previewValue);
       return `<div class="node-center"><div class="gate-face">
         <span class="lamp-indicator ${isOn ? "on" : ""}"></span>
       </div>
-      <div class="gate-meta">
-        <span>${escapeHtml(node.config.previewValue)}</span>
-        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-input-pin" data-node-id="${node.id}">${escapeHtml(
-          t("toggle")
-        )}</button>
-      </div></div>`;
+      <div class="gate-meta">${renderToggleControl("toggle-input-pin", node.id, node.config.previewValue)}</div></div>`;
     }
     if (node.type === "clock") {
       return `<div class="node-center"><div class="gate-face">
         <span class="gate-symbol">${escapeHtml(symbol)}</span>
       </div>
-      <div class="gate-meta">
-        <span>${escapeHtml(node.config.value)}</span>
-        <button class="ghost-button node-mini-button" type="button" data-node-action="toggle-clock" data-node-id="${node.id}">${escapeHtml(
-          t("toggle")
-        )}</button>
-      </div></div>`;
+      <div class="gate-meta">${renderToggleControl("toggle-clock", node.id, node.config.value)}</div></div>`;
     }
     if (node.type === "lamp") {
       const isOn = /1/.test(lampValue);
@@ -198,10 +183,40 @@ export function createCanvasRenderers(deps) {
       </div>
       <div class="gate-meta"><span>${escapeHtml(lampValue)}</span></div></div>`;
     }
-    return `<div class="node-center"><div class="gate-face">
+    const inverting = node.type === "gate" && INVERTING_GATES.includes(node.config.gateType);
+    return `<div class="node-center"><div class="gate-face${inverting ? " is-inverting" : ""}">
       <span class="gate-symbol">${escapeHtml(symbol)}</span>
     </div>
     <div class="gate-meta"><span>${escapeHtml(node.config.width)}b</span></div></div>`;
+  }
+
+  const INVERTING_GATES = ["NOT", "NAND", "NOR"];
+  const TAGLESS_NODE_TYPES = ["input-pin", "output-pin", "switch", "lamp"];
+
+  // The tag pill only adds information when it differs from the title (no "AND AND", no "DOOR IN").
+  function shouldShowStatePill(node, spec) {
+    if (TAGLESS_NODE_TYPES.includes(node.type)) {
+      return false;
+    }
+    const title = String(spec.title || "").trim().toUpperCase();
+    return getNodeTag(node).trim().toUpperCase() !== title;
+  }
+
+  // Single-bit values get a real switch (same button, same data attributes);
+  // wider values keep the text button.
+  function renderToggleControl(action, nodeId, value) {
+    const bits = String(value);
+    const label = escapeAttribute(t("toggle"));
+    if (bits.length > 1) {
+      return `<span>${escapeHtml(bits)}</span>
+        <button class="ghost-button node-mini-button" type="button" data-node-action="${action}" data-node-id="${nodeId}" aria-label="${label}">${escapeHtml(
+          t("toggleShort")
+        )}</button>`;
+    }
+    const on = bits === "1";
+    return `<button class="node-switch-toggle" type="button" data-node-action="${action}" data-node-id="${nodeId}" aria-pressed="${on}" aria-label="${label}">${escapeHtml(
+      bits
+    )}</button>`;
   }
 
   function renderPin(nodeId, pin, direction, bits) {
@@ -269,12 +284,12 @@ export function createCanvasRenderers(deps) {
   function getNodeSymbol(node) {
     if (node.type === "gate") {
       return {
-        NOT: "!",
+        NOT: "1",
         AND: "&",
-        OR: "1+",
+        OR: "≥1",
         XOR: "=1",
-        NAND: "!&",
-        NOR: "!|",
+        NAND: "&",
+        NOR: "≥1",
       }[node.config.gateType] || node.config.gateType;
     }
     if (node.type === "switch") {
