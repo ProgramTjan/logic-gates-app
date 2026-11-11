@@ -91,6 +91,7 @@ export default {
   homeWelcomeStart: "Start: {title}",
   // Lesson flow (UX fase B)
   stepIntro: "Intro",
+  lessonProgress: "Progress",
   introStart: "Let's build",
   stepBuild: "Build",
   stepCheck: "Check",

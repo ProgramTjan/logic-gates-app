@@ -697,6 +697,7 @@ import {
       return;
     }
     if (state.appView === "lesson") {
+      panelRenderers.syncLessonStep();
       scheduleLiveCheck();
     }
     if (state.appView === "sandbox") {
@@ -1128,6 +1129,17 @@ import {
           event.stopImmediatePropagation();
           const id = hintButton.dataset.revealHint;
           state.hintsShown[id] = (state.hintsShown[id] || 0) + 1;
+          panelRenderers.renderChallenges();
+          return;
+        }
+        const expandButton = event.target.closest("[data-expand-step]");
+        if (expandButton) {
+          event.stopImmediatePropagation();
+          const id = state.selectedChallengeId;
+          const step = expandButton.dataset.expandStep;
+          const open = state.expandedStep[id];
+          const current = dom.challengeList.querySelector(".lesson-step.is-current")?.dataset.lessonStep || "";
+          state.expandedStep[id] = open && open.step === step && open.current === current ? null : { step, current };
           panelRenderers.renderChallenges();
           return;
         }

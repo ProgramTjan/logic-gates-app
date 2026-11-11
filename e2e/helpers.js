@@ -53,3 +53,12 @@ export async function placePart(page, type) {
   }
   await page.locator(`[data-part-type="${type}"]`).click();
 }
+
+/** Beantwoordt alle quizvragen van de huidige les (eerste optie); de quiz gaat vóór "Verder". */
+export async function answerQuiz(page) {
+  const count = await page.locator(".lesson-quiz .quiz-item").count();
+  for (let index = 0; index < count; index += 1) {
+    await page.locator(`[data-quiz-question="${index}"][data-quiz-option="0"]`).click();
+  }
+  await expect(page.locator('[data-lesson-step="next"]')).toHaveClass(/is-current/);
+}

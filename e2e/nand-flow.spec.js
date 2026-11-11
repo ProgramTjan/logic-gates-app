@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { skipTutorial } from "./helpers.js";
+import { answerQuiz, skipTutorial } from "./helpers.js";
 
 async function clickOutput(page, label) {
   await page
@@ -82,7 +82,8 @@ test.describe("Leerflow nieuwe gebruiker", () => {
     await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-done/);
     await expect(page.locator("#nav-sandbox")).not.toHaveClass(/locked/);
 
-    // Door naar les 1 (NAND).
+    // Quiz beantwoorden, daarna door naar les 1 (NAND).
+    await answerQuiz(page);
     await page.locator('[data-next-lesson="nand"]').click();
     await skipTutorial(page);
     await page.locator(".parts-dropdown summary").click();
@@ -95,9 +96,8 @@ test.describe("Leerflow nieuwe gebruiker", () => {
     await clickOutputPinInput(page, "OUT");
 
     await page.locator('[data-submit-challenge="nand"]').click();
-    await expect(page.locator(".challenge-detail-card .challenge-status")).toContainText(/Passed|Gehaald|Verified/, {
-      timeout: 15_000,
-    });
+    await expect(page.locator(".challenge-detail-card .challenge-verified")).toBeVisible({ timeout: 15_000 });
+    await answerQuiz(page);
     await expect(page.locator('[data-next-lesson="not"]')).toBeVisible();
 
     // Nogmaals controleren zonder wijziging → geen nieuwe chipversie.
@@ -105,6 +105,7 @@ test.describe("Leerflow nieuwe gebruiker", () => {
       page.evaluate(() => JSON.parse(localStorage.getItem("forge-logic-project-v2") || "{}").chipDefinitions?.length || 0);
     await expect.poll(countDefinitions).toBeGreaterThan(0);
     const versionsBefore = await countDefinitions();
+    await page.locator('[data-expand-step="build"]').click(); // afgeronde stap klapt open voor een nieuwe controle
     await page.locator('[data-submit-challenge="nand"]').click();
     await page.waitForTimeout(600);
     expect(await countDefinitions()).toBe(versionsBefore);
@@ -121,7 +122,8 @@ test.describe("Leerflow nieuwe gebruiker", () => {
     await page.locator("[data-course-continue]").click();
     await expect(page.locator("[data-tutorial-coach]")).toBeHidden();
 
-    // …maar de knop in de Bouw-stap haalt hem terug.
+    // …maar de knop in de Bouw-stap (na "Aan de slag") haalt hem terug.
+    await page.locator("[data-intro-done]").click();
     await page.locator('[data-coach-start="intro-light"]').click();
     await expect(page.locator("[data-tutorial-coach]")).toBeVisible();
   });

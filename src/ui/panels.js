@@ -472,14 +472,41 @@ export function createPanelRenderers(deps) {
     return `${list}${button}`;
   }
 
-  function renderStep(number, key, stateClass, title, body) {
-    return `<li class="lesson-step ${stateClass}" data-lesson-step="${key}">
-      <span class="lesson-step-marker">${stateClass === "is-done" ? "✓" : number}</span>
+  /**
+   * One lesson step. Current: full content. Done: one line (✓ + title) that opens on click.
+   * Upcoming: one dimmed line without content.
+   */
+  function renderStep(number, key, stateClass, title, body, { expanded = false } = {}) {
+    const done = stateClass === "is-done";
+    const open = stateClass === "is-current" || (done && expanded);
+    const marker = `<span class="lesson-step-marker">${done ? "✓" : number}</span>`;
+    const heading = done
+      ? `<h4 class="lesson-step-title"><button type="button" class="lesson-step-toggle" data-expand-step="${key}" aria-expanded="${
+          expanded ? "true" : "false"
+        }">${escapeHtml(title)}</button></h4>`
+      : `<h4 class="lesson-step-title">${escapeHtml(title)}</h4>`;
+    const mode = stateClass === "is-current" ? "" : done ? (expanded ? " is-expanded" : " is-collapsed") : " is-upcoming";
+    return `<li class="lesson-step ${stateClass}${mode}" data-lesson-step="${key}">
+      ${marker}
       <div class="lesson-step-body">
-        <h4 class="lesson-step-title">${escapeHtml(title)}</h4>
-        ${body}
+        ${heading}
+        ${open ? body : ""}
       </div>
     </li>`;
+  }
+
+  function renderLessonProgress(stepOrder, titles, currentKey) {
+    const currentIndex = stepOrder.indexOf(currentKey);
+    return `<ol class="lesson-progress" aria-label="${escapeHtml(t("lessonProgress"))}">${stepOrder
+      .map((key, index) => {
+        const cls = index < currentIndex ? "is-done" : index === currentIndex ? "is-current" : "is-upcoming";
+        return `<li class="lesson-progress-item ${cls}"${
+          index === currentIndex ? ' aria-current="step"' : ""
+        }><span class="lesson-progress-dot">${index < currentIndex ? "✓" : index + 1}</span><span class="lesson-progress-label">${escapeHtml(
+          titles[key]
+        )}</span></li>`;
+      })
+      .join("")}</ol>`;
   }
 
   function renderChallengeDetail(challenge, result) {
@@ -507,10 +534,10 @@ export function createPanelRenderers(deps) {
     const template = challenge.template || { inputs: [], outputs: [] };
     const workspace = typeof getCurrentWorkspace === "function" ? getCurrentWorkspace() : null;
     const templateNodeCount = (template.inputs || []).length + (template.outputs || []).length;
-    const introDone =
-      lessonCompleted ||
-      Boolean(state.introSeen && state.introSeen[challenge.id]) ||
-      Boolean(workspace && workspace.nodes.length > templateNodeCount);
+    if (workspace && workspace.nodes.length > templateNodeCount) {
+      state.introSeen[challenge.id] = true; // once you build, the intro stays behind you
+    }
+    const introDone = lessonCompleted || Boolean(state.introSeen[challenge.id]);
     const hasQuiz = quizItems.length > 0;
     let currentKey = "next";
     if (!introDone) {
@@ -526,6 +553,8 @@ export function createPanelRenderers(deps) {
       const currentIndex = stepOrder.indexOf(currentKey);
       return index < currentIndex ? "is-done" : index === currentIndex ? "is-current" : "";
     };
+    const expandedEntry = state.expandedStep && state.expandedStep[challenge.id];
+    const isExpanded = (key) => Boolean(expandedEntry && expandedEntry.step === key && expandedEntry.current === currentKey);
 
     const theoryOpen =
       state.theoryOpen && state.theoryOpen[challenge.id] !== undefined
@@ -548,9 +577,13 @@ export function createPanelRenderers(deps) {
           </details>`
       : "";
 
-    const feedbackHtml = feedback
-      ? `<p class="submit-feedback ${feedback.ok ? "ok" : "bad"}">${escapeHtml(feedback.message)}</p>`
-      : "";
+    const feedbackHtml =
+      feedback && !feedback.ok ? `<p class="submit-feedback bad">${escapeHtml(feedback.message)}</p>` : "";
+    // A passed check leaves the build step; its confirmation stays visible above the steps.
+    const passedFeedbackHtml =
+      feedback && feedback.ok && lessonCompleted && (currentKey === "quiz" || currentKey === "next")
+        ? `<p class="submit-feedback ok">${escapeHtml(feedback.message)}</p>`
+        : "";
     const sequentialFailures = isSequentialChallenge(challenge) ? renderFailedCasesTable(result) : "";
 
     const steps = [];
@@ -569,7 +602,8 @@ export function createPanelRenderers(deps) {
                 t("introStart")
               )}</button>`
             : ""
-        }`
+        }`,
+        { expanded: isExpanded("intro") }
       )
     );
     steps.push(
@@ -595,20 +629,20 @@ export function createPanelRenderers(deps) {
         ${sequentialFailures}
         <button class="${lessonCompleted ? "ghost-button" : "primary-button"} lesson-check-button" type="button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
           t("lessonCheck")
-        )}</button>`
+        )}</button>`,
+        { expanded: isExpanded("build") }
       )
     );
 
     if (quizHtml) {
-      steps.push(renderStep(n++, "quiz", stepState("quiz"), t("stepQuiz"), quizHtml));
+      steps.push(renderStep(n++, "quiz", stepState("quiz"), t("stepQuiz"), quizHtml, { expanded: isExpanded("quiz") }));
     }
 
     const unlockedParts = getPartsUnlockedBy(challenge.id)
       .map((type) => BUILTIN_PARTS.find((part) => part.type === type)?.label || type)
       .join(", ");
     const nextBody = lessonCompleted
-      ? `${unlockedParts ? `<p class="lesson-unlocked-parts">✨ ${escapeHtml(t("unlockedParts", { parts: unlockedParts }))}</p>` : ""}
-        <div class="lesson-next-actions">
+      ? `<div class="lesson-next-actions">
           ${
             nextLessonId
               ? `<button class="primary-button" type="button" data-next-lesson="${nextLessonId}">${escapeHtml(
@@ -626,6 +660,16 @@ export function createPanelRenderers(deps) {
       : `<p class="lesson-step-copy muted">${escapeHtml(t("nextLocked"))}</p>`;
     steps.push(renderStep(n++, "next", stepState("next"), t("stepNext"), nextBody));
 
+    const unlockedPartsHtml =
+      unlockedParts && lessonCompleted && (currentKey === "quiz" || currentKey === "next")
+        ? `<p class="lesson-unlocked-parts">✨ ${escapeHtml(t("unlockedParts", { parts: unlockedParts }))}</p>`
+        : "";
+    const progressHtml = renderLessonProgress(
+      stepOrder,
+      { intro: t("stepIntro"), build: t("stepBuild"), quiz: t("stepQuiz"), next: t("stepNext") },
+      currentKey
+    );
+
     const lockNotice = !unlocked
       ? `<p class="challenge-lock-notice">${escapeHtml(t("lockNotice", { required: requiredTitle || t("locked") }))}</p>`
       : "";
@@ -635,12 +679,19 @@ export function createPanelRenderers(deps) {
     }">
       <div class="challenge-head">
         <h3>${unlocked ? "" : "🔒 "}${escapeHtml(localized.title)}</h3>
-        <span class="challenge-status">${escapeHtml(
-          lessonCompleted ? statusLabel("Verified") : unlocked ? statusLabel(result.label === "Open" ? "Open" : "Needs Work") : S.locked
-        )}</span>
+        ${
+          lessonCompleted
+            ? `<span class="challenge-verified" title="${escapeHtml(statusLabel("Verified"))}" aria-label="${escapeHtml(
+                statusLabel("Verified")
+              )}">✓</span>`
+            : ""
+        }
       </div>
       <p class="challenge-copy">${escapeHtml(localized.description)}</p>
       ${lockNotice}
+      ${progressHtml}
+      ${passedFeedbackHtml}
+      ${unlockedPartsHtml}
       <ol class="lesson-steps">${steps.join("")}</ol>
       <div class="lesson-footer">
         <button class="link-button" type="button" data-open-challenge="${challenge.id}" title="${escapeHtml(
@@ -648,6 +699,23 @@ export function createPanelRenderers(deps) {
         )}" ${disabledAttr}>↺ ${escapeHtml(t("lessonRestart"))}</button>
       </div>
     </article>`;
+  }
+
+  /** Called after canvas changes: leaves the intro step as soon as the sheet holds more than the template. */
+  function syncLessonStep() {
+    const rendered = dom.challengeList.querySelector(".lesson-step.is-current");
+    if (!rendered || rendered.dataset.lessonStep !== "intro") {
+      return;
+    }
+    const challenge = getActiveLesson();
+    const workspace = typeof getCurrentWorkspace === "function" ? getCurrentWorkspace() : null;
+    if (!challenge || !workspace) {
+      return;
+    }
+    const template = challenge.template || { inputs: [], outputs: [] };
+    if (workspace.nodes.length > (template.inputs || []).length + (template.outputs || []).length) {
+      renderChallenges();
+    }
   }
 
   function getLessonPosition(challengeId) {
@@ -716,5 +784,6 @@ export function createPanelRenderers(deps) {
     isChallengeUnlocked,
     getNextLessonId,
     refreshLiveCheck,
+    syncLessonStep,
   };
 }
