@@ -143,6 +143,30 @@ test.describe("Leerapp smoke", () => {
     await expect(playButton).not.toHaveClass(/is-running/);
   });
 
+  test("coach: ballon naast het lespaneel, niet over de lestekst", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    const coach = page.locator("[data-tutorial-coach]");
+    await expect(coach).toBeVisible();
+    await expect(coach).toHaveAttribute("data-arrow", "left");
+    const panelBox = await page.locator("#lesson-panel").boundingBox();
+    const coachBox = await coach.boundingBox();
+    expect(coachBox.x).toBeGreaterThanOrEqual(panelBox.x + panelBox.width);
+  });
+
+  test("intro toont alleen de eerste theorie-alinea; de rest staat achter Meer uitleg", async ({ page }) => {
+    await enableFreeMode(page);
+    await openLessonFromHome(page, "xor");
+    await skipTutorial(page);
+    const intro = page.locator('[data-lesson-step="intro"]');
+    await expect(intro.locator(".theory-paragraph")).toHaveCount(3);
+    await expect(intro.locator(".theory-paragraph:visible")).toHaveCount(1);
+    await expect(page.locator(".lesson-theory")).not.toHaveAttribute("open", "");
+    await expect(page.getByText("NAND(A,B) gives helper H", { exact: false })).toBeHidden();
+    await expect(page.locator(".lesson-interface")).toHaveCount(0);
+    await page.locator(".lesson-theory summary").click();
+    await expect(page.getByText("NAND(A,B) gives helper H", { exact: false })).toBeVisible();
+  });
+
   test("lespaneel: stappen, hints, gefilterd palet en live controle", async ({ page }) => {
     await enableFreeMode(page);
     await openLessonFromHome(page, "not");
@@ -150,6 +174,12 @@ test.describe("Leerapp smoke", () => {
 
     const steps = page.locator(".lesson-flow [data-lesson-step]");
     await expect(steps.first()).toBeVisible();
+    // Nieuwe les opent op Intro zonder vinkjes; "Aan de slag" vinkt Intro af en maakt Bouw actief.
+    await expect(steps).toHaveCount(4);
+    await expect(page.locator('[data-lesson-step="intro"]')).toHaveClass(/is-current/);
+    await expect(page.locator(".lesson-flow .lesson-step.is-done")).toHaveCount(0);
+    await page.locator("[data-intro-done]").click();
+    await expect(page.locator('[data-lesson-step="intro"]')).toHaveClass(/is-done/);
     await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-current/);
 
     // Hintladder: één hint per klik.
@@ -184,7 +214,7 @@ test.describe("Leerapp smoke", () => {
 
     await expect(page.locator(".live-check-summary")).toHaveClass(/ok/);
     await page.locator('[data-submit-challenge="not"]').click();
-    await expect(page.locator('[data-lesson-step="check"]')).toHaveClass(/is-done/);
+    await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-done/);
     await expect(page.locator(".lesson-unlocked-parts")).toContainText("NOT");
   });
 

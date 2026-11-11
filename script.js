@@ -169,6 +169,8 @@ import {
     hintsShown: {},
     inspectorOpenByView: { lesson: false, sandbox: window.innerWidth >= 1024 },
     theoryOpen: {},
+    introSeen: {},
+    expandedStep: {},
     sheetByView: { lesson: "half", sandbox: "peek" },
     challengeDetailTab: "theorie",
     lastSubmitFeedback: null,
@@ -695,6 +697,7 @@ import {
       return;
     }
     if (state.appView === "lesson") {
+      panelRenderers.syncLessonStep();
       scheduleLiveCheck();
     }
     if (state.appView === "sandbox") {
@@ -779,13 +782,19 @@ import {
     if (!dom.lessonPeekStatus) {
       return;
     }
-    const source =
-      dom.challengeList.querySelector(".live-check-summary span:last-child") ||
-      dom.challengeList.querySelector(".submit-feedback") ||
-      dom.challengeList.querySelector(".live-check-note");
-    dom.lessonPeekStatus.textContent = source ? source.textContent.trim() : "";
-    const ok = Boolean(dom.challengeList.querySelector(".live-check-summary.ok, .submit-feedback.ok"));
-    dom.lessonPeekStatus.classList.toggle("ok", ok);
+    // The folded sheet shows the action bar's status and its primary action.
+    const status = dom.challengeList.querySelector(".lesson-actionbar [data-bar-status]");
+    dom.lessonPeekStatus.textContent = status ? status.textContent.trim() : "";
+    dom.lessonPeekStatus.classList.toggle("ok", Boolean(status && status.classList.contains("ok")));
+    const primary = dom.challengeList.querySelector(
+      ".lesson-actionbar [data-intro-done], .lesson-actionbar [data-submit-challenge], .lesson-actionbar [data-next-lesson]"
+    );
+    document.querySelectorAll("[data-peek-check]").forEach((button) => {
+      button.style.display = primary ? "" : "none";
+      if (primary) {
+        button.textContent = primary.textContent.trim();
+      }
+    });
   }
 
   const SHEET_STATES = ["peek", "half", "full"];
@@ -882,6 +891,7 @@ import {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    getCurrentWorkspace,
     buildLiveDefinition,
     hasCoach: (challengeId) => tutorial.hasScript(challengeId),
     getActiveChallengeId: () => {
@@ -918,7 +928,10 @@ import {
     WORKSPACE_BASE_HEIGHT,
     tutorial,
     getAppView: () => (state.appView === "home" ? "course" : state.appView),
-    onWorkspaceRendered: () => updateWorkspaceChrome(),
+    onWorkspaceRendered: () => {
+      updateWorkspaceChrome();
+      updatePeekStatus();
+    },
   });
 
   const eventBinder = createEventBinder({
@@ -1128,6 +1141,25 @@ import {
           panelRenderers.renderChallenges();
           return;
         }
+        const expandButton = event.target.closest("[data-expand-step]");
+        if (expandButton) {
+          event.stopImmediatePropagation();
+          const id = state.selectedChallengeId;
+          const step = expandButton.dataset.expandStep;
+          const open = state.expandedStep[id];
+          const current = dom.challengeList.querySelector(".lesson-step.is-current")?.dataset.lessonStep || "";
+          state.expandedStep[id] = open && open.step === step && open.current === current ? null : { step, current };
+          panelRenderers.renderChallenges();
+          return;
+        }
+        const introButton = event.target.closest("[data-intro-done]");
+        if (introButton) {
+          event.stopImmediatePropagation();
+          state.introSeen[introButton.dataset.introDone] = true;
+          panelRenderers.renderChallenges();
+          updatePeekStatus();
+          return;
+        }
         const nextButton = event.target.closest("[data-next-lesson]");
         if (nextButton) {
           event.stopImmediatePropagation();
@@ -1153,9 +1185,11 @@ import {
     }
     document.querySelectorAll("[data-peek-check]").forEach((button) =>
       button.addEventListener("click", () => {
-        const check = dom.challengeList.querySelector("[data-submit-challenge]");
-        if (check && !check.disabled) {
-          check.click();
+        const primary = dom.challengeList.querySelector(
+          ".lesson-actionbar [data-intro-done], .lesson-actionbar [data-submit-challenge], .lesson-actionbar [data-next-lesson]"
+        );
+        if (primary && !primary.disabled) {
+          primary.click();
         }
       })
     );
@@ -1184,10 +1218,6 @@ import {
         const details = event.target;
         if (details && details.dataset && details.dataset.theoryToggle) {
           state.theoryOpen[details.dataset.theoryToggle] = details.open;
-          const summary = details.querySelector("summary");
-          if (summary) {
-            summary.textContent = details.open ? t("theoryHide") : t("theoryRead");
-          }
         }
       },
       true

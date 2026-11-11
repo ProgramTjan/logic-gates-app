@@ -8,7 +8,7 @@
  *            { part: match }       the Parts button (or the Parts menu itself while closed)
  *            { out: match }        first output pin of a matching node
  *            { toggle: "LABEL" }   toggle button of an input pin
- *            { check: true }       the "Check my circuit" button
+ *            { check: true }       the "Check" button
  *   until: when the step is done
  *            { ack: true }               coach shows a "Got it" button
  *            { has: match, count }       at least `count` matching nodes (default 1)
@@ -30,7 +30,7 @@ const checkStep = { say: "coach.check", at: { check: true }, until: { completed:
 
 export const COACH_SCRIPTS = {
   "intro-light": [
-    { say: "coach.intro.welcome", at: { selector: '[data-lesson-step="goal"]' }, until: { ack: true } },
+    { say: "coach.intro.welcome", at: { selector: '[data-lesson-step="intro"]' }, until: { ack: true } },
     { say: "coach.intro.canvas", at: { selector: "#workspace-canvas" }, until: { ack: true } },
     { say: "coach.place", vars: { part: "AND" }, at: { part: { gate: "AND" } }, until: { has: { gate: "AND" } } },
     {
@@ -81,7 +81,7 @@ export const COACH_SCRIPTS = {
   ],
 
   not: [
-    { say: "coach.not.idea", at: { selector: '[data-lesson-step="theory"]' }, until: { ack: true } },
+    { say: "coach.not.idea", at: { selector: '[data-lesson-step="intro"]' }, until: { ack: true } },
     { say: "coach.place", vars: { part: "NAND" }, at: { part: { gate: "NAND" } }, until: { has: { gate: "NAND" } } },
     {
       say: "coach.not.wireBoth",
@@ -98,7 +98,7 @@ export const COACH_SCRIPTS = {
   ],
 
   and: [
-    { say: "coach.and.idea", at: { selector: '[data-lesson-step="theory"]' }, until: { ack: true } },
+    { say: "coach.and.idea", at: { selector: '[data-lesson-step="intro"]' }, until: { ack: true } },
     { say: "coach.place", vars: { part: "NAND" }, at: { part: { gate: "NAND" } }, until: { has: { gate: "NAND" } } },
     { say: "coach.placeOwn", vars: { part: "NOT" }, at: { part: { gate: "NOT" } }, until: { has: gateOrChip("NOT") } },
     {
@@ -123,7 +123,7 @@ export const COACH_SCRIPTS = {
   ],
 
   or: [
-    { say: "coach.or.idea", at: { selector: '[data-lesson-step="theory"]' }, until: { ack: true } },
+    { say: "coach.or.idea", at: { selector: '[data-lesson-step="intro"]' }, until: { ack: true } },
     { say: "coach.placeTwo", vars: { part: "NOT" }, at: { part: { gate: "NOT" } }, until: { has: gateOrChip("NOT"), count: 2 } },
     { say: "coach.place", vars: { part: "NAND" }, at: { part: { gate: "NAND" } }, until: { has: { gate: "NAND" } } },
     {
@@ -146,7 +146,7 @@ export const COACH_SCRIPTS = {
   ],
 
   xor: [
-    { say: "coach.xor.idea", at: { selector: '[data-lesson-step="theory"]' }, until: { ack: true } },
+    { say: "coach.xor.idea", at: { selector: '[data-lesson-step="intro"]' }, until: { ack: true } },
     { say: "coach.placeOwn", vars: { part: "OR" }, at: { part: { gate: "OR" } }, until: { has: gateOrChip("OR") } },
     { say: "coach.place", vars: { part: "NAND" }, at: { part: { gate: "NAND" } }, until: { has: { gate: "NAND" } } },
     { say: "coach.placeOwn", vars: { part: "AND" }, at: { part: { gate: "AND" } }, until: { has: gateOrChip("AND") } },

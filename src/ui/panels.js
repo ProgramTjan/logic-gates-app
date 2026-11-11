@@ -20,6 +20,7 @@ export function createPanelRenderers(deps) {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    getCurrentWorkspace,
   } = deps;
 
   const challengesById = new Map(CHALLENGES.map((challenge) => [challenge.id, challenge]));
@@ -366,30 +367,24 @@ export function createPanelRenderers(deps) {
     </div>`;
   }
 
-  function formatPins(pins) {
-    return (pins || [])
-      .map((pin) => {
-        if (pin && typeof pin === "object") {
-          return pin.width && pin.width > 1 ? `${pin.name}[${pin.width}]` : pin.name;
-        }
-        return String(pin);
-      })
-      .join(", ");
-  }
-
   function formatAssignments(values) {
     return Object.entries(values || {})
       .map(([k, v]) => `${k}=${v}`)
       .join(" · ");
   }
 
+  // Short live status for the action bar; set by renderLiveCheckInner.
+  let liveStatus = { text: "", ok: false };
+
   /** Live test table: evaluates the sheet as it is now, without saving a chip. */
   function renderLiveCheckInner(challenge) {
     if (challenge.verification !== "combinational" || !challenge.tests?.length) {
+      liveStatus = { text: t("barSequential"), ok: false };
       return `<p class="live-check-note">${escapeHtml(t("liveSequential"))}</p>`;
     }
     const live = typeof deps.buildLiveDefinition === "function" ? deps.buildLiveDefinition() : null;
     if (!live || !live.definition) {
+      liveStatus = { text: t("barNeedsInterface"), ok: false };
       return `<p class="live-check-note">${escapeHtml(t("liveNeedsInterface"))}</p>`;
     }
     let passed = 0;
@@ -422,6 +417,10 @@ export function createPanelRenderers(deps) {
       .join("");
     const total = challenge.tests.length;
     const allPass = passed === total;
+    liveStatus = {
+      text: allPass ? t("barAllRows") : t("barRows", { passed, total }),
+      ok: allPass,
+    };
     return `<div class="live-check-summary ${allPass ? "ok" : ""}">
         <span class="live-check-meter" style="--ratio:${total ? passed / total : 0}"></span>
         <span>${escapeHtml(allPass ? t("liveAllPass") : t("livePassing", { passed, total }))}</span>
@@ -447,6 +446,11 @@ export function createPanelRenderers(deps) {
     const challenge = challengesById.get(container.dataset.liveCheck);
     if (challenge) {
       container.innerHTML = renderLiveCheckInner(challenge);
+      const status = dom.challengeList.querySelector("[data-bar-status]");
+      if (status && status.closest(".lesson-actionbar")?.dataset.barStep === "build") {
+        status.textContent = liveStatus.text;
+        status.classList.toggle("ok", liveStatus.ok);
+      }
     }
   }
 
@@ -471,14 +475,41 @@ export function createPanelRenderers(deps) {
     return `${list}${button}`;
   }
 
-  function renderStep(number, key, stateClass, title, body) {
-    return `<li class="lesson-step ${stateClass}" data-lesson-step="${key}">
-      <span class="lesson-step-marker">${stateClass === "is-done" ? "✓" : number}</span>
+  /**
+   * One lesson step. Current: full content. Done: one line (✓ + title) that opens on click.
+   * Upcoming: one dimmed line without content.
+   */
+  function renderStep(number, key, stateClass, title, body, { expanded = false } = {}) {
+    const done = stateClass === "is-done";
+    const open = stateClass === "is-current" || (done && expanded);
+    const marker = `<span class="lesson-step-marker">${done ? "✓" : number}</span>`;
+    const heading = done
+      ? `<h4 class="lesson-step-title"><button type="button" class="lesson-step-toggle" data-expand-step="${key}" aria-expanded="${
+          expanded ? "true" : "false"
+        }">${escapeHtml(title)}</button></h4>`
+      : `<h4 class="lesson-step-title">${escapeHtml(title)}</h4>`;
+    const mode = stateClass === "is-current" ? "" : done ? (expanded ? " is-expanded" : " is-collapsed") : " is-upcoming";
+    return `<li class="lesson-step ${stateClass}${mode}" data-lesson-step="${key}">
+      ${marker}
       <div class="lesson-step-body">
-        <h4 class="lesson-step-title">${escapeHtml(title)}</h4>
-        ${body}
+        ${heading}
+        ${open ? body : ""}
       </div>
     </li>`;
+  }
+
+  function renderLessonProgress(stepOrder, titles, currentKey) {
+    const currentIndex = stepOrder.indexOf(currentKey);
+    return `<ol class="lesson-progress" aria-label="${escapeHtml(t("lessonProgress"))}">${stepOrder
+      .map((key, index) => {
+        const cls = index < currentIndex ? "is-done" : index === currentIndex ? "is-current" : "is-upcoming";
+        return `<li class="lesson-progress-item ${cls}"${
+          index === currentIndex ? ' aria-current="step"' : ""
+        }><span class="lesson-progress-dot">${index < currentIndex ? "✓" : index + 1}</span><span class="lesson-progress-label">${escapeHtml(
+          titles[key]
+        )}</span></li>`;
+      })
+      .join("")}</ol>`;
   }
 
   function renderChallengeDetail(challenge, result) {
@@ -502,63 +533,85 @@ export function createPanelRenderers(deps) {
         : null;
     const lastCheckFailed = Boolean(feedback && !feedback.ok);
 
-    // Step states: done ✓ · current (accent) · upcoming (muted).
-    const buildState = lessonCompleted ? "is-done" : lastCheckFailed ? "" : "is-current";
-    const checkState = lessonCompleted ? "is-done" : lastCheckFailed ? "is-current" : "";
-    const quizState = !quizItems.length ? "" : quizAnswered ? "is-done" : lessonCompleted ? "is-current" : "";
-    const nextState = lessonCompleted && (!quizItems.length || quizAnswered) ? "is-current" : "";
+    // Four steps: intro → build → quiz → next. Only steps before the current one are done.
+    const template = challenge.template || { inputs: [], outputs: [] };
+    const workspace = typeof getCurrentWorkspace === "function" ? getCurrentWorkspace() : null;
+    const templateNodeCount = (template.inputs || []).length + (template.outputs || []).length;
+    if (workspace && workspace.nodes.length > templateNodeCount) {
+      state.introSeen[challenge.id] = true; // once you build, the intro stays behind you
+    }
+    const introDone = lessonCompleted || Boolean(state.introSeen[challenge.id]);
+    const hasQuiz = quizItems.length > 0;
+    let currentKey = "next";
+    if (!introDone) {
+      currentKey = "intro";
+    } else if (!lessonCompleted) {
+      currentKey = "build";
+    } else if (hasQuiz && !quizAnswered) {
+      currentKey = "quiz";
+    }
+    const stepOrder = hasQuiz ? ["intro", "build", "quiz", "next"] : ["intro", "build", "next"];
+    const stepState = (key) => {
+      const index = stepOrder.indexOf(key);
+      const currentIndex = stepOrder.indexOf(currentKey);
+      return index < currentIndex ? "is-done" : index === currentIndex ? "is-current" : "";
+    };
+    const expandedEntry = state.expandedStep && state.expandedStep[challenge.id];
+    const isExpanded = (key) => Boolean(expandedEntry && expandedEntry.step === key && expandedEntry.current === currentKey);
 
-    const theoryOpen =
-      state.theoryOpen && state.theoryOpen[challenge.id] !== undefined
-        ? state.theoryOpen[challenge.id]
-        : !lessonCompleted;
-    const theoryParagraphs = (localized.theory || [])
+    // Intro shows only the first paragraph; the rest sits behind "More background" (closed by default).
+    const theoryList = Array.isArray(localized.theory) ? localized.theory : [];
+    const theoryOpen = Boolean(state.theoryOpen && state.theoryOpen[challenge.id]);
+    const theoryLeadHtml = theoryList.length ? `<p class="theory-paragraph">${escapeHtml(theoryList[0])}</p>` : "";
+    const theoryMoreParagraphs = theoryList
+      .slice(1)
       .map((paragraph) => `<p class="theory-paragraph">${escapeHtml(paragraph)}</p>`)
       .join("");
 
-    const template = challenge.template || { inputs: [], outputs: [] };
     const conceptsHtml =
       Array.isArray(learning.concepts) && learning.concepts.length
         ? `<div class="lesson-concepts">${learning.concepts
             .map((concept) => `<span class="lesson-concept">${escapeHtml(concept)}</span>`)
             .join("")}</div>`
         : "";
+    const theoryHtml = `${theoryLeadHtml}${
+      theoryMoreParagraphs
+        ? `<details class="lesson-theory" data-theory-toggle="${challenge.id}"${theoryOpen ? " open" : ""}>
+            <summary>${escapeHtml(t("theoryMore"))}</summary>
+            <div class="theory-body">${theoryMoreParagraphs}</div>
+          </details>`
+        : ""
+    }`;
+
+    const feedbackHtml =
+      feedback && !feedback.ok ? `<p class="submit-feedback bad">${escapeHtml(feedback.message)}</p>` : "";
+    // A passed check leaves the build step; its confirmation stays visible above the steps.
+    const passedFeedbackHtml =
+      feedback && feedback.ok && lessonCompleted && (currentKey === "quiz" || currentKey === "next")
+        ? `<p class="submit-feedback ok">${escapeHtml(feedback.message)}</p>`
+        : "";
+    const sequentialFailures = isSequentialChallenge(challenge) ? renderFailedCasesTable(result) : "";
 
     const steps = [];
     let n = 1;
     steps.push(
       renderStep(
         n++,
-        "goal",
-        "is-done",
-        t("stepGoal"),
-        `<p class="lesson-goal-text">${escapeHtml(learning.goal || localized.description || "")}</p>${conceptsHtml}`
+        "intro",
+        stepState("intro"),
+        t("stepIntro"),
+        `<p class="lesson-goal-text">${escapeHtml(learning.goal || localized.description || "")}</p>${conceptsHtml}
+        ${theoryHtml}`,
+        { expanded: isExpanded("intro") }
       )
     );
-    if (theoryParagraphs) {
-      steps.push(
-        renderStep(
-          n++,
-          "theory",
-          "is-done",
-          t("stepTheory"),
-          `<details class="lesson-theory" data-theory-toggle="${challenge.id}"${theoryOpen ? " open" : ""}>
-            <summary>${escapeHtml(theoryOpen ? t("theoryHide") : t("theoryRead"))}</summary>
-            <div class="theory-body">${theoryParagraphs}</div>
-          </details>`
-        )
-      );
-    }
     steps.push(
       renderStep(
         n++,
         "build",
-        buildState,
+        stepState("build"),
         t("stepBuild"),
         `<p class="lesson-step-copy">${escapeHtml(t("buildInstruction"))}</p>
-        <p class="lesson-interface"><span>${escapeHtml(formatPins(template.inputs))}</span> → <span>${escapeHtml(
-          formatPins(template.outputs)
-        )}</span></p>
         ${
           unlocked && typeof deps.hasCoach === "function" && deps.hasCoach(challenge.id)
             ? `<button type="button" class="ghost-button coach-button" data-coach-start="${challenge.id}">▶ ${escapeHtml(
@@ -566,46 +619,30 @@ export function createPanelRenderers(deps) {
               )}</button>`
             : ""
         }
-        ${renderHintLadder(challenge, localized)}`
-      )
-    );
-
-    const feedbackHtml = feedback
-      ? `<p class="submit-feedback ${feedback.ok ? "ok" : "bad"}">${escapeHtml(feedback.message)}</p>`
-      : "";
-    const sequentialFailures = isSequentialChallenge(challenge) ? renderFailedCasesTable(result) : "";
-    steps.push(
-      renderStep(
-        n++,
-        "check",
-        checkState,
-        t("stepCheck"),
-        `${unlocked ? `<div class="live-check" data-live-check="${challenge.id}">${renderLiveCheckInner(challenge)}</div>` : ""}
+        ${renderHintLadder(challenge, localized)}
+        ${unlocked ? `<div class="live-check" data-live-check="${challenge.id}">${renderLiveCheckInner(challenge)}</div>` : ""}
         ${feedbackHtml}
         ${sequentialFailures}
-        <button class="${lessonCompleted ? "ghost-button" : "primary-button"} lesson-check-button" type="button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
-          t("lessonCheck")
-        )}</button>`
+        ${
+          lessonCompleted && unlocked
+            ? `<button class="ghost-button lesson-check-button" type="button" data-submit-challenge="${challenge.id}">${escapeHtml(
+                t("lessonCheckAgain")
+              )}</button>`
+            : ""
+        }`,
+        { expanded: isExpanded("build") }
       )
     );
 
     if (quizHtml) {
-      steps.push(renderStep(n++, "quiz", quizState, t("stepQuiz"), quizHtml));
+      steps.push(renderStep(n++, "quiz", stepState("quiz"), t("stepQuiz"), quizHtml, { expanded: isExpanded("quiz") }));
     }
 
     const unlockedParts = getPartsUnlockedBy(challenge.id)
       .map((type) => BUILTIN_PARTS.find((part) => part.type === type)?.label || type)
       .join(", ");
     const nextBody = lessonCompleted
-      ? `${unlockedParts ? `<p class="lesson-unlocked-parts">✨ ${escapeHtml(t("unlockedParts", { parts: unlockedParts }))}</p>` : ""}
-        <div class="lesson-next-actions">
-          ${
-            nextLessonId
-              ? `<button class="primary-button" type="button" data-next-lesson="${nextLessonId}">${escapeHtml(
-                  t("lessonNext")
-                )}</button>`
-              : ""
-          }
+      ? `<div class="lesson-next-actions">
           <button class="ghost-button" type="button" data-nav="home">${escapeHtml(t("backToOverview"))}</button>
           ${
             challenge.id === "computer"
@@ -614,30 +651,93 @@ export function createPanelRenderers(deps) {
           }
         </div>`
       : `<p class="lesson-step-copy muted">${escapeHtml(t("nextLocked"))}</p>`;
-    steps.push(renderStep(n++, "next", nextState, t("stepNext"), nextBody));
+    steps.push(renderStep(n++, "next", stepState("next"), t("stepNext"), nextBody));
+
+    const unlockedPartsHtml =
+      unlockedParts && lessonCompleted && (currentKey === "quiz" || currentKey === "next")
+        ? `<p class="lesson-unlocked-parts">✨ ${escapeHtml(t("unlockedParts", { parts: unlockedParts }))}</p>`
+        : "";
+    const progressHtml = renderLessonProgress(
+      stepOrder,
+      { intro: t("stepIntro"), build: t("stepBuild"), quiz: t("stepQuiz"), next: t("stepNext") },
+      currentKey
+    );
 
     const lockNotice = !unlocked
       ? `<p class="challenge-lock-notice">${escapeHtml(t("lockNotice", { required: requiredTitle || t("locked") }))}</p>`
       : "";
+
+    // One fixed action bar: a short status on the left, exactly one primary button on the right.
+    let barStatus = "";
+    let barOk = false;
+    let barButton = "";
+    if (currentKey === "intro") {
+      barButton = unlocked
+        ? `<button type="button" class="primary-button" data-intro-done="${challenge.id}">${escapeHtml(t("introStart"))}</button>`
+        : "";
+    } else if (currentKey === "build") {
+      barStatus = unlocked ? liveStatus.text : "";
+      barOk = unlocked && liveStatus.ok;
+      barButton = `<button type="button" class="primary-button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
+        t("lessonCheck")
+      )}</button>`;
+    } else if (currentKey === "quiz") {
+      barStatus = t("barQuiz");
+    } else {
+      barStatus = t("barDone");
+      barOk = true;
+      barButton = nextLessonId
+        ? `<button type="button" class="primary-button" data-next-lesson="${nextLessonId}">${escapeHtml(t("lessonNext"))}</button>`
+        : "";
+    }
+    const actionBar = `<div class="lesson-actionbar" data-bar-step="${currentKey}">
+      <span class="lesson-actionbar-status${barOk ? " ok" : ""}" data-bar-status>${escapeHtml(barStatus)}</span>
+      ${barButton}
+    </div>`;
 
     return `<article class="challenge-card challenge-detail-card lesson-flow ${lessonCompleted ? "done" : ""} ${
       unlocked ? "" : "locked"
     }">
       <div class="challenge-head">
         <h3>${unlocked ? "" : "🔒 "}${escapeHtml(localized.title)}</h3>
-        <span class="challenge-status">${escapeHtml(
-          lessonCompleted ? statusLabel("Verified") : unlocked ? statusLabel(result.label === "Open" ? "Open" : "Needs Work") : S.locked
-        )}</span>
+        ${
+          lessonCompleted
+            ? `<span class="challenge-verified" title="${escapeHtml(statusLabel("Verified"))}" aria-label="${escapeHtml(
+                statusLabel("Verified")
+              )}">✓</span>`
+            : ""
+        }
       </div>
       <p class="challenge-copy">${escapeHtml(localized.description)}</p>
       ${lockNotice}
+      ${progressHtml}
+      ${passedFeedbackHtml}
+      ${unlockedPartsHtml}
       <ol class="lesson-steps">${steps.join("")}</ol>
       <div class="lesson-footer">
         <button class="link-button" type="button" data-open-challenge="${challenge.id}" title="${escapeHtml(
           t("lessonRestartTitle")
         )}" ${disabledAttr}>↺ ${escapeHtml(t("lessonRestart"))}</button>
       </div>
-    </article>`;
+    </article>
+    ${actionBar}`;
+  }
+
+  /** Called after canvas changes: leaves the intro step as soon as the sheet holds more than the template. */
+  function syncLessonStep() {
+    const rendered = dom.challengeList.querySelector(".lesson-step.is-current");
+    if (!rendered || rendered.dataset.lessonStep !== "intro") {
+      return;
+    }
+    const challenge = getActiveLesson();
+    const workspace = typeof getCurrentWorkspace === "function" ? getCurrentWorkspace() : null;
+    if (!challenge || !workspace) {
+      return;
+    }
+    const template = challenge.template || { inputs: [], outputs: [] };
+    if (workspace.nodes.length > (template.inputs || []).length + (template.outputs || []).length) {
+      renderChallenges();
+    }
   }
 
   function getLessonPosition(challengeId) {
@@ -706,5 +806,6 @@ export function createPanelRenderers(deps) {
     isChallengeUnlocked,
     getNextLessonId,
     refreshLiveCheck,
+    syncLessonStep,
   };
 }

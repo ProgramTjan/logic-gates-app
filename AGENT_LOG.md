@@ -511,3 +511,53 @@
 - De spec noemt `--challenge-card-bg` (bruine lestint) nog; staat in fase J/H.
 
 **Resultaat:** groen, `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 22/22 (20 bestaande + 2 nieuwe). Alle drie de thema's (dark, light, neon) visueel gecontroleerd op 1440×900, 1180×820 en 820×1180 (touch).
+
+---
+
+## 2026-11-11 — UX fase G: les, één stap tegelijk
+
+### G.4 taak 4 — inventaris: lessen waarvan `theory[0]` de bouwwijze verklapt (NL, alleen genoteerd, niets herschreven)
+
+Beoordeeld op: noemt de eerste theorie-alinea welke poorten/chips je gebruikt of hoe je ze verbindt.
+
+Verklapt duidelijk (6):
+- `add4` — "rijgt vier adders aaneen … ripple-carry adder, carry rimpelt van rechts naar links".
+- `add16` — "dezelfde structuur als Add4: zestien Full Adders … met carry tussen de posities".
+- `register16` — "Bit × 16: één LOAD en één CLK sturen alle bits tegelijk".
+- `alu-with-registers` — "A en D voeden de ALU; de ALU-uitkomst kan terug naar D".
+- `cpu` — noemt alle onderdelen (PC, registers, ALU, geheugen) en hun rol.
+- `computer` — noemt de onderdelen (ROM, CPU, Screen).
+
+Grensgevallen (3 groepen):
+- `xor-nand-only` — noemt de beperking (alleen NAND), niet de opbouw.
+- `half-adder`, `inc4` — "berekent beide bits apart" / "chain van carries van rechts naar links" geven een richting, geen onderdelen.
+- `ram64`, `ram512`, `ram4k`, `ram16k` — "dezelfde LOAD/ADDR/CLK-interface als RAM8, maar meer adresbits"; verwijst naar de opbouw via RAM8 en bevat letterlijk de titel ("Build RAM64 is een grotere …", vier keer vrijwel dezelfde tekst).
+
+Verklapt niet (rest): `intro-light`, `nand`, `not`, `and`, `or`, `xor` (de NAND-formule staat in alinea 3, nu achter "Meer uitleg"), `mux`, `dmux`, `not16`, `and16`, `or16`, `mux16`, `or4way`, `mux4way`, `dmux4way`, `or8way`, `mux4way16`, `mux8way16`, `dmux8way`, `full-adder`, `inc16`, `dff`, `register-chip`, `pc`, `alu`, `instruction-decoder`, `ram8`, `mod4-counter`.
+Totaal 41 lessen bekeken (6 duidelijk, 7 grensgeval, 28 niet) (zelfde tekst als in `src/data/challenges.js`; de EN-teksten zijn niet apart beoordeeld).
+
+### Uitgevoerd (één commit per stap)
+- G.1 Vier stappen `intro`/`build`/`quiz`/`next` (`data-lesson-step`). Intro = doel + begrippen + theorie; Bouw = hints, "Laat zien hoe", live-tabel en feedback. `state.introSeen` (niet opgeslagen) wordt waar na "Aan de slag" (`data-intro-done`), zodra het werkblad meer nodes heeft dan het lessjabloon (ook sticky), of als de les klaar is. Alleen stappen vóór de huidige zijn afgevinkt. Sleutels `stepIntro`, `introStart`. Coach-scripts wijzen nu naar `[data-lesson-step="intro"]` i.p.v. goal/theory.
+- G.2 `.lesson-progress` (bolletje + korte titel per stap), alleen de huidige stap toont inhoud; afgeronde stappen zijn één regel die opent (`data-expand-step`, `state.expandedStep[id] = {step, current}`), komende stappen één gedimde regel. Statuschip vervangen door ✓ (`.challenge-verified`). `syncLessonStep()` (aangeroepen vanuit `updateWorkspaceChrome`) laat het paneel de intro verlaten zodra er onderdelen op het canvas staan.
+- G.3 `.lesson-actionbar` als laatste kind van `#challenge-list` (sticky, `margin-top:auto`), status links en één primaire knop rechts: Aan de slag (`data-intro-done`) / Controleer (`data-submit-challenge`) + live status "x van y rijen kloppen" / geen (quiz: "Beantwoord de vraag") / Volgende les → (`data-next-lesson`). Losse knoppen uit de stapinhoud gehaald. Onderpaneel (`data-peek-check`) toont dezelfde status en kopieert label en actie van de primaire knop. Knoplabel `lessonCheck` is nu "Controleer"/"Check"; verwijzingen in coach-, hulp- en introteksten meegenomen.
+- G.4 Intro toont alleen `theory[0]`, de rest staat achter `<details>` "Meer uitleg" (`theoryMore`, standaard dicht, `state.theoryOpen`). `.lesson-interface` (A, B → OUT) weg. Inventaris hierboven.
+- G.5 `positionCoach`: doel in lespaneel (breed) → ballon rechts naast het paneel op hoogte van het doel, `data-arrow="left"`; geen doel → midden van het canvas; smal → boven het onderpaneel (pijltje omlaag, ballon nooit eroverheen); ballon schuift omhoog als hij het doel of de primaire knop van de actiebalk zou raken; op breed blijft de ballon buiten het lespaneel.
+
+### Aannames/afwijkingen
+- "Alleen stappen vóór de huidige zijn is-done" + "Verder pas na de quiz": de quiz stuurt "Verder" aan. Een quiz telt als af zodra alle vragen beantwoord zijn (goed of fout). E2E beantwoordt de quiz nu vóór "Volgende les" (`answerQuiz` in `e2e/helpers.js`).
+- Opnieuw controleren na een geslaagde les kan alleen door de afgeronde Bouw-stap uit te klappen; daar staat een ghost-knop "Controleer opnieuw" (`data-submit-challenge`). Dit is mijn toevoeging (anders is er geen manier meer, en een e2e-test toetst dat een tweede controle geen nieuwe chipversie maakt). De hook staat daarmee nooit tegelijk met de primaire knop in de balk zichtbaar (die toont dan Verder/quiz).
+- Een geslaagde-melding ("Ingeleverd: …") en "Nieuw in je onderdelen" staan boven de stappen zodra de les geslaagd is (quiz/verder), omdat de Bouw-stap dan inklapt.
+- Statusregel in de balk bij sequentiële lessen: "Test met Controleer" (nieuwe sleutels `barSequential`, `barNeedsInterface`, `barRows`, `barAllRows`, `barQuiz`, `barDone`, `lessonCheckAgain`, `lessonProgress`). `liveAllPass`/`liveSequential` noemen nu "Controleer". `stepGoal`, `stepTheory`, `theoryRead`, `theoryHide`, `stepCheck` zijn niet meer in gebruik en verwijderd.
+- E2E aangepast met behoud van wat ze toetsen: `data-lesson-step="check"` → `build` (is-done), `.challenge-status` → `.challenge-verified`, intro eerst afronden in de "stappen"-test en de coach-opnieuw-test, quiz beantwoorden vóór `data-next-lesson`, afgeronde Bouw-stap uitklappen voor de tweede controle. Nieuw: intro toont één theorie-alinea (XOR), coach ligt naast het paneel.
+
+### Bevindingen (niet opgepakt)
+- Coach-stap 1 (welkom) staat naast het paneel en bedekt daarmee op 1440×900 deels het DOOR-blok op het canvas; stap 2 (canvas) legt de ballon bewust binnen het canvas (het doel is het hele canvas), daar is overlap met het "doel" onvermijdelijk.
+- De voortgangsrij en de verticale staplijst tonen dezelfde vier stappen (volgt het plan letterlijk); op 372px breed wordt "Begrepen?" als huidige stap afgekapt ("Begre…").
+- Quiz is nu verplicht (alleen beantwoorden, niet goed) om "Verder" te bereiken; wie de quiz wil overslaan kan niet naar de volgende les via het paneel (wel via Lessen).
+- `introSeen` is sticky per sessie: "Opnieuw beginnen" op een les waarvan de intro al gezien is opent direct in Bouw.
+- Lessen 1–5 (nand, not, and, or, xor) scrollen op 1440×900 in intro en bouw niet (gemeten); de quiz- en verder-stap is alleen voor les 0 gemeten (ook geen scroll).
+- Palet is nog steeds de Parts-dropdown op breed (H.1), `Huidige sheet` en twee statusregels linksonder liggen op tablet nog over onderste nodes (H.2/H.3).
+- Duplicaat in lesinhoud: `ram64`/`ram512`/`ram4k`/`ram16k` hebben bijna dezelfde `theory[0]` met de titel erin ("Build RAM64 is een grotere …").
+
+### Resultaat
+Groen: `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 24/24 (22 bestaande + 2 nieuwe). Schermafdrukken op 1440×900, 1180×820 en 820×1180 (touch) van les 0 in alle stappen en de XOR-les; thema's dark, light en neon bekeken voor G.2/G.3/G.5; onderpaneel 820×1180 peek/half/full en alle 9 coachstappen (1440×900, 1180×820, 820×1180; dark, plus light/neon op desktop) gecontroleerd.

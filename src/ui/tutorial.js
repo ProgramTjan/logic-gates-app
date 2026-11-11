@@ -227,17 +227,49 @@ export function createTutorial(deps) {
   // ---------------------------------------------------------------------------
   // Rendering
   // ---------------------------------------------------------------------------
+  function rectsOverlap(a, b, margin = 4) {
+    return (
+      a.left < b.right + margin && a.right > b.left - margin && a.top < b.bottom + margin && a.bottom > b.top - margin
+    );
+  }
+
+  /**
+   * Places the coach balloon.
+   *  - target inside the lesson panel, wide screen: right of the panel, level with the target, arrow to the left;
+   *  - narrow screen (lesson panel is a bottom sheet): above the sheet, never over it;
+   *  - no target (welcome): centred on the canvas;
+   *  - never over the target itself or the primary button of the lesson action bar.
+   */
   function positionCoach(target) {
     const coach = root.querySelector("[data-tutorial-coach]");
     const spotlight = root.querySelector("[data-tutorial-spotlight]");
     const coachWidth = Math.min(320, window.innerWidth - 24);
     coach.style.width = `${coachWidth}px`;
     coach.hidden = false;
+    coach.dataset.arrow = "none";
+    const coachHeight = coach.offsetHeight || 130;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const wide = vw >= 1024;
+    const panel = document.getElementById("lesson-panel");
+    const panelRect = panel && panel.offsetParent !== null ? panel.getBoundingClientRect() : null;
+    const place = (top, left) => {
+      coach.style.top = `${Math.round(top)}px`;
+      coach.style.left = `${Math.round(Math.max(12, left))}px`;
+    };
 
     if (!target) {
       spotlight.hidden = true;
-      coach.style.top = "84px";
-      coach.style.left = `${Math.max(12, (window.innerWidth - coachWidth) / 2)}px`;
+      const canvas = document.getElementById("workspace-canvas");
+      const canvasRect = canvas ? canvas.getBoundingClientRect() : null;
+      if (canvasRect && canvasRect.width > 0) {
+        place(
+          Math.max(8, canvasRect.top + (canvasRect.height - coachHeight) / 2),
+          canvasRect.left + (canvasRect.width - coachWidth) / 2
+        );
+      } else {
+        place(84, (vw - coachWidth) / 2);
+      }
       return;
     }
 
@@ -249,21 +281,65 @@ export function createTutorial(deps) {
     spotlight.style.width = `${rect.width + pad * 2}px`;
     spotlight.style.height = `${rect.height + pad * 2}px`;
 
-    const coachHeight = coach.offsetHeight || 130;
-    let top = rect.bottom + 14;
-    if (top + coachHeight > window.innerHeight - 8) {
-      top = rect.top - coachHeight - 14;
+    const inPanel = Boolean(panelRect && panel.contains(target));
+    // Lowest y the balloon may reach: on narrow screens that is the top of the bottom sheet.
+    const maxBottom = !wide && panelRect ? panelRect.top - 8 : vh - 8;
+    let top;
+    let left;
+    let insideBigTarget = false;
+
+    if (inPanel && wide) {
+      // Beside the panel, level with the (top of the) target; the arrow points left at it.
+      const anchorY = rect.top + Math.min(rect.height / 2, 40);
+      top = Math.min(Math.max(8, anchorY - 28), vh - coachHeight - 8);
+      left = panelRect.right + 14;
+      coach.dataset.arrow = "left";
+      coach.style.setProperty("--coach-arrow", `${Math.round(Math.min(Math.max(anchorY - top, 16), coachHeight - 16))}px`);
+    } else if (inPanel) {
+      // Narrow: above the bottom sheet, arrow down at the target's column.
+      top = Math.max(8, panelRect.top - coachHeight - 10);
+      left = Math.min(Math.max(12, rect.left), vw - coachWidth - 12);
+      coach.dataset.arrow = "down";
+      const arrowX = rect.left + Math.min(rect.width / 2, 40) - left;
+      coach.style.setProperty("--coach-arrow", `${Math.round(Math.min(Math.max(arrowX, 16), coachWidth - 16))}px`);
+    } else {
+      top = rect.bottom + 14;
+      if (top + coachHeight > maxBottom) {
+        top = rect.top - coachHeight - 14;
+      }
+      if (top < 8) {
+        // Big target (e.g. the canvas): sit inside it, near the top.
+        insideBigTarget = true;
+        top = Math.min(maxBottom - coachHeight, Math.max(8, rect.top + 14));
+      }
+      left = rect.left;
+      if (left + coachWidth > vw - 12) {
+        left = vw - coachWidth - 12;
+      }
+      // Keep clear of the lesson panel (its text) on wide screens.
+      if (wide && panelRect && left < panelRect.right + 8) {
+        left = panelRect.right + 8;
+      }
     }
-    if (top < 8) {
-      // Big target (e.g. the canvas): sit inside it, near the top.
-      top = Math.min(window.innerHeight - coachHeight - 8, Math.max(8, rect.top + 14));
+
+    // Never over the target or the lesson's primary button: move up.
+    const avoid = [];
+    if (!insideBigTarget) {
+      avoid.push(rect);
     }
-    let left = rect.left;
-    if (left + coachWidth > window.innerWidth - 12) {
-      left = window.innerWidth - coachWidth - 12;
+    const primary = document.querySelector(
+      ".lesson-actionbar [data-intro-done], .lesson-actionbar [data-submit-challenge], .lesson-actionbar [data-next-lesson]"
+    );
+    if (primary) {
+      avoid.push(primary.getBoundingClientRect());
     }
-    coach.style.top = `${top}px`;
-    coach.style.left = `${Math.max(12, left)}px`;
+    for (const rectToAvoid of avoid) {
+      const box = { left, right: left + coachWidth, top, bottom: top + coachHeight };
+      if (rectsOverlap(box, rectToAvoid)) {
+        top = Math.max(8, rectToAvoid.top - coachHeight - 10);
+      }
+    }
+    place(top, left);
   }
 
   function renderStep() {
