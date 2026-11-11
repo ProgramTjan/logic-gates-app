@@ -625,7 +625,7 @@ import {
     }
     dom.challengeList.scrollTop = 0;
     window.scrollTo(0, 0);
-    requestAnimationFrame(() => fitToContent({ onlyIfOverflowing: true }));
+    requestAnimationFrame(() => fitToContent({ minZoom: 0.6, maxZoom: 1.25, centered: true }));
   }
 
   function nodesNeedClock(nodes, seenDefinitions) {
@@ -1321,7 +1321,7 @@ import {
    * Zoom and scroll so every node is visible. By default only zooms out (never past
    * `minZoom`, so pins stay tappable) — used when a lesson opens on a narrow screen.
    */
-  function fitToContent({ minZoom = 0.6, maxZoom = 1, onlyIfOverflowing = false } = {}) {
+  function fitToContent({ minZoom = 0.6, maxZoom = 1, onlyIfOverflowing = false, centered = false } = {}) {
     const workspace = getCurrentWorkspace();
     if (!workspace || !workspace.nodes.length || !dom.canvas.clientWidth) {
       return;
@@ -1346,11 +1346,56 @@ import {
     const zoomX = dom.canvas.clientWidth / (maxX - minX + pad * 2);
     const zoomY = dom.canvas.clientHeight / (maxY - minY + pad * 2);
     const target = Math.max(minZoom, Math.min(maxZoom, zoomX, zoomY));
+    if (centered) {
+      fitCentered(boxes, target, minZoom);
+      canvasRenderers.renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
+      return;
+    }
     state.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(target * 100) / 100));
     applyWorkspaceZoom();
     dom.canvas.scrollLeft = Math.max(0, (minX - pad) * state.zoom);
     dom.canvas.scrollTop = Math.max(0, (minY - pad) * state.zoom);
     canvasRenderers.renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
+  }
+
+  /**
+   * Zoom and scroll so the content sits in the middle of the visible canvas, and (if possible)
+   * clear of the floating cards (inspector, tools, status). Steps the zoom down to `minZoom`.
+   */
+  function fitCentered(boxes, startZoom, minZoom) {
+    const minX = Math.min(...boxes.map((b) => b.x));
+    const minY = Math.min(...boxes.map((b) => b.y));
+    const maxX = Math.max(...boxes.map((b) => b.x + b.w));
+    const maxY = Math.max(...boxes.map((b) => b.y + b.h));
+    const canvasRect = dom.canvas.getBoundingClientRect();
+    const overlays = ["#inspector-card", ".canvas-tools", ".canvas-status"]
+      .map((selector) => document.querySelector(selector))
+      .filter((el) => el && !el.hidden && el.offsetParent !== null)
+      .map((el) => el.getBoundingClientRect())
+      .map((r) => ({ l: r.left - canvasRect.left, t: r.top - canvasRect.top, r: r.right - canvasRect.left, b: r.bottom - canvasRect.top }));
+    const place = (zoom) => {
+      state.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(zoom * 100) / 100));
+      applyWorkspaceZoom();
+      dom.canvas.scrollLeft = Math.max(0, ((minX + maxX) / 2) * state.zoom - dom.canvas.clientWidth / 2);
+      dom.canvas.scrollTop = Math.max(0, ((minY + maxY) / 2) * state.zoom - dom.canvas.clientHeight / 2);
+    };
+    const collides = () =>
+      boxes.some((b) => {
+        const l = b.x * state.zoom - dom.canvas.scrollLeft;
+        const t = b.y * state.zoom - dom.canvas.scrollTop;
+        const r = l + b.w * state.zoom;
+        const bt = t + b.h * state.zoom;
+        return overlays.some((o) => l < o.r && r > o.l && t < o.b && bt > o.t);
+      });
+    // Touch: never zoom out just to dodge a floating card; pins must stay finger-sized.
+    const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    const floor = coarse ? Math.min(startZoom, Math.max(minZoom, 1)) : minZoom;
+    let zoom = startZoom;
+    place(zoom);
+    while (collides() && zoom - 0.05 >= floor) {
+      zoom -= 0.05;
+      place(zoom);
+    }
   }
 
   function changeZoom(delta) {
