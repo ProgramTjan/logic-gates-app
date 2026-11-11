@@ -217,6 +217,18 @@ test.describe("Leerapp smoke", () => {
     await expect(page.locator(".lesson-unlocked-parts")).toContainText("NOT");
   });
 
+  test("lessen: Inspector alleen bij onderdelen met eigenschappen (splitter wel, poort niet)", async ({ page }) => {
+    await enableFreeMode(page);
+    await openLessonFromHome(page, "not16");
+    await skipTutorial(page);
+    await placePart(page, "gate-nand");
+    await expect(page.locator("article.gate-nand")).toHaveCount(1);
+    await expect(page.locator("#inspector-card")).toBeHidden();
+    await placePart(page, "splitter");
+    await expect(page.locator("article.node-splitter")).toHaveCount(1);
+    await expect(page.locator("#inspector-card")).toBeVisible();
+  });
+
   test("hulpmenu toont sneltoetsen; coach uitzetten in instellingen", async ({ page }) => {
     await page.locator("#help-menu summary").click();
     await expect(page.locator(".help-shortcuts")).toContainText("Ctrl+Z");

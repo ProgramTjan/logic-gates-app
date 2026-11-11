@@ -767,7 +767,9 @@ import {
     }
     if (dom.inspectorCard) {
       const selected = workspace.nodes.find((node) => node.id === state.selectedNodeId);
-      dom.inspectorCard.hidden = !selected;
+      // In lessons the properties card only appears for parts that have properties worth editing.
+      const quietInLesson = new Set(["gate", "switch", "lamp", "input-pin", "output-pin", "chip-instance"]);
+      dom.inspectorCard.hidden = !selected || (state.appView === "lesson" && quietInLesson.has(selected.type));
       // In lessons the inspector starts folded so it never hides pins; one tap opens it.
       const open = Boolean(state.inspectorOpenByView[state.appView]);
       dom.inspectorCard.classList.toggle("collapsed", !open);

@@ -369,7 +369,7 @@ Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit pe
 
 ---
 
-## FASE H — Rust op het scherm
+## FASE H — Rust op het scherm ✅ gedaan 2026-11-11
 
 ### Stap H.0: Voortgangsrij weg, quiz overslaan mag (besluit eigenaar 2026-11-11)
 

@@ -561,3 +561,32 @@ Totaal 41 lessen bekeken (6 duidelijk, 7 grensgeval, 28 niet) (zelfde tekst als 
 
 ### Resultaat
 Groen: `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 24/24 (22 bestaande + 2 nieuwe). Schermafdrukken op 1440×900, 1180×820 en 820×1180 (touch) van les 0 in alle stappen en de XOR-les; thema's dark, light en neon bekeken voor G.2/G.3/G.5; onderpaneel 820×1180 peek/half/full en alle 9 coachstappen (1440×900, 1180×820, 820×1180; dark, plus light/neon op desktop) gecontroleerd.
+
+---
+
+## 2026-11-11 — UX fase H: rust op het scherm
+
+**Uitgevoerd** (één commit per stap):
+- H.0 (extra stap, besluit eigenaar) `.lesson-progress` en `renderLessonProgress` weg (markup + CSS + sleutel `lessonProgress`). In de quiz-stap toont de actiebalk een ghost-knop "Sla over" / "Skip" (`data-quiz-skip`, sleutels `quizSkip`, `quizStillOpen`); `state.quizSkipped` (geheugen) maakt `next` de huidige stap. Een overgeslagen quiz is niet afgevinkt: stapstatus `is-pending`, één regel met "Nog te doen" die bij een klik openklapt (`data-expand-step`), na beantwoorden volgt het vinkje. `openLesson` zet `quizSkipped` bij het heropenen van een voltooide les met onbeantwoorde quiz. "Opnieuw beginnen" (`openLesson(..., {fresh:true})`) zet `introSeen[id] = false` en wist `quizSkipped[id]`; `renderChallengeDetail` leest `introSeen === false` als "intro nog niet gezien", ook bij een voltooide les. E2E: nieuwe test (quiz overslaan, "Nog te doen", alsnog beantwoorden) en een intro-check in de "Opnieuw beginnen"-test.
+- H.1 `#parts-strip` is het enige palet. Knoppen: symbool (via `getNodeSymbol`, nu geëxporteerd uit `canvas.js`) boven het label, `title` = `partCopy.*`; groepen in/uit · poorten · bus/klok/geheugen · eigen chips · "leer je later" (uitgeschakeld, 🔒, `paletteLockedTitle`), gescheiden door `.parts-strip-sep`. ≥1024px verticaal (96px) links van het canvas (grid in `.workspace-frame`), daaronder horizontaal onderin; scrollt in beide richtingen. `.parts-dropdown` is `display:none`; DOM en `#builtin-palette` staan nog. Coach (`partButton`) wijst altijd de strook aan (valt terug op de eigen chip met dezelfde naam en op de strook zelf) en scrollt de knop in beeld. Teksten die "Parts" noemen verwijzen nu naar de onderdelenstrook (coach, buildInstruction, emptyState, help, onboarding, tutorial; NL en EN). `placePart` en de lokale kopieën in e2e klikken `#parts-strip [data-strip-part]`.
+- H.2 `.workspace-heading` verborgen (DOM blijft), `.workspace-header` alleen zichtbaar met `has-sim` (gezet in `updateWorkspaceChrome`, naast `sim-controls.hidden`). Naam van het actieve werkblad staat in de app-balk naast de tabs (`#appbar-sheet`, alleen in Vrij bouwen).
+- H.3 `setStatus` zet tekst en `is-visible`, na 4 s gaat de class eraf (opacity-fade); geen standaardtekst bij laden (`data-i18n` van `#status-line` weg); `#connection-status` krijgt `is-visible` alleen bij `state.pendingConnection`. Onzichtbare regels nemen geen ruimte in (position absolute), dus `.canvas-status` is in rust 0px hoog. De melding "nieuwe versie beschikbaar" (main.js) zet ook `is-visible` en blijft staan.
+- H.4 In een les is `#inspector-card` alleen zichtbaar voor typen buiten gate, switch, lamp, input-pin, output-pin, chip-instance; Vrij bouwen ongewijzigd. E2E: Not16-les, NAND geplaatst (geen kaart), splitter geplaatst (kaart zichtbaar).
+
+**Aannames/afwijkingen:**
+- H.1: de strook staat op breed náást het canvas (grid-kolom), niet erover. Daardoor overlapt hij de schakeling nooit en rekenen `fitToContent`/plaatsing automatisch met de kleinere canvasbreedte. `getReservedStageRects` telt `#parts-strip` wel mee, maar alleen als hij het canvas daadwerkelijk overlapt (nu nooit).
+- H.1: een kleine hover-fix (`.parts-strip-button:hover .parts-strip-symbol { color: inherit }`, symbool verdween op de blauwe hover) zit in de H.4-commit.
+- H.1: lestekst in `src/data/challenges.js` en `src/data/locales/` ("Open Parts en plaats de AND-poort", "uit de Parts-balk") mocht niet worden aangepast en verwijst dus nog naar "Parts".
+- H.0 e): voor een al voltooide les opent "Opnieuw beginnen" bij Intro; na "Aan de slag" valt de les terug op quiz/Verder omdat de les nog als voltooid telt (opgeslagen voortgang wordt niet gewist).
+- Coach-welkomballon over het DOOR-blok op 1440×900 (open punt fase F): niet aangepast; de ballon ligt in stap 3 (AND plaatsen) nu onder de AND-knop in de strook en bedekt dan tijdelijk de onderkant van DOOR.
+- Sleutel `statusDefault` (nl/en) is ongebruikt maar niet verwijderd.
+
+**Bevindingen (niet opgepakt):**
+- Lessen noemen in hints nog "Parts" (zie hierboven, buiten scope door harde grens).
+- `emptyState` in NL toont letterlijk backticks rond `Input` en `Output` (bestond al).
+- Op een telefoon (390px) wordt de werkbladnaam in de app-balk afgekapt ("Main…").
+- Labels in de strook zijn Engels (Switch, Lamp, Bus Split, Clock): fase J.3.
+- De strook is op tablet staand 48px hoog en laat op 820×1180 het onderpaneel en de canvasknoppen vrij.
+- Brede 16-bit invoer en 62%-zoom in de ALU-les (uit fase F) ongewijzigd.
+
+**Resultaat:** groen, `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 26/26 (24 bestaande + 2 nieuwe: quiz overslaan in H.0, Inspector in les in H.4). Schermafdrukken op 1440×900, 1180×820, 820×1180 (touch) van start, les 0 (intro, bouw, bedraad, live ok, quiz met "Sla over", overgeslagen, heropend), een sequentiële les (Build Bit), Vrij bouwen en Not16 met de Inspector; dark op alle drie, light en neon op desktop/tablet steekproefsgewijs. Coach van les 0 volledig doorlopen op 1440×900 en 820×1180.

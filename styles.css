@@ -4170,3 +4170,7 @@ h2 {
     font-size: 0.82rem;
   }
 }
+
+.parts-strip-button:hover:not(:disabled) .parts-strip-symbol {
+  color: inherit;
+}
