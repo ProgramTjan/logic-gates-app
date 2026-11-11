@@ -94,7 +94,6 @@ export default {
   lessonProgress: "Progress",
   introStart: "Let's build",
   stepBuild: "Build",
-  stepCheck: "Check",
   stepQuiz: "Did it click?",
   stepNext: "Next",
   theoryMore: "More background",

@@ -94,7 +94,6 @@ export default {
   lessonProgress: "Voortgang",
   introStart: "Aan de slag",
   stepBuild: "Bouw",
-  stepCheck: "Controleer",
   stepQuiz: "Begrepen?",
   stepNext: "Verder",
   theoryMore: "Meer uitleg",

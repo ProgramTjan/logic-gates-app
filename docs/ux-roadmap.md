@@ -292,7 +292,7 @@ Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit pe
 
 ---
 
-## FASE G — Les: één stap tegelijk
+## FASE G — Les: één stap tegelijk ✅ gedaan 2026-11-11
 
 ### Stap G.1: Vier eerlijke stappen
 
