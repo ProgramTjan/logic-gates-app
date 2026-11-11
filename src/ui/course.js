@@ -125,17 +125,47 @@ export function createCourseRenderers(deps) {
     }).join("");
 
     const isNewcomer = !(learner.completedChallengeIds || []).length;
-    const continueLabel = nextTitle
-      ? isNewcomer
-        ? t("homeWelcomeStart", { title: nextTitle })
-        : `${S.continue}: ${nextTitle}`
-      : S.courseEmptyDone;
+    const allLessonIds = getOrderedLessonIds(CURRICULUM);
+    const completedSet = new Set(learner.completedChallengeIds || []);
+    const totalLessons = allLessonIds.length;
+    const doneLessons = allLessonIds.filter((id) => completedSet.has(id)).length;
+    const totalPct = totalLessons ? Math.round((doneLessons / totalLessons) * 100) : 0;
+    const nextModule = nextId ? CURRICULUM.find((module) => module.lessonIds.includes(nextId)) : null;
+    const nextIndex = nextModule ? nextModule.lessonIds.indexOf(nextId) + 1 : 0;
+    const nextDescription = nextChallenge ? localizeChallenge(nextChallenge).description : "";
+    let heroEyebrow = t("homeEyebrow");
+    let heroTitle = S.courseEmptyDone;
+    let heroLead = "";
+    let continueLabel = S.courseEmptyDone;
+    if (isNewcomer) {
+      heroEyebrow = t("homeWelcomeEyebrow");
+      heroTitle = t("homeWelcomeTitle");
+      heroLead = t("homeWelcomeLead");
+      continueLabel = nextTitle ? t("homeWelcomeStart", { title: nextTitle }) : S.courseEmptyDone;
+    } else if (nextTitle && nextModule) {
+      heroEyebrow = t("homeHeroEyebrow", {
+        module: localizeCurriculumModule(nextModule).title,
+        n: nextIndex,
+        total: nextModule.lessonIds.length,
+      });
+      heroTitle = nextTitle;
+      heroLead = nextDescription || "";
+      continueLabel = S.continue;
+    }
 
     dom.courseView.innerHTML = `
       <div class="course-hero ${isNewcomer ? "is-welcome" : ""}">
-        <p class="eyebrow">${escapeHtml(isNewcomer ? t("homeWelcomeEyebrow") : t("homeEyebrow"))}</p>
-        <h2>${escapeHtml(isNewcomer ? t("homeWelcomeTitle") : t("homeTitle"))}</h2>
-        <p class="course-lead">${escapeHtml(isNewcomer ? t("homeWelcomeLead") : t("homeLead"))}</p>
+        <p class="eyebrow">${escapeHtml(heroEyebrow)}</p>
+        <h2>${escapeHtml(heroTitle)}</h2>
+        ${heroLead ? `<p class="course-lead">${escapeHtml(heroLead)}</p>` : ""}
+        <div class="course-total" role="group" aria-label="${escapeHtml(
+          t("homeTotalProgress", { done: doneLessons, total: totalLessons })
+        )}">
+          <div class="course-bar" style="--p:${totalPct}%"><span></span></div>
+          <span class="course-total-label">${escapeHtml(
+            t("homeTotalProgress", { done: doneLessons, total: totalLessons })
+          )}</span>
+        </div>
         <div class="course-hero-actions">
           <button type="button" class="primary-button course-continue" data-course-continue ${nextId ? "" : "disabled"}>
             ${escapeHtml(continueLabel)}

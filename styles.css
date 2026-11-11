@@ -2746,9 +2746,56 @@ h2 {
   gap: 1.4rem;
 }
 
+.home-view .course-hero {
+  width: 100%;
+  max-width: 720px;
+  justify-self: center;
+  padding: 1.25rem 1.4rem 1.35rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel);
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+
+.home-view .course-hero > * {
+  margin: 0;
+}
+
 .home-view .course-hero h2 {
   font-size: 1.75rem;
-  margin: 0.2rem 0 0.4rem;
+  line-height: 1.2;
+}
+
+.home-view .course-hero .course-lead {
+  max-width: 36rem;
+}
+
+.course-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--panel-border);
+  overflow: hidden;
+}
+
+.course-bar > span {
+  display: block;
+  height: 100%;
+  width: var(--p, 0%);
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.course-total {
+  width: 100%;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.course-total-label {
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 .home-view .course-continue {
