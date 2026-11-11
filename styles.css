@@ -3112,6 +3112,28 @@ h2 {
   display: none;
 }
 
+/* Toast: shown briefly after an action; the connection hint only while a wire is being drawn (UX fase H.3). */
+.canvas-status {
+  position: relative;
+}
+
+.canvas-status p {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  max-width: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 250ms ease, visibility 0s linear 250ms;
+}
+
+.canvas-status p.is-visible {
+  position: static;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 250ms ease, visibility 0s;
+}
+
 .canvas-tools {
   display: flex;
   align-items: center;

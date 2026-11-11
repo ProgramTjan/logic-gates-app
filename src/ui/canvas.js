@@ -431,6 +431,8 @@ export function createCanvasRenderers(deps) {
 
   function updateConnectionStatus(message) {
     syncWiringClass();
+    // Only visible while a wire is being drawn.
+    dom.connectionStatus.classList.toggle("is-visible", Boolean(state.pendingConnection));
     if (message) {
       dom.connectionStatus.textContent = message;
       return;

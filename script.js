@@ -220,8 +220,17 @@ import {
 
   const appModals = createAppModals({ dom });
 
+  // The status line is a toast: the text stays in the DOM, the class fades it in for 4 seconds.
+  let statusTimer = null;
   function setStatus(message) {
     dom.statusLine.textContent = message;
+    clearTimeout(statusTimer);
+    if (!message) {
+      dom.statusLine.classList.remove("is-visible");
+      return;
+    }
+    dom.statusLine.classList.add("is-visible");
+    statusTimer = setTimeout(() => dom.statusLine.classList.remove("is-visible"), 4000);
   }
 
   const tutorial = createTutorial({
