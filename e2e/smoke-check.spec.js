@@ -52,6 +52,31 @@ test.describe("Leerapp smoke", () => {
     await expect(page.locator("#export-button")).toBeHidden();
   });
 
+  test("les 0: eerste AND landt tussen de schakelaars en de lamp", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    await skipTutorial(page);
+    await placePart(page, "gate-and");
+    const left = async (locator) => (await locator.first().boundingBox()).x;
+    const door = await left(page.locator("article.node").filter({ hasText: "DOOR" }));
+    const and = await left(page.locator("article.gate-and"));
+    const lamp = await left(page.locator("article.node").filter({ hasText: "LAMP" }));
+    expect(door).toBeLessThan(and);
+    expect(and).toBeLessThan(lamp);
+
+    // Een tweede onderdeel overlapt niets.
+    await placePart(page, "gate-and");
+    const boxes = await page.locator("article.node").evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect()).map((r) => ({ l: r.left, t: r.top, r: r.right, b: r.bottom }))
+    );
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i];
+        const b = boxes[j];
+        expect(a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t).toBe(false);
+      }
+    }
+  });
+
   test("vrije modus unlockt lessen; computer-les opent met ROM en Screen", async ({ page }) => {
     await expect(page.locator('.course-lesson[data-course-lesson="computer"]')).toBeDisabled();
     await enableFreeMode(page);
