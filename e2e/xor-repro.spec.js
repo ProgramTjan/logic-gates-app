@@ -93,10 +93,7 @@ test.describe("XOR met NAND repro", () => {
     // Indienen.
     await page.locator(`[data-submit-challenge="${challengeId}"]`).click();
 
-    await expect(page.locator(".challenge-detail-card .challenge-status")).toContainText(
-      /Passed|Gehaald|Verified/,
-      { timeout: 15_000 }
-    );
+    await expect(page.locator(".challenge-detail-card .challenge-verified")).toBeVisible({ timeout: 15_000 });
     await expect(page.locator(".challenge-detail-card .submit-feedback.ok")).toBeVisible();
   }
 

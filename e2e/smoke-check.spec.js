@@ -52,6 +52,72 @@ test.describe("Leerapp smoke", () => {
     await expect(page.locator("#export-button")).toBeHidden();
   });
 
+  test("les 0: eerste AND landt tussen de schakelaars en de lamp", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    await skipTutorial(page);
+    await placePart(page, "gate-and");
+    const left = async (locator) => (await locator.first().boundingBox()).x;
+    const door = await left(page.locator("article.node").filter({ hasText: "DOOR" }));
+    const and = await left(page.locator("article.gate-and"));
+    const lamp = await left(page.locator("article.node").filter({ hasText: "LAMP" }));
+    expect(door).toBeLessThan(and);
+    expect(and).toBeLessThan(lamp);
+
+    // Een tweede onderdeel overlapt niets.
+    await placePart(page, "gate-and");
+    const boxes = await page.locator("article.node").evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect()).map((r) => ({ l: r.left, t: r.top, r: r.right, b: r.bottom }))
+    );
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i];
+        const b = boxes[j];
+        expect(a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t).toBe(false);
+      }
+    }
+  });
+
+  test("les 0: draad slepen van uitgang naar ingang, met voorbeeldlijn", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    await skipTutorial(page);
+    await placePart(page, "gate-and");
+
+    const pinCenter = async (label, direction, index = 0) => {
+      const box = await page
+        .locator("article.node")
+        .filter({ hasText: label })
+        .first()
+        .locator(`[data-pin-direction="${direction}"]`)
+        .nth(index)
+        .boundingBox();
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+    const wires = page.locator("#wire-layer path.wire");
+    const before = await wires.count();
+
+    const from = await pinCenter("DOOR", "output");
+    const to = await pinCenter("AND", "input", 0);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2, { steps: 6 });
+    await expect(page.locator("#wire-layer .wire-preview")).toHaveCount(1);
+    await expect(page.locator("#workspace-canvas")).toHaveClass(/is-wiring/);
+    await page.mouse.move(to.x, to.y, { steps: 6 });
+    await page.mouse.up();
+    await expect(wires).toHaveCount(before + 1);
+    await expect(page.locator("#wire-layer .wire-preview")).toHaveCount(0);
+    await expect(page.locator("#workspace-canvas")).not.toHaveClass(/is-wiring/);
+
+    // Slepen en loslaten op leeg canvas annuleert zonder draad.
+    const from2 = await pinCenter("ALARM", "output");
+    await page.mouse.move(from2.x, from2.y);
+    await page.mouse.down();
+    await page.mouse.move(from2.x + 60, from2.y + 160, { steps: 6 });
+    await page.mouse.up();
+    await expect(wires).toHaveCount(before + 1);
+    await expect(page.locator("#wire-layer .wire-preview")).toHaveCount(0);
+  });
+
   test("vrije modus unlockt lessen; computer-les opent met ROM en Screen", async ({ page }) => {
     await expect(page.locator('.course-lesson[data-course-lesson="computer"]')).toBeDisabled();
     await enableFreeMode(page);
@@ -77,6 +143,30 @@ test.describe("Leerapp smoke", () => {
     await expect(playButton).not.toHaveClass(/is-running/);
   });
 
+  test("coach: ballon naast het lespaneel, niet over de lestekst", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    const coach = page.locator("[data-tutorial-coach]");
+    await expect(coach).toBeVisible();
+    await expect(coach).toHaveAttribute("data-arrow", "left");
+    const panelBox = await page.locator("#lesson-panel").boundingBox();
+    const coachBox = await coach.boundingBox();
+    expect(coachBox.x).toBeGreaterThanOrEqual(panelBox.x + panelBox.width);
+  });
+
+  test("intro toont alleen de eerste theorie-alinea; de rest staat achter Meer uitleg", async ({ page }) => {
+    await enableFreeMode(page);
+    await openLessonFromHome(page, "xor");
+    await skipTutorial(page);
+    const intro = page.locator('[data-lesson-step="intro"]');
+    await expect(intro.locator(".theory-paragraph")).toHaveCount(3);
+    await expect(intro.locator(".theory-paragraph:visible")).toHaveCount(1);
+    await expect(page.locator(".lesson-theory")).not.toHaveAttribute("open", "");
+    await expect(page.getByText("NAND(A,B) gives helper H", { exact: false })).toBeHidden();
+    await expect(page.locator(".lesson-interface")).toHaveCount(0);
+    await page.locator(".lesson-theory summary").click();
+    await expect(page.getByText("NAND(A,B) gives helper H", { exact: false })).toBeVisible();
+  });
+
   test("lespaneel: stappen, hints, gefilterd palet en live controle", async ({ page }) => {
     await enableFreeMode(page);
     await openLessonFromHome(page, "not");
@@ -84,6 +174,12 @@ test.describe("Leerapp smoke", () => {
 
     const steps = page.locator(".lesson-flow [data-lesson-step]");
     await expect(steps.first()).toBeVisible();
+    // Nieuwe les opent op Intro zonder vinkjes; "Aan de slag" vinkt Intro af en maakt Bouw actief.
+    await expect(steps).toHaveCount(4);
+    await expect(page.locator('[data-lesson-step="intro"]')).toHaveClass(/is-current/);
+    await expect(page.locator(".lesson-flow .lesson-step.is-done")).toHaveCount(0);
+    await page.locator("[data-intro-done]").click();
+    await expect(page.locator('[data-lesson-step="intro"]')).toHaveClass(/is-done/);
     await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-current/);
 
     // Hintladder: één hint per klik.
@@ -118,7 +214,7 @@ test.describe("Leerapp smoke", () => {
 
     await expect(page.locator(".live-check-summary")).toHaveClass(/ok/);
     await page.locator('[data-submit-challenge="not"]').click();
-    await expect(page.locator('[data-lesson-step="check"]')).toHaveClass(/is-done/);
+    await expect(page.locator('[data-lesson-step="build"]')).toHaveClass(/is-done/);
     await expect(page.locator(".lesson-unlocked-parts")).toContainText("NOT");
   });
 

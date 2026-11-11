@@ -169,6 +169,8 @@ import {
     hintsShown: {},
     inspectorOpenByView: { lesson: false, sandbox: window.innerWidth >= 1024 },
     theoryOpen: {},
+    introSeen: {},
+    expandedStep: {},
     sheetByView: { lesson: "half", sandbox: "peek" },
     challengeDetailTab: "theorie",
     lastSubmitFeedback: null,
@@ -625,7 +627,7 @@ import {
     }
     dom.challengeList.scrollTop = 0;
     window.scrollTo(0, 0);
-    requestAnimationFrame(() => fitToContent({ onlyIfOverflowing: true }));
+    requestAnimationFrame(() => fitToContent({ minZoom: 0.6, maxZoom: 1.25, centered: true }));
   }
 
   function nodesNeedClock(nodes, seenDefinitions) {
@@ -695,6 +697,7 @@ import {
       return;
     }
     if (state.appView === "lesson") {
+      panelRenderers.syncLessonStep();
       scheduleLiveCheck();
     }
     if (state.appView === "sandbox") {
@@ -779,13 +782,19 @@ import {
     if (!dom.lessonPeekStatus) {
       return;
     }
-    const source =
-      dom.challengeList.querySelector(".live-check-summary span:last-child") ||
-      dom.challengeList.querySelector(".submit-feedback") ||
-      dom.challengeList.querySelector(".live-check-note");
-    dom.lessonPeekStatus.textContent = source ? source.textContent.trim() : "";
-    const ok = Boolean(dom.challengeList.querySelector(".live-check-summary.ok, .submit-feedback.ok"));
-    dom.lessonPeekStatus.classList.toggle("ok", ok);
+    // The folded sheet shows the action bar's status and its primary action.
+    const status = dom.challengeList.querySelector(".lesson-actionbar [data-bar-status]");
+    dom.lessonPeekStatus.textContent = status ? status.textContent.trim() : "";
+    dom.lessonPeekStatus.classList.toggle("ok", Boolean(status && status.classList.contains("ok")));
+    const primary = dom.challengeList.querySelector(
+      ".lesson-actionbar [data-intro-done], .lesson-actionbar [data-submit-challenge], .lesson-actionbar [data-next-lesson]"
+    );
+    document.querySelectorAll("[data-peek-check]").forEach((button) => {
+      button.style.display = primary ? "" : "none";
+      if (primary) {
+        button.textContent = primary.textContent.trim();
+      }
+    });
   }
 
   const SHEET_STATES = ["peek", "half", "full"];
@@ -882,6 +891,7 @@ import {
     challengeVerifier,
     workspaceActions,
     escapeHtml,
+    getCurrentWorkspace,
     buildLiveDefinition,
     hasCoach: (challengeId) => tutorial.hasScript(challengeId),
     getActiveChallengeId: () => {
@@ -918,7 +928,10 @@ import {
     WORKSPACE_BASE_HEIGHT,
     tutorial,
     getAppView: () => (state.appView === "home" ? "course" : state.appView),
-    onWorkspaceRendered: () => updateWorkspaceChrome(),
+    onWorkspaceRendered: () => {
+      updateWorkspaceChrome();
+      updatePeekStatus();
+    },
   });
 
   const eventBinder = createEventBinder({
@@ -1037,6 +1050,10 @@ import {
         if (event.pointerType !== "touch") {
           return;
         }
+        // Een vinger op een pin sleept een draad; die telt niet mee voor pan of pinch.
+        if (event.target.closest && event.target.closest("[data-pin-direction]")) {
+          return;
+        }
         touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
         if (touches.size === 2) {
           // Second finger: cancel any single-finger pan/drag/long-press and start pinching.
@@ -1124,6 +1141,25 @@ import {
           panelRenderers.renderChallenges();
           return;
         }
+        const expandButton = event.target.closest("[data-expand-step]");
+        if (expandButton) {
+          event.stopImmediatePropagation();
+          const id = state.selectedChallengeId;
+          const step = expandButton.dataset.expandStep;
+          const open = state.expandedStep[id];
+          const current = dom.challengeList.querySelector(".lesson-step.is-current")?.dataset.lessonStep || "";
+          state.expandedStep[id] = open && open.step === step && open.current === current ? null : { step, current };
+          panelRenderers.renderChallenges();
+          return;
+        }
+        const introButton = event.target.closest("[data-intro-done]");
+        if (introButton) {
+          event.stopImmediatePropagation();
+          state.introSeen[introButton.dataset.introDone] = true;
+          panelRenderers.renderChallenges();
+          updatePeekStatus();
+          return;
+        }
         const nextButton = event.target.closest("[data-next-lesson]");
         if (nextButton) {
           event.stopImmediatePropagation();
@@ -1149,9 +1185,11 @@ import {
     }
     document.querySelectorAll("[data-peek-check]").forEach((button) =>
       button.addEventListener("click", () => {
-        const check = dom.challengeList.querySelector("[data-submit-challenge]");
-        if (check && !check.disabled) {
-          check.click();
+        const primary = dom.challengeList.querySelector(
+          ".lesson-actionbar [data-intro-done], .lesson-actionbar [data-submit-challenge], .lesson-actionbar [data-next-lesson]"
+        );
+        if (primary && !primary.disabled) {
+          primary.click();
         }
       })
     );
@@ -1180,10 +1218,6 @@ import {
         const details = event.target;
         if (details && details.dataset && details.dataset.theoryToggle) {
           state.theoryOpen[details.dataset.theoryToggle] = details.open;
-          const summary = details.querySelector("summary");
-          if (summary) {
-            summary.textContent = details.open ? t("theoryHide") : t("theoryRead");
-          }
         }
       },
       true
@@ -1317,7 +1351,7 @@ import {
    * Zoom and scroll so every node is visible. By default only zooms out (never past
    * `minZoom`, so pins stay tappable) — used when a lesson opens on a narrow screen.
    */
-  function fitToContent({ minZoom = 0.6, maxZoom = 1, onlyIfOverflowing = false } = {}) {
+  function fitToContent({ minZoom = 0.6, maxZoom = 1, onlyIfOverflowing = false, centered = false } = {}) {
     const workspace = getCurrentWorkspace();
     if (!workspace || !workspace.nodes.length || !dom.canvas.clientWidth) {
       return;
@@ -1342,11 +1376,56 @@ import {
     const zoomX = dom.canvas.clientWidth / (maxX - minX + pad * 2);
     const zoomY = dom.canvas.clientHeight / (maxY - minY + pad * 2);
     const target = Math.max(minZoom, Math.min(maxZoom, zoomX, zoomY));
+    if (centered) {
+      fitCentered(boxes, target, minZoom);
+      canvasRenderers.renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
+      return;
+    }
     state.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(target * 100) / 100));
     applyWorkspaceZoom();
     dom.canvas.scrollLeft = Math.max(0, (minX - pad) * state.zoom);
     dom.canvas.scrollTop = Math.max(0, (minY - pad) * state.zoom);
     canvasRenderers.renderWires(getCurrentWorkspace(), state.lastEvaluation || evaluateWorkspace(getCurrentWorkspace()));
+  }
+
+  /**
+   * Zoom and scroll so the content sits in the middle of the visible canvas, and (if possible)
+   * clear of the floating cards (inspector, tools, status). Steps the zoom down to `minZoom`.
+   */
+  function fitCentered(boxes, startZoom, minZoom) {
+    const minX = Math.min(...boxes.map((b) => b.x));
+    const minY = Math.min(...boxes.map((b) => b.y));
+    const maxX = Math.max(...boxes.map((b) => b.x + b.w));
+    const maxY = Math.max(...boxes.map((b) => b.y + b.h));
+    const canvasRect = dom.canvas.getBoundingClientRect();
+    const overlays = ["#inspector-card", ".canvas-tools", ".canvas-status"]
+      .map((selector) => document.querySelector(selector))
+      .filter((el) => el && !el.hidden && el.offsetParent !== null)
+      .map((el) => el.getBoundingClientRect())
+      .map((r) => ({ l: r.left - canvasRect.left, t: r.top - canvasRect.top, r: r.right - canvasRect.left, b: r.bottom - canvasRect.top }));
+    const place = (zoom) => {
+      state.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(zoom * 100) / 100));
+      applyWorkspaceZoom();
+      dom.canvas.scrollLeft = Math.max(0, ((minX + maxX) / 2) * state.zoom - dom.canvas.clientWidth / 2);
+      dom.canvas.scrollTop = Math.max(0, ((minY + maxY) / 2) * state.zoom - dom.canvas.clientHeight / 2);
+    };
+    const collides = () =>
+      boxes.some((b) => {
+        const l = b.x * state.zoom - dom.canvas.scrollLeft;
+        const t = b.y * state.zoom - dom.canvas.scrollTop;
+        const r = l + b.w * state.zoom;
+        const bt = t + b.h * state.zoom;
+        return overlays.some((o) => l < o.r && r > o.l && t < o.b && bt > o.t);
+      });
+    // Touch: never zoom out just to dodge a floating card; pins must stay finger-sized.
+    const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    const floor = coarse ? Math.min(startZoom, Math.max(minZoom, 1)) : minZoom;
+    let zoom = startZoom;
+    place(zoom);
+    while (collides() && zoom - 0.05 >= floor) {
+      zoom -= 0.05;
+      place(zoom);
+    }
   }
 
   function changeZoom(delta) {

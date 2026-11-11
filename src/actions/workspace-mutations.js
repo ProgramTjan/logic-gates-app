@@ -113,9 +113,23 @@ export function createWorkspaceMutations(deps) {
         }
       : stage;
     const inside = (x, y, box) => x >= box.x && y >= box.y && x + newSize.w <= box.x + box.w && y + newSize.h <= box.y + box.h;
-    const preferred = inside(anchor.x, anchor.y, area)
-      ? anchor
-      : { x: area.x + area.w * 0.35, y: area.y + area.h * 0.3 };
+    // No selection and a sheet with inputs and outputs: aim between them, level with the inputs.
+    const inputPins = workspace.nodes.filter((node) => node.type === "input-pin");
+    const outputPins = workspace.nodes.filter((node) => node.type === "output-pin");
+    let centered = null;
+    if (!selectedNode && inputPins.length > 0 && outputPins.length > 0) {
+      const inputsRight = Math.max(...inputPins.map((node) => node.x + sizeOf(node).w));
+      const outputsLeft = Math.min(...outputPins.map((node) => node.x));
+      centered = {
+        x: (inputsRight + outputsLeft) / 2 - newSize.w / 2,
+        y: inputPins.reduce((sum, node) => sum + node.y, 0) / inputPins.length,
+      };
+    }
+    const preferred = centered
+      ? centered
+      : inside(anchor.x, anchor.y, area)
+        ? anchor
+        : { x: area.x + area.w * 0.35, y: area.y + area.h * 0.3 };
 
     const search = (box) => {
       const step = 20;
@@ -189,8 +203,8 @@ export function createWorkspaceMutations(deps) {
 
   function populateChallengeWorkspace(workspace, challenge) {
     const template = challenge.template || { inputs: [], outputs: [] };
-    const inputStep = Math.max(90, Math.floor(420 / Math.max(1, template.inputs.length)));
-    const outputStep = Math.max(90, Math.floor(420 / Math.max(1, template.outputs.length)));
+    const inputStep = Math.max(120, Math.floor(420 / Math.max(1, template.inputs.length)));
+    const outputStep = Math.max(120, Math.floor(420 / Math.max(1, template.outputs.length)));
     // Narrow canvas (tablet portrait / phone): pull inputs and outputs closer together.
     const view = typeof deps.getVisibleStageRect === "function" ? deps.getVisibleStageRect() : null;
     const viewWidth = view && view.width > 0 ? view.width : 1000;

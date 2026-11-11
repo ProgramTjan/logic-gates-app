@@ -117,6 +117,25 @@ export function createInteractionHandlers(deps) {
     return state.selectedNodeId ? [state.selectedNodeId] : [];
   }
 
+  // Draad slepen: pointerdown op een uitgang start een pending verbinding. Onder 8px beweging
+  // blijft het een gewone klik (klik-klik werkt nog); verder slepen eindigt op een ingang of annuleert.
+  const WIRE_DRAG_THRESHOLD = 8;
+  let wireDrag = null;
+
+  function startWireDrag(pin, event) {
+    state.pendingConnection = {
+      nodeId: pin.dataset.nodeId,
+      pinKey: pin.dataset.pinKey,
+      direction: "output",
+    };
+    wireDrag = { pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, moved: false };
+    // Touch legt de pointer impliciet vast op de pin; los laten zodat we boven andere pins uitkomen.
+    if (pin.releasePointerCapture && pin.hasPointerCapture && pin.hasPointerCapture(event.pointerId)) {
+      pin.releasePointerCapture(event.pointerId);
+    }
+    canvasRenderers.syncWiringClass();
+  }
+
   function handleNodeLayerPointerDown(event) {
     if (event.button !== 0) {
       return;
@@ -124,6 +143,11 @@ export function createInteractionHandlers(deps) {
     // Shift+klik is selectie-toggelen (click-handler); geen drag starten en
     // vooral de bestaande multi-selectie niet resetten.
     if (event.shiftKey) {
+      return;
+    }
+    const outputPin = event.target.closest('[data-pin-direction="output"]');
+    if (outputPin) {
+      startWireDrag(outputPin, event);
       return;
     }
     if (
@@ -271,6 +295,43 @@ export function createInteractionHandlers(deps) {
   }
 
   function handleDragMove(event) {
+    handleDragMoveInner(event);
+    if (wireDrag && event.pointerId === wireDrag.pointerId && !wireDrag.moved) {
+      wireDrag.moved =
+        Math.hypot(event.clientX - wireDrag.startClientX, event.clientY - wireDrag.startClientY) >=
+        WIRE_DRAG_THRESHOLD;
+    }
+    if (state.pendingConnection) {
+      canvasRenderers.updateWirePreview(event.clientX, event.clientY);
+    }
+  }
+
+  function finishWireDrag(event) {
+    const drag = wireDrag;
+    wireDrag = null;
+    if (event.type === "pointercancel") {
+      canvasRenderers.clearWirePreview();
+      return;
+    }
+    if (!drag.moved) {
+      return; // gewone klik: pending blijft, de click-handler volgt
+    }
+    // Na een sleepbeweging volgt een click op een gemeenschappelijke ouder; die negeren.
+    suppressNextLayerClick = true;
+    window.setTimeout(() => {
+      suppressNextLayerClick = false;
+    }, 50);
+    const hit = document.elementFromPoint(event.clientX, event.clientY);
+    const inputPin = hit ? hit.closest('[data-pin-direction="input"]') : null;
+    if (inputPin) {
+      handlePinClick(inputPin);
+    } else {
+      state.pendingConnection = null;
+      renderWorkspace();
+    }
+  }
+
+  function handleDragMoveInner(event) {
     if (state.longPressWire && event.pointerId === state.longPressWire.pointerId) {
       const distance = Math.hypot(
         event.clientX - state.longPressWire.startClientX,
@@ -340,6 +401,10 @@ export function createInteractionHandlers(deps) {
   }
 
   function stopDragging(event) {
+    if (wireDrag && event && event.pointerId === wireDrag.pointerId) {
+      finishWireDrag(event);
+      return;
+    }
     clearWireLongPress(event ? event.pointerId : null);
 
     if (state.marquee) {
@@ -373,7 +438,17 @@ export function createInteractionHandlers(deps) {
       if (event && event.pointerId != null && event.pointerId !== state.panningCanvas.pointerId) {
         return;
       }
+      const pan = state.panningCanvas;
       state.panningCanvas = null;
+      // Een tik op leeg canvas (geen pan) annuleert een lopende verbinding.
+      const tapped =
+        event &&
+        event.type === "pointerup" &&
+        Math.hypot(event.clientX - pan.startClientX, event.clientY - pan.startClientY) < 4;
+      if (tapped && state.pendingConnection) {
+        state.pendingConnection = null;
+        renderWorkspace();
+      }
     }
     clearLongPress(event ? event.pointerId : null);
   }
