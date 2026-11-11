@@ -127,6 +127,7 @@ import {
     navSandbox: document.getElementById("nav-sandbox"),
     settingsMenu: document.getElementById("settings-menu"),
     simControls: document.getElementById("sim-controls"),
+    appbarSheet: document.getElementById("appbar-sheet"),
     inspectorCard: document.getElementById("inspector-card"),
     checksCard: document.getElementById("checks-card"),
   };
@@ -743,6 +744,17 @@ import {
       if (!showSim) {
         runtimeActions.clockRunner.stop();
       }
+    }
+    // The bar above the canvas exists only to hold the clock buttons.
+    if (dom.simControls && dom.simControls.parentElement) {
+      const header = dom.simControls.closest(".workspace-header");
+      if (header) {
+        header.classList.toggle("has-sim", showSim);
+      }
+    }
+    // Free build: the active sheet's name sits in the app bar next to the tabs.
+    if (dom.appbarSheet && dom.appbarSheet.textContent !== workspace.name) {
+      dom.appbarSheet.textContent = workspace.name;
     }
     if (dom.inspectorCard) {
       const selected = workspace.nodes.find((node) => node.id === state.selectedNodeId);
