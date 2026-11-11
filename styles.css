@@ -4017,3 +4017,47 @@ h2 {
 .lesson-step-toggle[aria-expanded="true"]::after {
   content: "▾";
 }
+
+/* —— Fixed action bar (UX fase G.3) —— */
+.lesson-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-bottom: 0;
+}
+
+.lesson-panel-body > * {
+  flex: none;
+}
+
+.lesson-actionbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: auto -0.85rem 0;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 3.4rem;
+  background: var(--right-bg);
+  border-top: 1px solid var(--panel-border);
+}
+
+.lesson-actionbar-status {
+  min-width: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.lesson-actionbar-status.ok {
+  color: var(--signal-high);
+}
+
+.lesson-actionbar .primary-button {
+  flex: none;
+  width: auto;
+  margin-left: auto;
+  padding: 0.55rem 1.1rem;
+}

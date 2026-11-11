@@ -384,13 +384,18 @@ export function createPanelRenderers(deps) {
       .join(" · ");
   }
 
+  // Short live status for the action bar; set by renderLiveCheckInner.
+  let liveStatus = { text: "", ok: false };
+
   /** Live test table: evaluates the sheet as it is now, without saving a chip. */
   function renderLiveCheckInner(challenge) {
     if (challenge.verification !== "combinational" || !challenge.tests?.length) {
+      liveStatus = { text: t("barSequential"), ok: false };
       return `<p class="live-check-note">${escapeHtml(t("liveSequential"))}</p>`;
     }
     const live = typeof deps.buildLiveDefinition === "function" ? deps.buildLiveDefinition() : null;
     if (!live || !live.definition) {
+      liveStatus = { text: t("barNeedsInterface"), ok: false };
       return `<p class="live-check-note">${escapeHtml(t("liveNeedsInterface"))}</p>`;
     }
     let passed = 0;
@@ -423,6 +428,10 @@ export function createPanelRenderers(deps) {
       .join("");
     const total = challenge.tests.length;
     const allPass = passed === total;
+    liveStatus = {
+      text: allPass ? t("barAllRows") : t("barRows", { passed, total }),
+      ok: allPass,
+    };
     return `<div class="live-check-summary ${allPass ? "ok" : ""}">
         <span class="live-check-meter" style="--ratio:${total ? passed / total : 0}"></span>
         <span>${escapeHtml(allPass ? t("liveAllPass") : t("livePassing", { passed, total }))}</span>
@@ -448,6 +457,11 @@ export function createPanelRenderers(deps) {
     const challenge = challengesById.get(container.dataset.liveCheck);
     if (challenge) {
       container.innerHTML = renderLiveCheckInner(challenge);
+      const status = dom.challengeList.querySelector("[data-bar-status]");
+      if (status && status.closest(".lesson-actionbar")?.dataset.barStep === "build") {
+        status.textContent = liveStatus.text;
+        status.classList.toggle("ok", liveStatus.ok);
+      }
     }
   }
 
@@ -595,14 +609,7 @@ export function createPanelRenderers(deps) {
         stepState("intro"),
         t("stepIntro"),
         `<p class="lesson-goal-text">${escapeHtml(learning.goal || localized.description || "")}</p>${conceptsHtml}
-        ${theoryHtml}
-        ${
-          unlocked
-            ? `<button type="button" class="primary-button lesson-intro-button" data-intro-done="${challenge.id}">${escapeHtml(
-                t("introStart")
-              )}</button>`
-            : ""
-        }`,
+        ${theoryHtml}`,
         { expanded: isExpanded("intro") }
       )
     );
@@ -627,9 +634,13 @@ export function createPanelRenderers(deps) {
         ${unlocked ? `<div class="live-check" data-live-check="${challenge.id}">${renderLiveCheckInner(challenge)}</div>` : ""}
         ${feedbackHtml}
         ${sequentialFailures}
-        <button class="${lessonCompleted ? "ghost-button" : "primary-button"} lesson-check-button" type="button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
-          t("lessonCheck")
-        )}</button>`,
+        ${
+          lessonCompleted && unlocked
+            ? `<button class="ghost-button lesson-check-button" type="button" data-submit-challenge="${challenge.id}">${escapeHtml(
+                t("lessonCheckAgain")
+              )}</button>`
+            : ""
+        }`,
         { expanded: isExpanded("build") }
       )
     );
@@ -643,13 +654,6 @@ export function createPanelRenderers(deps) {
       .join(", ");
     const nextBody = lessonCompleted
       ? `<div class="lesson-next-actions">
-          ${
-            nextLessonId
-              ? `<button class="primary-button" type="button" data-next-lesson="${nextLessonId}">${escapeHtml(
-                  t("lessonNext")
-                )}</button>`
-              : ""
-          }
           <button class="ghost-button" type="button" data-nav="home">${escapeHtml(t("backToOverview"))}</button>
           ${
             challenge.id === "computer"
@@ -673,6 +677,34 @@ export function createPanelRenderers(deps) {
     const lockNotice = !unlocked
       ? `<p class="challenge-lock-notice">${escapeHtml(t("lockNotice", { required: requiredTitle || t("locked") }))}</p>`
       : "";
+
+    // One fixed action bar: a short status on the left, exactly one primary button on the right.
+    let barStatus = "";
+    let barOk = false;
+    let barButton = "";
+    if (currentKey === "intro") {
+      barButton = unlocked
+        ? `<button type="button" class="primary-button" data-intro-done="${challenge.id}">${escapeHtml(t("introStart"))}</button>`
+        : "";
+    } else if (currentKey === "build") {
+      barStatus = unlocked ? liveStatus.text : "";
+      barOk = unlocked && liveStatus.ok;
+      barButton = `<button type="button" class="primary-button" data-submit-challenge="${challenge.id}" ${disabledAttr}>${escapeHtml(
+        t("lessonCheck")
+      )}</button>`;
+    } else if (currentKey === "quiz") {
+      barStatus = t("barQuiz");
+    } else {
+      barStatus = t("barDone");
+      barOk = true;
+      barButton = nextLessonId
+        ? `<button type="button" class="primary-button" data-next-lesson="${nextLessonId}">${escapeHtml(t("lessonNext"))}</button>`
+        : "";
+    }
+    const actionBar = `<div class="lesson-actionbar" data-bar-step="${currentKey}">
+      <span class="lesson-actionbar-status${barOk ? " ok" : ""}" data-bar-status>${escapeHtml(barStatus)}</span>
+      ${barButton}
+    </div>`;
 
     return `<article class="challenge-card challenge-detail-card lesson-flow ${lessonCompleted ? "done" : ""} ${
       unlocked ? "" : "locked"
@@ -698,7 +730,8 @@ export function createPanelRenderers(deps) {
           t("lessonRestartTitle")
         )}" ${disabledAttr}>↺ ${escapeHtml(t("lessonRestart"))}</button>
       </div>
-    </article>`;
+    </article>
+    ${actionBar}`;
   }
 
   /** Called after canvas changes: leaves the intro step as soon as the sheet holds more than the template. */

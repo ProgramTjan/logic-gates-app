@@ -70,8 +70,8 @@ export default {
   "coach.toggleWatch": "Switch {pin} on and watch the signals change colour.",
   "coach.intro.toggleDoor": "Test it: close the door — switch DOOR on. The lamp stays off: the alarm isn't armed yet.",
   "coach.intro.toggleAlarm": "Now arm the alarm — switch ALARM on. The lamp lights up!",
-  "coach.intro.check": "Works! Click Check my circuit to finish your first lesson.",
-  "coach.check": "Looks good in the live test? Click Check my circuit.",
+  "coach.intro.check": "Works! Click Check to finish your first lesson.",
+  "coach.check": "Looks good in the live test? Click Check.",
   "coach.not.idea": "Idea: a NAND with both inputs tied together acts as NOT. Read the explanation if you like, then build it.",
   "coach.not.wireBoth": "Connect IN to both inputs of the NAND: click IN's output, then input A — and again for input B.",
   "coach.and.idea": "Idea: AND is NAND followed by NOT. You need one of each.",
@@ -103,9 +103,9 @@ export default {
   hintShow: "Show a hint ({n}/{total})",
   liveColNow: "Now",
   livePassing: "{passed} of {total} rows correct — keep building.",
-  liveAllPass: "Every row matches. Click Check my circuit to complete the lesson.",
+  liveAllPass: "Every row matches. Click Check to complete the lesson.",
   liveNeedsInterface: "Connect your circuit to the output pins to see live results.",
-  liveSequential: "This lesson is checked over several clock ticks — use Check my circuit to test it.",
+  liveSequential: "This lesson is checked over several clock ticks — use Check to test it.",
   nextLocked: "Pass the check to continue.",
   backToOverview: "Back to overview",
   unlockedParts: "New in your parts: {parts}",
@@ -121,7 +121,14 @@ export default {
   themeLabel: "Theme",
   lessonBack: "← All lessons",
   lessonPosition: "{module} · lesson {n} of {total}",
-  lessonCheck: "Check my circuit",
+  lessonCheck: "Check",
+  lessonCheckAgain: "Check again",
+  barRows: "{passed} of {total} rows match",
+  barAllRows: "All rows match",
+  barNeedsInterface: "Wire up the output to test",
+  barSequential: "Test with Check",
+  barQuiz: "Answer the question",
+  barDone: "✓ Lesson complete",
   lessonRestart: "Start over",
   lessonRestartTitle: "Open a fresh sheet for this lesson",
   lessonNext: "Next lesson →",
@@ -239,7 +246,7 @@ export default {
   howTo3:
     "<strong>3. Test live</strong> — switch inputs with their toggle button. The lesson panel shows a live test table: ✓ per row that already matches.",
   howTo4:
-    "<strong>4. Check</strong> — <em>Check my circuit</em> saves your sheet as a chip and runs every test. Passing unlocks the next lesson and new parts.",
+    "<strong>4. Check</strong> — <em>Check</em> saves your sheet as a chip and runs every test. Passing unlocks the next lesson and new parts.",
   howTo5:
     "<strong>5. Stuck?</strong> — use the hints in the Build step, or <em>Show me how</em> in the first lessons.",
   howTo6:
@@ -280,7 +287,7 @@ export default {
   onboardingStep1: "<strong>Continue</strong> on the overview opens your next lesson.",
   onboardingStep2: "Add components from <strong>Parts</strong>.",
   onboardingStep3: "Click an <strong>output pin</strong>, then an <strong>input pin</strong> to connect.",
-  onboardingStep4: "<strong>Check my circuit</strong> — passing unlocks the next lesson.",
+  onboardingStep4: "<strong>Check</strong> — passing unlocks the next lesson.",
   onboardingShortcuts:
     "Shortcuts: <kbd>Ctrl+Z</kbd> undo · <kbd>Ctrl+A</kbd> select all · <kbd>Shift+drag</kbd> marquee · <kbd>Ctrl+C</kbd>/<kbd>Ctrl+V</kbd> copy/paste · <kbd>Ctrl+D</kbd> duplicate · <kbd>Esc</kbd> stop connecting · arrows move node.",
   onboardingIos:

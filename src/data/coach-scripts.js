@@ -8,7 +8,7 @@
  *            { part: match }       the Parts button (or the Parts menu itself while closed)
  *            { out: match }        first output pin of a matching node
  *            { toggle: "LABEL" }   toggle button of an input pin
- *            { check: true }       the "Check my circuit" button
+ *            { check: true }       the "Check" button
  *   until: when the step is done
  *            { ack: true }               coach shows a "Got it" button
  *            { has: match, count }       at least `count` matching nodes (default 1)
