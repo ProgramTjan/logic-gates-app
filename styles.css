@@ -1421,9 +1421,9 @@ h2 {
 
 .node {
   position: absolute;
-  width: 82px;
-  min-height: 44px;
-  padding: 0.22rem 0.24rem;
+  width: 132px;
+  min-height: 64px;
+  padding: 0.4rem 0.45rem;
   border-radius: var(--node-radius);
   border: 1px solid var(--node-border);
   background: var(--node-bg);
@@ -1554,7 +1554,7 @@ h2 {
 }
 
 .node-label {
-  font-size: 0.52rem;
+  font-size: 0.74rem;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -1598,7 +1598,7 @@ h2 {
 
 .gate-symbol {
   font-family: var(--font-display);
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -1607,13 +1607,13 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: 0.14rem;
-  font-size: 0.46rem;
+  font-size: 0.7rem;
   color: var(--muted);
 }
 
 .node-mini-button {
   padding: 0.08rem 0.18rem;
-  font-size: 0.44rem;
+  font-size: 0.7rem;
   line-height: 1.1;
   border-radius: 6px;
 }
@@ -1655,7 +1655,7 @@ h2 {
   gap: 0.25rem;
   padding: 0.08rem 0.2rem;
   border-radius: 999px;
-  font-size: 0.42rem;
+  font-size: 0.62rem;
   background: var(--state-pill-bg);
   color: var(--muted);
 }
@@ -1686,14 +1686,14 @@ h2 {
 }
 
 .pin-label {
-  font-size: 0.42rem;
+  font-size: 0.66rem;
   color: var(--muted);
 }
 
 .pin-badge {
   flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
   background: var(--signal-off);
   border: 1px solid var(--pin-badge-border);
@@ -3660,13 +3660,13 @@ h2 {
   }
 
   .node {
-    width: 124px;
+    width: 148px;
     min-height: 64px;
     padding: 0.35rem 0.4rem;
   }
 
   .node-label {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
   }
 
   .gate-symbol {
@@ -3714,11 +3714,11 @@ h2 {
   }
 
   .pin-label {
-    font-size: 0.6rem;
+    font-size: 0.7rem;
   }
 
   .pin-value {
-    font-size: 0.55rem;
+    font-size: 0.66rem;
   }
 
   .node-mini-button {
@@ -3730,7 +3730,7 @@ h2 {
 
   .node-state-pill,
   .gate-meta {
-    font-size: 0.58rem;
+    font-size: 0.66rem;
   }
 
   .lamp-indicator {

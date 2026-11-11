@@ -189,8 +189,8 @@ export function createWorkspaceMutations(deps) {
 
   function populateChallengeWorkspace(workspace, challenge) {
     const template = challenge.template || { inputs: [], outputs: [] };
-    const inputStep = Math.max(90, Math.floor(420 / Math.max(1, template.inputs.length)));
-    const outputStep = Math.max(90, Math.floor(420 / Math.max(1, template.outputs.length)));
+    const inputStep = Math.max(120, Math.floor(420 / Math.max(1, template.inputs.length)));
+    const outputStep = Math.max(120, Math.floor(420 / Math.max(1, template.outputs.length)));
     // Narrow canvas (tablet portrait / phone): pull inputs and outputs closer together.
     const view = typeof deps.getVisibleStageRect === "function" ? deps.getVisibleStageRect() : null;
     const viewWidth = view && view.width > 0 ? view.width : 1000;
