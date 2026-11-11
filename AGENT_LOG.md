@@ -486,3 +486,28 @@
 **Aanname:** de taal van foutmeldingen volgt de taal op het moment van evalueren; na een taalwissel rekent de app opnieuw en kloppen de meldingen weer.
 
 **Resultaat:** groen — `npm test` 169/169, `npm run check` OK, e2e 20/20.
+
+---
+
+## 2026-11-11 — UX fase F: canvas leesbaar en direct
+
+**Uitgevoerd** (één commit per stap):
+- F.1 Uit is grijs: `--pin-low-bg`, `--pin-low-border` en `--wire-low` in alle drie de themablokken; rood blijft alleen voor `--wire-invalid` en `--warning`.
+- F.2 Grotere onderdelen: `.node` 132px (148px bij `pointer: coarse`), labels/pins/symbolen volgens plan, `.pin-badge` 10px; `inputStep`/`outputStep` minimaal 120. De coarse-overrides die onder de nieuwe minimumwaarden uitkwamen (label, pin-label, pin-value, pill/meta) zijn meeverhoogd; pins en tikzones niet verkleind.
+- F.3 Rustiger onderdelen: `.node-state-pill` alleen als de tekst afwijkt van de titel en niet voor input-pin/output-pin/switch/lamp; poortsymbolen `1`, `&`, `≥1`, `=1`, `&`, `≥1` met inversiebolletje (`is-inverting`); 1-bit switch/input-pin/klok als pilschakelaar (`.node-switch-toggle`, zelfde `data-node-action`/`data-node-id`, `aria-pressed`, tekst 0/1); i18n-sleutel `toggle` is nu de aria-label ("Omschakelen" / "Toggle").
+- F.4 `getSuggestedNodePosition`: zonder selectie en met minstens één input-pin en output-pin wordt de voorkeurspositie het midden tussen beide kolommen, op gemiddelde input-hoogte; zoekactie en obstakellogica ongewijzigd. E2E toegevoegd (DOOR.x < AND.x < LAMP.x, tweede onderdeel overlapt niet).
+- F.5 Draad slepen: pointerdown op uitgang start pending + `is-wiring` op `#workspace-canvas`; `pointermove` tekent alleen `path.wire-preview` in `#wire-layer`; loslaten op een ingang gebruikt `handlePinClick` (dus `connectPins` + status); <8px blijft klik-klik; elders loslaten annuleert. Een tik op leeg canvas (zonder pan) annuleert nu ook (bestond nog niet), Escape werkte al. In `bindTouchGestures` telt een vinger op een pin niet mee voor pan/pinch. E2E toegevoegd (slepen, preview, annuleren). Met touch geverifieerd via CDP-touchevents op 820×1180 (slepen en tik-tik maken beide een draad).
+- F.6 `openLesson` roept `fitToContent({ minZoom: 0.6, maxZoom: 1.25, centered: true })` aan; `centered` is nieuw (zet de inhoud in het midden en zoomt in stappen van 0,05 uit zolang nodes onder de zwevende kaarten uit `#inspector-card`/`.canvas-tools`/`.canvas-status` liggen). Op touch wordt daarvoor niet onder 100% uitgezoomd (pins moeten vingergroot blijven). De ⤢-knop en andere aanroepen gedragen zich als voorheen.
+
+**Aannames/afwijkingen:**
+- Brede (>1 bit) schakelbare onderdelen houden de tekstknop; de zichtbare tekst daarvan is een nieuwe sleutel `toggleShort` ("toggle" / "wissel"), omdat "Omschakelen" in de node niet paste. Dit is achteraf in de F.3-commit gefixupt.
+- De opdracht noemde dat een klik op leeg canvas al annuleert; dat bleek niet zo en is in F.5 toegevoegd.
+
+**Bevindingen (niet opgepakt):**
+- 16-bit input-nodes (bv. X/Y in de ALU-les): de 16-cijferige waarde plus knop is breder dan de node (132px) en steekt over de OUT-pin heen. Past bij een vervolgstap (bv. waarde inkorten of node breder bij width > 1).
+- Op 1440×900 loopt de ALU-les uit naar 62% zoom; de teksten zijn dan klein (0,6 is de ondergrens uit het plan).
+- Statusregels linksonder ("Klik output, klik input." + laatste melding) liggen op tablet staand nog over de onderste input-node (ALARM); dat is ruis die fase H.3 oplost.
+- Op tablet staand valt de eerste AND al tussen DOOR en LAMP; dat kwam al uit de bestaande fallback en blijft zo.
+- De spec noemt `--challenge-card-bg` (bruine lestint) nog; staat in fase J/H.
+
+**Resultaat:** groen, `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 22/22 (20 bestaande + 2 nieuwe). Alle drie de thema's (dark, light, neon) visueel gecontroleerd op 1440×900, 1180×820 en 820×1180 (touch).

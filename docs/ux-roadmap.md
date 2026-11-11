@@ -197,7 +197,7 @@ Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit pe
 
 ---
 
-## FASE F — Canvas leesbaar en direct
+## FASE F — Canvas leesbaar en direct ✅ gedaan 2026-11-11
 
 ### Stap F.1: Uit is grijs, niet rood
 
