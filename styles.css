@@ -1618,6 +1618,25 @@ h2 {
   border-radius: 6px;
 }
 
+/* Draad slepen (UX F.5) */
+.wire-preview {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 7 6;
+  pointer-events: none;
+}
+
+.is-wiring .pin.direction-input {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.is-wiring .pin.direction-output:not(.pending) {
+  opacity: 0.45;
+}
+
 /* Inverting gates (NOT, NAND, NOR): small bubble right of the face. */
 .gate-face.is-inverting {
   position: relative;

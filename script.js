@@ -1037,6 +1037,10 @@ import {
         if (event.pointerType !== "touch") {
           return;
         }
+        // Een vinger op een pin sleept een draad; die telt niet mee voor pan of pinch.
+        if (event.target.closest && event.target.closest("[data-pin-direction]")) {
+          return;
+        }
         touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
         if (touches.size === 2) {
           // Second finger: cancel any single-finger pan/drag/long-press and start pinching.

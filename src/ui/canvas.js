@@ -388,7 +388,49 @@ export function createCanvasRenderers(deps) {
     return { x, y };
   }
 
+  // Preview line from the pending output pin to the pointer. Only this one path is touched;
+  // the workspace is not re-rendered while the pointer moves.
+  function updateWirePreview(clientX, clientY) {
+    const pending = state.pendingConnection;
+    if (!pending) {
+      clearWirePreview();
+      return;
+    }
+    const source = dom.nodeLayer.querySelector(
+      `[data-node-id="${pending.nodeId}"][data-pin-key="${pending.pinKey}"][data-pin-direction="output"]`
+    );
+    if (!source) {
+      return;
+    }
+    const from = getElementOffsetCenter(source, dom.nodeLayer);
+    const rect = dom.nodeLayer.getBoundingClientRect();
+    const zoom = state.zoom || 1;
+    const x2 = (clientX - rect.left) / zoom;
+    const y2 = (clientY - rect.top) / zoom;
+    const delta = Math.max(60, Math.abs(x2 - from.x) * 0.55);
+    const path = `M ${from.x} ${from.y} C ${from.x + delta} ${from.y}, ${x2 - delta} ${y2}, ${x2} ${y2}`;
+    let preview = dom.wireLayer.querySelector(".wire-preview");
+    if (!preview) {
+      preview = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      preview.setAttribute("class", "wire-preview");
+      dom.wireLayer.appendChild(preview);
+    }
+    preview.setAttribute("d", path);
+  }
+
+  function clearWirePreview() {
+    const preview = dom.wireLayer.querySelector(".wire-preview");
+    if (preview) {
+      preview.remove();
+    }
+  }
+
+  function syncWiringClass() {
+    dom.canvas.classList.toggle("is-wiring", Boolean(state.pendingConnection));
+  }
+
   function updateConnectionStatus(message) {
+    syncWiringClass();
     if (message) {
       dom.connectionStatus.textContent = message;
       return;
@@ -408,5 +450,8 @@ export function createCanvasRenderers(deps) {
     renderNode,
     renderWires,
     updateConnectionStatus,
+    updateWirePreview,
+    clearWirePreview,
+    syncWiringClass,
   };
 }

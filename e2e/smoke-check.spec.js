@@ -77,6 +77,47 @@ test.describe("Leerapp smoke", () => {
     }
   });
 
+  test("les 0: draad slepen van uitgang naar ingang, met voorbeeldlijn", async ({ page }) => {
+    await page.locator("[data-course-continue]").click();
+    await skipTutorial(page);
+    await placePart(page, "gate-and");
+
+    const pinCenter = async (label, direction, index = 0) => {
+      const box = await page
+        .locator("article.node")
+        .filter({ hasText: label })
+        .first()
+        .locator(`[data-pin-direction="${direction}"]`)
+        .nth(index)
+        .boundingBox();
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    };
+    const wires = page.locator("#wire-layer path.wire");
+    const before = await wires.count();
+
+    const from = await pinCenter("DOOR", "output");
+    const to = await pinCenter("AND", "input", 0);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2, { steps: 6 });
+    await expect(page.locator("#wire-layer .wire-preview")).toHaveCount(1);
+    await expect(page.locator("#workspace-canvas")).toHaveClass(/is-wiring/);
+    await page.mouse.move(to.x, to.y, { steps: 6 });
+    await page.mouse.up();
+    await expect(wires).toHaveCount(before + 1);
+    await expect(page.locator("#wire-layer .wire-preview")).toHaveCount(0);
+    await expect(page.locator("#workspace-canvas")).not.toHaveClass(/is-wiring/);
+
+    // Slepen en loslaten op leeg canvas annuleert zonder draad.
+    const from2 = await pinCenter("ALARM", "output");
+    await page.mouse.move(from2.x, from2.y);
+    await page.mouse.down();
+    await page.mouse.move(from2.x + 60, from2.y + 160, { steps: 6 });
+    await page.mouse.up();
+    await expect(wires).toHaveCount(before + 1);
+    await expect(page.locator("#wire-layer .wire-preview")).toHaveCount(0);
+  });
+
   test("vrije modus unlockt lessen; computer-les opent met ROM en Screen", async ({ page }) => {
     await expect(page.locator('.course-lesson[data-course-lesson="computer"]')).toBeDisabled();
     await enableFreeMode(page);
