@@ -72,7 +72,6 @@ export function createEventBinder(deps) {
     dom.workspaceList.addEventListener("click", workspaceActions.handleWorkspaceListClick);
     dom.chipLibrary.addEventListener("click", workspaceActions.handleChipLibraryClick);
     dom.challengeList.addEventListener("click", workspaceActions.handleChallengeListClick);
-    dom.challengeList.addEventListener("change", workspaceActions.handleChallengeListChange);
     document.querySelectorAll(".app-view-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         if (typeof setAppView === "function") {

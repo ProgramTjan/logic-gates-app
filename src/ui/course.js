@@ -171,21 +171,20 @@ export function createCourseRenderers(deps) {
         </div>
       </div>
       <div class="course-modules">${modulesHtml}</div>
-      <article class="course-sandbox-card ${sandboxUnlocked ? "" : "locked"}">
+      ${
+        sandboxUnlocked
+          ? `<article class="course-sandbox-card">
         <div>
-          <h3>${sandboxUnlocked ? "" : "🔒 "}${escapeHtml(t("homeSandboxTitle"))}</h3>
-          <p class="course-module-copy">${escapeHtml(
-            sandboxUnlocked ? t("homeSandboxCopy") : t("homeSandboxLocked")
-          )}</p>
+          <h3>${escapeHtml(t("homeSandboxTitle"))}</h3>
+          <p class="course-module-copy">${escapeHtml(t("homeSandboxCopy"))}</p>
         </div>
-        <button type="button" class="ghost-button" data-nav="sandbox" ${sandboxUnlocked ? "" : "disabled"}>${escapeHtml(
-          t("homeSandboxOpen")
-        )}</button>
-      </article>
-      <label class="challenge-free-mode course-free-mode">
-        <input type="checkbox" data-toggle-free-mode ${learner.unlockedAll ? "checked" : ""} />
-        <span>${escapeHtml(S.freeMode)}</span>
-      </label>
+        <button type="button" class="ghost-button" data-nav="sandbox">${escapeHtml(t("homeSandboxOpen"))}</button>
+      </article>`
+          : `<article class="course-sandbox-card locked">
+        <span class="course-sandbox-lock-title">🔒 ${escapeHtml(t("homeSandboxTitle"))}</span>
+        <span class="course-module-copy">${escapeHtml(t("homeSandboxLocked"))}</span>
+      </article>`
+      }
     `;
   }
 
@@ -217,7 +216,7 @@ export function createCourseRenderers(deps) {
     openModules.set(id, details.open);
   }
 
-  function handleCourseChange(event) {
+  function handleFreeModeChange(event) {
     const toggle = event.target.closest("[data-toggle-free-mode]");
     if (!toggle) {
       return;
@@ -228,5 +227,5 @@ export function createCourseRenderers(deps) {
     renderAll();
   }
 
-  return { renderCourse, handleCourseClick, handleCourseChange, handleCourseToggle, getNextOpenLessonId };
+  return { renderCourse, handleCourseClick, handleFreeModeChange, handleCourseToggle, getNextOpenLessonId };
 }

@@ -705,6 +705,10 @@ import {
     if (coachToggle) {
       coachToggle.checked = state.project.learner?.coachEnabled !== false;
     }
+    const freeModeToggle = document.querySelector("#settings-menu [data-toggle-free-mode]");
+    if (freeModeToggle) {
+      freeModeToggle.checked = Boolean(state.project.learner?.unlockedAll);
+    }
     const sandboxUnlocked = isSandboxUnlocked();
     if (dom.navSandbox) {
       dom.navSandbox.classList.toggle("locked", !sandboxUnlocked);
@@ -1161,8 +1165,11 @@ import {
       button.addEventListener("click", () => setAppView(button.dataset.nav));
     });
     if (dom.courseView) {
-      dom.courseView.addEventListener("change", courseRenderers.handleCourseChange);
       dom.courseView.addEventListener("toggle", courseRenderers.handleCourseToggle, true);
+    }
+    // Free mode lives in the settings menu: this is its only change handler.
+    if (dom.settingsMenu) {
+      dom.settingsMenu.addEventListener("change", courseRenderers.handleFreeModeChange);
     }
     // Lesson panel: navigation that the legacy challenge handler doesn't know about.
     dom.challengeList.addEventListener(
