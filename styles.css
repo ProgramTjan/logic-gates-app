@@ -1598,8 +1598,25 @@ h2 {
   font-weight: 700;
 }
 
+/* Wide values (16-bit pins): monospace, and a wider node so value and button fit beside the pin. */
+.node-center {
+  min-width: 0;
+}
+
+.node-bits {
+  min-width: 0;
+  text-align: center;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.node.node-wide {
+  width: 216px;
+}
+
 .gate-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 0.14rem;
@@ -3495,6 +3512,13 @@ h2 {
   color: var(--accent);
 }
 
+/* Text links: the accent colour is nearly the text colour in the dark theme, so underline them. */
+.link-button,
+.lesson-theory > summary {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .lesson-theory .theory-body {
   margin-top: 0.45rem;
   font-size: var(--fs-sm);
@@ -3788,6 +3812,10 @@ h2 {
   /* Pinch and pan are handled by the app (see bindTouchGestures in script.js). */
   .app .workspace-canvas {
     touch-action: none;
+  }
+
+  .node.node-wide {
+    width: 236px;
   }
 
   .node {

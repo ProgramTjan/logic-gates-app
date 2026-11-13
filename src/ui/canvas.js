@@ -44,6 +44,10 @@ export function createCanvasRenderers(deps) {
       (state.selectedNodeIds && state.selectedNodeIds.includes(node.id));
     const quickDeleteVisible = node.id === state.quickDeleteNodeId;
     const typeClass = `node-${node.type}`;
+    const wideClass =
+      ["switch", "lamp", "input-pin", "output-pin"].includes(node.type) && Number(node.config.width) > 1
+        ? "node-wide"
+        : "";
     const gateClass =
       node.type === "gate" && node.config.gateType
         ? `gate-${String(node.config.gateType).toLowerCase()}`
@@ -74,7 +78,7 @@ export function createCanvasRenderers(deps) {
     const listening =
       node.type === "keyboard" && state.keyboardCaptureNodeId === node.id ? "keyboard-listening" : "";
 
-    return `<article class="node ${typeClass} ${gateClass} ${selected ? "selected" : ""} ${
+    return `<article class="node ${typeClass} ${wideClass} ${gateClass} ${selected ? "selected" : ""} ${
       invalid ? "invalid" : ""
     } ${listening}" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
       ${
@@ -146,7 +150,7 @@ export function createCanvasRenderers(deps) {
       return `<div class="node-center"><div class="gate-face">
         <span class="lamp-indicator ${isOn ? "on" : ""}"></span>
       </div>
-      <div class="gate-meta"><span>${escapeHtml(lampValue)}</span></div></div>`;
+      <div class="gate-meta"><span class="node-bits">${escapeHtml(lampValue)}</span></div></div>`;
     }
     if (node.type === "register") {
       return `<div class="node-center"><div class="gate-face">
@@ -204,7 +208,7 @@ export function createCanvasRenderers(deps) {
       return `<div class="node-center"><div class="gate-face">
         <span class="lamp-indicator ${isOn ? "on" : ""}"></span>
       </div>
-      <div class="gate-meta"><span>${escapeHtml(lampValue)}</span></div></div>`;
+      <div class="gate-meta"><span class="node-bits">${escapeHtml(lampValue)}</span></div></div>`;
     }
     const inverting = node.type === "gate" && INVERTING_GATES.includes(node.config.gateType);
     return `<div class="node-center"><div class="gate-face${inverting ? " is-inverting" : ""}">
@@ -231,7 +235,7 @@ export function createCanvasRenderers(deps) {
     const bits = String(value);
     const label = escapeAttribute(t("toggle"));
     if (bits.length > 1) {
-      return `<span>${escapeHtml(bits)}</span>
+      return `<span class="node-bits">${escapeHtml(bits)}</span>
         <button class="ghost-button node-mini-button" type="button" data-node-action="${action}" data-node-id="${nodeId}" aria-label="${label}">${escapeHtml(
           t("toggleShort")
         )}</button>`;

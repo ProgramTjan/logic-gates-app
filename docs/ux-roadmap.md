@@ -160,7 +160,7 @@ Les 0–5: volledige coach. Daarna een hintladder (hint 1 → hint 2 → aanwijz
 
 # RONDE 2 — Van werkende structuur naar prettig gereedschap (fase F t/m J)
 
-**Status:** gepland 2026-11-10, nog niets uitgevoerd.
+**Status:** uitgevoerd 2026-11-13 (fase F t/m J).
 
 **Voor wie:** een kleiner coding-model dat zelfstandig werkt. Daarom zijn de stappen klein, staan bestanden, selectors en waarden erbij en heeft elke stap een "Niet doen". Lees eerst "Uitvoeringsregels ronde 2" onderaan dit hoofdstuk.
 
@@ -192,7 +192,7 @@ Fase A–E hebben de structuur goed gezet (drie schermen, les 0, coach, gefilter
 
 ## Volgorde
 
-F.1 → F.2 → F.3 → F.4 → F.5 → F.6 → G.1 → G.2 → G.3 → G.4 → G.5 → H.0 → H.1 → H.2 → H.3 → H.4 → I.1 → I.2 → I.3 → J.1 → J.2 → J.3.
+F.1 → F.2 → F.3 → F.4 → F.5 → F.6 → G.1 → G.2 → G.3 → G.4 → G.5 → H.0 → H.1 → H.2 → H.3 → H.4 → I.1 → I.2 → I.3 → J.1 → J.2 → J.3 → J.4.
 Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit per stap.
 
 ---
@@ -475,7 +475,7 @@ Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit pe
 
 ---
 
-## FASE J — Stijl en taal
+## FASE J — Stijl en taal ✅ gedaan 2026-11-13
 
 ### Stap J.1: Typografie- en radiusschaal
 
@@ -532,6 +532,17 @@ Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit pe
 5. Herhaal de scan uit fase E: alle schermen in NL, noteer wat Engels blijft (vaktermen als NAND, chip, ROM mogen).
 
 **Acceptatie:** in NL staat er op start-, les- en bouwscherm geen Engels meer buiten vaktermen; in EN geen Nederlands.
+
+### Stap J.4: Restpunten
+
+**Bestanden:** `styles.css`, `src/i18n/nl.js`, `src/i18n/en.js`, `src/ui/canvas.js` (alleen taak 3).
+
+**Taken:**
+1. Tekstlinks herkenbaar maken: `.link-button` en de `summary`-link "Meer uitleg" in het lespaneel krijgen `text-decoration: underline; text-underline-offset: 3px`, omdat de accentkleur in het donkere thema bijna gelijk is aan de tekstkleur.
+2. Ongebruikte i18n-sleutels verwijderen in beide talen, alleen als `grep -rn "<sleutel>" src script.js index.html` buiten de i18n-bestanden niets vindt: `homeTitle`, `homeLead`, `homeShowLessons`, `courseLessonsCount`, `statusDefault`, `currentSheet`.
+3. Brede invoer (input-pin met breedte > 1, bijv. X/Y in de ALU-les): waarde op een eigen regel in monospace met `overflow-wrap: anywhere` (klasse `.node-bits`), zodat de waarde de OUT-pin niet meer raakt. Kleinste ingreep; geen bredere onderdelen.
+
+**Acceptatie:** links zijn in donker en licht als link herkenbaar; geen overlap bij 16-bit invoer op 1440×900 en 820×1180; `npm test` blijft groen na het opruimen van sleutels.
 
 ---
 
