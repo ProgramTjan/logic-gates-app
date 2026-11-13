@@ -632,3 +632,36 @@ Groen: `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 24/24 (22 best
 
 **Resultaat:** groen, `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 27/27 (26 bestaande + 1 nieuwe). Schermafdrukken (`/home/claude/shots/i3-*`) op 1440×900, 1180×820, 820×1180 (touch), 390×844 (touch) in vier toestanden (nieuw, na les 0, halverwege module 1, vrije modus) in donker en licht; neon steekproef op 1440×900 en 390×844. Verse gebruiker op 1440×900: kaart, alle moduleregels en Vrij bouwen zonder scrollen (documentscroll 0).
 
+
+---
+
+## 2026-11-13 — UX fase J: stijl en taal
+
+**Uitgevoerd** (één commit per stap):
+- J.1 Tokens `--fs-xs/sm/md/lg/xl` (0.75/0.875/1/1.25/1.75rem), `--radius` 12px, `--radius-sm` 8px, `--radius-pill` 999px in het `:root`-blok; `--font-display`/`--font-body` = `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`. Elke `font-size` buiten de canvas-selectors staat op de schaal; `grep -o "font-size: [^;]*" styles.css | sort -u | wc -l` = 14 (was 40). Radii (8/10/12/14/999px) verwijzen naar de tokens. Hoofdletter-eyebrows alleen nog op `.course-hero .eyebrow` (start) en `.lesson-goal-label` (les); `letter-spacing` bij de rest weg. Geen kleurwaarden in de themablokken gewijzigd.
+- J.2 `.appbar` zonder kader (alleen `border-bottom`, geen schaduw/radius/achtergrond). `.lesson-panel .challenge-detail-card` (ook `.done`) zonder rand, achtergrond en padding; de afgeronde les blijft zichtbaar via de ✓ (`.challenge-verified`) naast de titel. Sandbox-paneel: `.workspace-card`, `.chip-card` en `.chip-series-card` zonder rand en achtergrond; actief werkblad en geopende chipserie op `--accent-soft`.
+- J.3 `partLabel.<type>` (17 typen, NL en EN) en `partLabel(type)` in `panels.js` voor strook, locked-lijst en "Nieuw in je onderdelen"; nieuwe `displayNodeLabel(node, title)` (`canvas.js`) vertaalt alleen de weergave van een standaardlabel op een onderdeel (exacte Engelse standaard: Switch, Lamp, Input, Output, Clock, Register, Screen, Keyboard, Split/Bus Split, Join/Bus Join); `config.label`, `BUILTIN_PARTS` en data blijven Engels (labels dienen als data voor coach, tutorial, `CLK`-detectie, I/O-matching). Ook gebruikt in Eigenschappen-titel, inspector-chip en de toast "… toegevoegd aan …". Nodespec-subtitels gebruiken `partLabel`; Screen/Keyboard-subtitel via `nodeSubtitle.*`. Tabel uit de roadmap doorgevoerd (parts, sheets, sheetsAndChips, snapshot, inspector, checks, workspaceOpen/Duplicate/Delete, toggleClocks, stepRegisters, play, resetState, connectionHint; `buildInstruction` bestond al goed en bleef staan). `connectionHint` ook in EN aangepast. `emptyState` NL zonder backticks. Verder in `nl.js` de zichtbare Engelse restanten vervangen (werkblad i.p.v. sheet/workspace, onderdeel i.p.v. node, Eigenschappen-velden, "Concept voor", "{n} onderdelen • {m} draden", statusmeldingen, tutorialtekst) en theme-/zoom-/undo-aria's vertaalbaar (`themeDark/Light/Neon`, `zoomOutAria`, `zoomInAria`). Lestitels NL: 39 titels "Build X" → "Bouw X" (alleen `title`). Verwijzingen naar Parts vervangen door "de onderdelenstrook" / "the parts strip". Gewijzigde les-id's voor die tekstwijziging (NL én EN): `intro-light` (hint 1) en `nand` (laatste theorieparagraaf); titelwijziging: alle 39 NL-lessen met titel "Build …" (alle lessen behalve `intro-light` en `computer`).
+- J.4 (a) `.link-button` en `.lesson-theory > summary` onderstreept (`text-underline-offset: 3px`). (b) Verwijderd in nl+en: `homeTitle`, `homeLead`, `homeShowLessons`, `courseLessonsCount`, `statusDefault`. `currentSheet` blijft: `index.html` (verborgen `.workspace-heading`) gebruikt hem. (c) 16-bit pins: nieuwe klasse `.node-bits` (monospace, `overflow-wrap: anywhere`) en `.node-wide` (216px, op touch 236px) voor switch/lamp/input-pin/output-pin met breedte > 1. Roadmap: J.4 toegevoegd.
+- Statusmarkering: "✅ gedaan 2026-11-13" bij FASE J, "uitgevoerd 2026-11-13" bij RONDE 2.
+
+**Aannames/afwijkingen:**
+- `scripts/extract-challenge-locales.js` schrijft `challenges-nl.js` uit `CHALLENGES` (Engelse titels). Het bestand is sindsdien met de hand vertaald en onderhouden; ik heb dus het bestand zelf aangepast en het script niet gedraaid (het zou de vertaling overschrijven). Ontgrendeling leunt niet op de vertaalde titel: `localizedRequiredTitle` zoekt eerst op id en dan op de basistitel in `CHALLENGES`.
+- J.1: canvas-selectors (`.node*`, `.pin*`, `.gate*`, `.wire*`, `.register-readout`) bleven op hun eigen waarden, op `0.72`/`0.74rem` (→ `--fs-xs`) en `0.66rem` (→ `0.7rem`) na om het totaal op 14 te krijgen. `0.4rem`, `0.5rem` (desktop `.pin-value`, `.register-readout`) staan er nog; die vielen buiten de opdracht.
+- J.3: de strook kreeg 104px (was 96px) en `.parts-strip-label` mag afbreken tussen woorden (was ellipsis) zodat "Bus samenvoegen" en "Schakelaar" volledig zichtbaar zijn (J.1-acceptatie).
+- J.4 (b): `scripts/verify.js` testte `t("courseLessonsCount", {n: 5})`; de test toetst nu dezelfde interpolatie met `homeTotalProgress` (EN: "5 of 41 lessons").
+- J.4 (c): gekozen voor "node breder" (de kleinste ingreep die hier werkt). Eerst geprobeerd: waarde op een eigen regel met wrapping; dat gaf op 820×1180 overlap tussen de gestapelde 16-bit ingangen in `mux4way16` en `mux8way16` (nodes werden hoger). Met de bredere node staan waarde en knop weer op één regel. Gecontroleerd met een script dat alle 41 lessen opent op 1440×900 en 820×1180 (touch): geen overlap tussen nodes, waarde binnen het onderdeel.
+- Roadmap-regel "Elke kleurwijziging in alle drie de thema's": er is niets aan kleuren gewijzigd.
+
+**Bevindingen (niet opgepakt):**
+- `Main Workspace` (standaardnaam van het eerste werkblad) en starter-chipnamen (Full Adder, Half Adder) zijn data en blijven Engels in NL. Idem labels van onderdelen die de gebruiker zelf een naam gaf.
+- Chip-meta "3 in • 2 out • v1" (strook-title, chiplijst) is hardcoded in `panels.js`; "in/out" is half vakterm, niet vertaald.
+- `tipWireColors` (NL en EN) beschrijft nog groen/rood; sinds fase F is uit grijs en aan gekleurd.
+- De werkbladkaart toont "0 onderdelen • 0 draden" op twee regels (smalle kolom naast de knop Openen).
+- De hero-eyebrow op het startscherm en "DOEL"-label in de les zijn de enige hoofdletterteksten; `.palette-section-title` e.d. zijn kleine gewone tekst geworden.
+- Telefoon 390px: werkbladnaam in de app-balk nog afgekapt (uit fase H); de strook staat nog op 48px hoog bij tablet staand.
+- Hardcoded Engelse tekst in `tutorial.js`/coach niet gescand buiten de schermen hieronder; in NL bevatten de lesbeschrijvingen nog vaktermen als "play", "pins", "CLK-tick".
+- Zoom 78% in de ALU-les (fase F) ongewijzigd; de bredere 16-bit nodes (216px) maken `fitToContent` iets krapper.
+
+**Taalscan:** NL (start, les 0 intro/bouw, dff, alu, ram8, computer, Vrij bouwen met alle onderdelen geplaatst, ⚙-menu, hulp): geen Engels meer behalve vaktermen en data (zie bevindingen). EN (zelfde schermen): geen Nederlands gevonden (tekstdump + zoektermen).
+
+**Resultaat:** groen, `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 27/27 (geen nieuwe tests). Schermafdrukken in `/home/claude/shots/` (`j1-*` t/m `j4-*`, `jf-*` eindset).
