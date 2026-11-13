@@ -1276,19 +1276,15 @@ h2 {
   padding: 0.7rem;
 }
 
-.workspace-card.active {
-  border-color: var(--workspace-card-active-border);
-  background: var(--workspace-card-active-bg);
-}
-
-.workspace-card {
-  background: var(--workspace-card-bg);
-  border-color: var(--workspace-card-border);
-}
-
+/* Two levels only (page, panel): cards inside a panel have no frame of their own. */
+.workspace-card,
 .chip-card {
-  background: var(--chip-card-bg);
-  border-color: var(--chip-card-border);
+  border: 0;
+  background: transparent;
+}
+
+.workspace-card.active {
+  background: var(--accent-soft);
 }
 
 .chip-library-hint {
@@ -1300,8 +1296,12 @@ h2 {
 
 .chip-series-card {
   border-radius: var(--radius);
-  border: 1px solid var(--chip-card-border);
-  background: var(--chip-card-bg);
+  border: 0;
+  background: transparent;
+}
+
+.chip-series-card[open] {
+  background: var(--accent-soft);
 }
 
 .chip-series-summary {
@@ -2625,8 +2625,11 @@ h2 {
   align-items: center;
   gap: 0.75rem;
   padding: 0.45rem 0.6rem;
-  background: var(--toolbar-bg);
-  border-color: var(--toolbar-border);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--panel-border);
+  border-radius: 0;
+  box-shadow: none;
   position: relative;
   z-index: 30;
 }
@@ -2989,8 +2992,13 @@ h2 {
   text-align: right;
 }
 
-.lesson-panel .challenge-detail-card {
+.lesson-panel .challenge-detail-card,
+.lesson-panel .challenge-detail-card.done {
   cursor: default;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .lesson-panel .challenge-actions {
