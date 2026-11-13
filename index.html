@@ -83,9 +83,9 @@
             </div>
             <p class="eyebrow" data-i18n="themeLabel">Theme</p>
             <div class="theme-switcher" id="theme-switcher" data-i18n-title="themeTitle" title="Choose a theme">
-              <button class="theme-btn theme-btn-dark" data-theme="dark" type="button" title="Dark">●</button>
-              <button class="theme-btn theme-btn-light" data-theme="light" type="button" title="Light">○</button>
-              <button class="theme-btn theme-btn-neon" data-theme="neon" type="button" title="Neon">◉</button>
+              <button class="theme-btn theme-btn-dark" data-theme="dark" type="button" data-i18n-title="themeDark" title="Dark">●</button>
+              <button class="theme-btn theme-btn-light" data-theme="light" type="button" data-i18n-title="themeLight" title="Light">○</button>
+              <button class="theme-btn theme-btn-neon" data-theme="neon" type="button" data-i18n-title="themeNeon" title="Neon">◉</button>
             </div>
           </div>
         </details>
@@ -199,13 +199,13 @@
               <p id="status-line" class="status-line" role="status" aria-live="polite"></p>
             </div>
             <div class="canvas-tools">
-              <button id="undo-button" class="ghost-button icon-button" type="button" data-i18n-title="undoTitle" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↩</button>
-              <button id="redo-button" class="ghost-button icon-button" type="button" data-i18n-title="redoTitle" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↪</button>
+              <button id="undo-button" class="ghost-button icon-button" type="button" data-i18n-title="undoTitle" data-i18n-aria="undoTitle" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↩</button>
+              <button id="redo-button" class="ghost-button icon-button" type="button" data-i18n-title="redoTitle" data-i18n-aria="redoTitle" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>↪</button>
               <span class="canvas-tools-divider" aria-hidden="true"></span>
-              <button id="zoom-out-button" class="ghost-button icon-button" type="button" aria-label="Zoom out">−</button>
+              <button id="zoom-out-button" class="ghost-button icon-button" type="button" data-i18n-aria="zoomOutAria" aria-label="Zoom out">−</button>
               <button id="zoom-reset-button" class="ghost-button zoom-reset" type="button">100%</button>
-              <button id="zoom-in-button" class="ghost-button icon-button" type="button" aria-label="Zoom in">+</button>
-              <button id="zoom-fit-button" class="ghost-button icon-button" type="button" data-i18n-title="zoomFit" title="Fit to screen" aria-label="Fit to screen">⤢</button>
+              <button id="zoom-in-button" class="ghost-button icon-button" type="button" data-i18n-aria="zoomInAria" aria-label="Zoom in">+</button>
+              <button id="zoom-fit-button" class="ghost-button icon-button" type="button" data-i18n-title="zoomFit" data-i18n-aria="zoomFit" title="Fit to screen" aria-label="Fit to screen">⤢</button>
               <span id="zoom-value" class="zoom-value" hidden>100%</span>
             </div>
           </div>

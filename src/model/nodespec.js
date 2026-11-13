@@ -1,4 +1,7 @@
 import { clampWidth } from "../sim/bits.js";
+import { t } from "../i18n/index.js";
+
+const partName = (type) => t(`partLabel.${type}`);
 
 export function createNodeSpecFactory(deps) {
   const { getChipDefinition } = deps;
@@ -10,7 +13,7 @@ export function createNodeSpecFactory(deps) {
     if (node.type === "switch") {
       return {
         title: node.config.label,
-        subtitle: `Switch • ${node.config.width}-bit`,
+        subtitle: `${partName("switch")} • ${node.config.width}-bit`,
         inputs: [],
         outputs: [{ key: "OUT", name: "OUT", width: node.config.width }],
       };
@@ -18,7 +21,7 @@ export function createNodeSpecFactory(deps) {
     if (node.type === "lamp") {
       return {
         title: node.config.label,
-        subtitle: `Lamp • ${node.config.width}-bit`,
+        subtitle: `${partName("lamp")} • ${node.config.width}-bit`,
         inputs: [{ key: "IN", name: "IN", width: node.config.width }],
         outputs: [],
       };
@@ -27,7 +30,7 @@ export function createNodeSpecFactory(deps) {
       const isUnary = node.config.gateType === "NOT";
       return {
         title: node.config.label,
-        subtitle: `${node.config.gateType} Gate • ${node.config.width}-bit`,
+        subtitle: `${node.config.gateType} • ${node.config.width}-bit`,
         inputs: isUnary
           ? [{ key: "A", name: "A", width: node.config.width }]
           : [
@@ -40,7 +43,7 @@ export function createNodeSpecFactory(deps) {
     if (node.type === "input-pin") {
       return {
         title: node.config.label,
-        subtitle: `Chip Input • ${node.config.width}-bit`,
+        subtitle: `${partName("input-pin")} • ${node.config.width}-bit`,
         inputs: [],
         outputs: [{ key: "OUT", name: "OUT", width: node.config.width }],
       };
@@ -48,7 +51,7 @@ export function createNodeSpecFactory(deps) {
     if (node.type === "output-pin") {
       return {
         title: node.config.label,
-        subtitle: `Chip Output • ${node.config.width}-bit`,
+        subtitle: `${partName("output-pin")} • ${node.config.width}-bit`,
         inputs: [{ key: "IN", name: "IN", width: node.config.width }],
         outputs: [],
       };
@@ -56,7 +59,7 @@ export function createNodeSpecFactory(deps) {
     if (node.type === "clock") {
       return {
         title: node.config.label,
-        subtitle: "Clock • 1-bit",
+        subtitle: `${partName("clock")} • 1-bit`,
         inputs: [],
         outputs: [{ key: "OUT", name: "OUT", width: 1 }],
       };
@@ -64,7 +67,7 @@ export function createNodeSpecFactory(deps) {
     if (node.type === "register") {
       return {
         title: node.config.label,
-        subtitle: `Register • ${node.config.width}-bit`,
+        subtitle: `${partName("register")} • ${node.config.width}-bit`,
         inputs: [
           { key: "D", name: "D", width: node.config.width },
           { key: "CLK", name: "CLK", width: 1 },
@@ -86,7 +89,7 @@ export function createNodeSpecFactory(deps) {
     if (node.type === "screen") {
       return {
         title: node.config.label,
-        subtitle: "Screen • IN[7:0]→rij, ROW(3), WRITE+CLK latched",
+        subtitle: `${partName("screen")} • ${t("nodeSubtitle.screen")}`,
         inputs: [
           { key: "IN", name: "IN", width: 16 },
           { key: "ROW", name: "ROW", width: 3 },
@@ -99,7 +102,7 @@ export function createNodeSpecFactory(deps) {
     if (node.type === "keyboard") {
       return {
         title: node.config.label,
-        subtitle: "Keyboard • OUT=laatste toets (klik=luister, Esc=stop)",
+        subtitle: `${partName("keyboard")} • ${t("nodeSubtitle.keyboard")}`,
         inputs: [],
         outputs: [{ key: "OUT", name: "OUT", width: 16 }],
       };
@@ -108,7 +111,7 @@ export function createNodeSpecFactory(deps) {
       const lowWidth = node.config.width - node.config.highWidth;
       return {
         title: node.config.label,
-        subtitle: `Bus Split • ${node.config.width}-bit`,
+        subtitle: `${partName("splitter")} • ${node.config.width}-bit`,
         inputs: [{ key: "IN", name: "IN", width: node.config.width }],
         outputs: [
           { key: "HI", name: `HI(${node.config.highWidth})`, width: node.config.highWidth },
@@ -120,7 +123,7 @@ export function createNodeSpecFactory(deps) {
       const lowWidth = node.config.width - node.config.highWidth;
       return {
         title: node.config.label,
-        subtitle: `Bus Join • ${node.config.width}-bit`,
+        subtitle: `${partName("joiner")} • ${node.config.width}-bit`,
         inputs: [
           { key: "HI", name: `HI(${node.config.highWidth})`, width: node.config.highWidth },
           { key: "LO", name: `LO(${lowWidth})`, width: lowWidth },

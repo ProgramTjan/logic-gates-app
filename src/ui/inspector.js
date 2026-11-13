@@ -1,4 +1,5 @@
 import { t } from "../i18n/index.js";
+import { displayNodeLabel } from "./canvas.js";
 
 export function createInspectorRenderers(deps) {
   const {
@@ -168,7 +169,7 @@ export function createInspectorRenderers(deps) {
     dom.inspector.className = "inspector";
     dom.inspector.innerHTML = `
       <div>
-        <h3>${escapeHtml(spec.title)}</h3>
+        <h3>${escapeHtml(displayNodeLabel(node, spec.title))}</h3>
         <p class="micro-copy">${escapeHtml(spec.subtitle)}</p>
       </div>
       ${renderInspectorFields(node)}

@@ -4,7 +4,7 @@ export default {
     "title": "Licht aan",
     "description": "Casus: de buitenlamp mag alleen aan als de deur dicht is én het alarm aan staat. Bouw de schakeling die de lamp aanstuurt.",
     "hints": [
-      "Open Parts en plaats de AND-poort.",
+      "Open de onderdelenstrook en plaats de AND-poort.",
       "Verbind DOOR en ALARM elk met een ingang van de AND-poort.",
       "Verbind de uitgang van de AND-poort met LAMP en zet daarna DOOR en ALARM aan."
     ],
@@ -37,7 +37,7 @@ export default {
     }
   },
   "nand": {
-    "title": "Build NAND",
+    "title": "Bouw NAND",
     "description": "Maak je eigen NAND-chip zonder de starterversie te gebruiken.",
     "hints": [
       "Gebruik twee Input nodes met namen A en B.",
@@ -48,7 +48,7 @@ export default {
       "Een bit is de kleinste eenheid informatie: 0 (laag, false, uit) of 1 (hoog, true, aan). Alles in een computer is opgebouwd uit miljoenen van dit soort schakelaars.",
       "Een logische poort combineert één of meer bits tot een nieuw bit. De NAND-poort (Not-AND) geeft pas 0 als BEIDE inputs 1 zijn — anders altijd 1.",
       "NAND is de universele bouwsteen: elke andere logische functie kan uitsluitend met NAND-gates worden gebouwd. Dit project begint hier bewust — zodra je NAND hebt, heb je alles.",
-      "Bouw-strategie: gebruik de ingebouwde NAND-gate uit de Parts-balk. Verbind A en B direct aan de gate, en de output aan je OUT-pin."
+      "Bouw-strategie: gebruik de ingebouwde NAND-gate uit de onderdelenstrook. Verbind A en B direct aan de gate, en de output aan je OUT-pin."
     ],
     "learning": {
       "goal": "Begrijp waarom NAND universeel is en bouw een werkende NAND-chip.",
@@ -84,7 +84,7 @@ export default {
     }
   },
   "not": {
-    "title": "Build NOT",
+    "title": "Bouw NOT",
     "description": "Bouw een inverterchip met 1 input en 1 output.",
     "hints": [
       "Gebruik één Input en één Output.",
@@ -118,7 +118,7 @@ export default {
     }
   },
   "and": {
-    "title": "Build AND",
+    "title": "Bouw AND",
     "description": "Bouw AND uit je bestaande bouwblokken.",
     "hints": [
       "Gebruik A en B als inputs en OUT als output.",
@@ -163,7 +163,7 @@ export default {
     }
   },
   "or": {
-    "title": "Build OR",
+    "title": "Bouw OR",
     "description": "Maak een OR-chip in dezelfde stijl als NAND2Tetris.",
     "hints": [
       "Gebruik twee data-inputs A en B.",
@@ -197,7 +197,7 @@ export default {
     }
   },
   "xor": {
-    "title": "Build XOR",
+    "title": "Bouw XOR",
     "description": "Bouw XOR als composietchip.",
     "hints": [
       "Gebruik XOR-logica: precies één input hoog geeft een hoge output.",
@@ -242,7 +242,7 @@ export default {
     }
   },
   "xor-nand-only": {
-    "title": "Build XOR (alleen NAND)",
+    "title": "Bouw XOR (alleen NAND)",
     "description": "Zelfde waarheidstabel als XOR, maar je mag alleen ingebouwde NAND-poorten gebruiken (geen AND/OR/NOT/XOR op de canvas). Sub-chips mogen wél, zolang die ook alleen NAND bevatten.",
     "hints": [
       "Je Output-pin moet OUT heten (zoals bij andere opdrachten).",
@@ -277,7 +277,7 @@ export default {
     }
   },
   "mux": {
-    "title": "Build MUX",
+    "title": "Bouw MUX",
     "description": "Maak een multiplexer met twee datalijnen en één select.",
     "hints": [
       "Gebruik A, B en SEL als inputs.",
@@ -298,7 +298,7 @@ export default {
     }
   },
   "dmux": {
-    "title": "Build DMUX",
+    "title": "Bouw DMUX",
     "description": "Splits één input naar twee outputs op basis van een select-lijn.",
     "hints": [
       "Gebruik IN en SEL als inputs.",
@@ -320,7 +320,7 @@ export default {
     }
   },
   "not16": {
-    "title": "Build Not16",
+    "title": "Bouw Not16",
     "description": "16-bit inverter: elke bit van IN wordt omgekeerd naar OUT.",
     "hints": [
       "Gebruik een NOT-gate met width=16, of zestien 1-bit NOT’s met Splitter/Joiner.",
@@ -340,7 +340,7 @@ export default {
     }
   },
   "and16": {
-    "title": "Build And16",
+    "title": "Bouw And16",
     "description": "16-bit AND: OUT[i] = A[i] AND B[i] voor elke bitpositie.",
     "hints": [
       "Een AND-gate met width=16 volstaat, of herhaal 1-bit AND per positie.",
@@ -360,7 +360,7 @@ export default {
     }
   },
   "or16": {
-    "title": "Build Or16",
+    "title": "Bouw Or16",
     "description": "16-bit OR: OUT[i] = A[i] OR B[i] voor elke bitpositie.",
     "hints": [
       "Zelfde patroon als And16, maar met OR.",
@@ -380,7 +380,7 @@ export default {
     }
   },
   "mux16": {
-    "title": "Build Mux16",
+    "title": "Bouw Mux16",
     "description": "16-bit multiplexer: SEL=0 → OUT=A, SEL=1 → OUT=B (hele bus).",
     "hints": [
       "Hergebruik je 1-bit MUX zestien keer, of bouw met And16/Or16/Not16: OUT = (A AND Not16(SEL…)) OR (B AND SEL…).",
@@ -400,7 +400,7 @@ export default {
     }
   },
   "or4way": {
-    "title": "Build Or4Way",
+    "title": "Bouw Or4Way",
     "description": "Geef 1 als minstens één bit van de 4-bit invoer hoog is.",
     "hints": [
       "Gebruik een Splitter (width=4, highWidth=1) om bit voor bit uit IN te halen.",
@@ -422,7 +422,7 @@ export default {
     }
   },
   "mux4way": {
-    "title": "Build Mux4Way",
+    "title": "Bouw Mux4Way",
     "description": "Kies één van vier data-inputs op basis van select-lijnen S0 en S1.",
     "hints": [
       "S0=0,S1=0 → A · S0=1,S1=0 → B · S0=0,S1=1 → C · S0=1,S1=1 → D.",
@@ -444,7 +444,7 @@ export default {
     }
   },
   "dmux4way": {
-    "title": "Build DMux4Way",
+    "title": "Bouw DMux4Way",
     "description": "Stuur één input door naar één van vier outputs op basis van S0 en S1.",
     "hints": [
       "S0=0,S1=0 → A · S0=1,S1=0 → B · S0=0,S1=1 → C · S0=1,S1=1 → D.",
@@ -466,7 +466,7 @@ export default {
     }
   },
   "or8way": {
-    "title": "Build Or8Way",
+    "title": "Bouw Or8Way",
     "description": "Reduction-OR over 8 bits: OUT=1 als minstens één bit van IN hoog is.",
     "hints": [
       "Splitter (width=8) + OR-ketting, of twee Or4Way-chips + OR.",
@@ -486,7 +486,7 @@ export default {
     }
   },
   "mux4way16": {
-    "title": "Build Mux4Way16",
+    "title": "Bouw Mux4Way16",
     "description": "Kies één van vier 16-bit bussen met een 2-bit SEL (00=A … 11=D).",
     "hints": [
       "SEL=00→A, 01→B, 10→C, 11→D (MSB van SEL staat links).",
@@ -506,7 +506,7 @@ export default {
     }
   },
   "mux8way16": {
-    "title": "Build Mux8Way16",
+    "title": "Bouw Mux8Way16",
     "description": "Kies één van acht 16-bit bussen met een 3-bit SEL (000=A … 111=H).",
     "hints": [
       "Twee Mux4Way16’en (A–D en E–H) op SEL[1:0], daarna Mux16 op SEL[2].",
@@ -526,7 +526,7 @@ export default {
     }
   },
   "dmux8way": {
-    "title": "Build DMux8Way",
+    "title": "Bouw DMux8Way",
     "description": "Stuur 1-bit IN naar precies één van acht outputs (A–H) op basis van 3-bit SEL.",
     "hints": [
       "Eerst DMux op SEL[2], daarna per tak een DMux4Way op SEL[1:0].",
@@ -546,7 +546,7 @@ export default {
     }
   },
   "half-adder": {
-    "title": "Build Half Adder",
+    "title": "Bouw Half Adder",
     "description": "Bouw SUM en CARRY als aparte outputs.",
     "hints": [
       "SUM werkt als XOR van A en B.",
@@ -567,7 +567,7 @@ export default {
     }
   },
   "full-adder": {
-    "title": "Build Full Adder",
+    "title": "Bouw Full Adder",
     "description": "Combineer adders tot een volledige 1-bit adder met carry-in en carry-out.",
     "hints": [
       "Gebruik twee half adders of een eigen equivalent.",
@@ -588,7 +588,7 @@ export default {
     }
   },
   "add4": {
-    "title": "Build Add4",
+    "title": "Bouw Add4",
     "description": "Opteller voor twee 4-bit getallen. Overflow wordt genegeerd (geen carry-out).",
     "hints": [
       "Sla eerst je Half Adder en Full Adder chips op als je die nog nodig hebt.",
@@ -613,7 +613,7 @@ export default {
     }
   },
   "inc4": {
-    "title": "Build Inc4",
+    "title": "Bouw Inc4",
     "description": "Verhoog een 4-bit getal met 1. Overflow wraps terug naar 0.",
     "hints": [
       "Makkelijkste route: gebruik je Add4-chip met A=IN en B=een Switch (width=4, value=0001).",
@@ -635,7 +635,7 @@ export default {
     }
   },
   "dff": {
-    "title": "Build Bit (DFF + LOAD)",
+    "title": "Bouw Bit (DFF + LOAD)",
     "description": "1-bit geheugencel met load: alleen bij LOAD=1 én een CLK-tick neemt OUT de waarde van IN over; anders houdt hij de oude waarde.",
     "hints": [
       "In deze app is de builtin Register-node de DFF-primitieve: bij CLK=1 kopieert hij D→Q.",
@@ -659,7 +659,7 @@ export default {
     }
   },
   "register-chip": {
-    "title": "Build Register (Bit)",
+    "title": "Bouw Register (Bit)",
     "description": "1-bit register: neemt de waarde van D over op CLK=1, en reset op RST=1.",
     "hints": [
       "Gebruik D, CLK en RST als inputs en Q als output.",
@@ -683,7 +683,7 @@ export default {
     }
   },
   "register16": {
-    "title": "Build Register16",
+    "title": "Bouw Register16",
     "description": "16-bit register met LOAD: bij LOAD=1 en CLK-tick wordt IN overgenomen; anders blijft OUT gelijk.",
     "hints": [
       "Gebruik een Register-node met width=16, of zestien Bit-chips.",
@@ -705,7 +705,7 @@ export default {
     }
   },
   "pc": {
-    "title": "Build PC",
+    "title": "Bouw PC",
     "description": "Programmateller: RST reset naar 0, LOAD laadt IN, INC telt op. Prioriteit: RST > LOAD > INC.",
     "hints": [
       "Gebruik een Register-node als geheugen voor de huidige waarde (OUT = Q van de register).",
@@ -729,7 +729,7 @@ export default {
     }
   },
   "add16": {
-    "title": "Build Add16",
+    "title": "Bouw Add16",
     "description": "Ripple-carry optelling voor twee 16-bit getallen (overflow/carry-out wordt genegeerd, zoals Add4).",
     "hints": [
       "Kopieer het Add4-patroon: Full Adders in keten, Splitters/Joiners voor bussen.",
@@ -749,7 +749,7 @@ export default {
     }
   },
   "inc16": {
-    "title": "Build Inc16",
+    "title": "Bouw Inc16",
     "description": "Verhoog een 16-bit waarde met 1; overflow wrapt naar 0.",
     "hints": [
       "Hergebruik Add16 met B=0000000000000001 of bouw een carry-keten.",
@@ -769,7 +769,7 @@ export default {
     }
   },
   "alu": {
-    "title": "Build ALU (16-bit)",
+    "title": "Bouw ALU (16-bit)",
     "description": "nand2tetris-stijl ALU: stuur X en Y met zx,nx,zy,ny,f,no; lees OUT (16), zr (1 als OUT==0), ng (1 als MSB van OUT gezet is).",
     "hints": [
       "Bouw eerst hulpfuncties: zero/negate op X en Y, dan MUX tussen AND en ADD, dan optionele NOT op het resultaat.",
@@ -792,7 +792,7 @@ export default {
     }
   },
   "instruction-decoder": {
-    "title": "Build Instruction Decoder",
+    "title": "Bouw Instruction Decoder",
     "description": "Splits een 16-bit HACK-instructie in stuurbits: isA (1 als MSB=0), comp (7), dest (3), jump (3).",
     "hints": [
       "A-instructie: MSB=0 → isA=1. C-instructie: MSB=1 → isA=0.",
@@ -815,7 +815,7 @@ export default {
     }
   },
   "alu-with-registers": {
-    "title": "Build ALU + Registers",
+    "title": "Bouw ALU + Registers",
     "description": "Mini-datapad: A- en D-register + ALU. Y van de ALU is A; X is D. Laad A met A_IN, laad D vanuit ALU-out.",
     "hints": [
       "Register16 (of breed register) voor A en D; CLK poorten met A_LOAD / D_LOAD.",
@@ -837,7 +837,7 @@ export default {
     }
   },
   "ram8": {
-    "title": "Build RAM8",
+    "title": "Bouw RAM8",
     "description": "8 woorden × 16 bit: bij LOAD=1 en een CLK-tick schrijf je IN naar geheugen[ADDR]; OUT toont altijd geheugen[ADDR] (combinatoir uitlezen). ADDR is 3-bit.",
     "hints": [
       "Gebruik acht keer een 16-bit register (of je eigen brede register-chip) en een DMux8Way/Mux8Way-achtige adresdecodering.",
@@ -860,7 +860,7 @@ export default {
     }
   },
   "mod4-counter": {
-    "title": "Build Mod4 teller",
+    "title": "Bouw Mod4 teller",
     "description": "Sequentieel bouwblok: 2-bit teller. RST=1 zet terug naar 00; elke tick met CLK=1 (na stabiele inputs) telt +1 mod 4.",
     "hints": [
       "Een register van 2 bits of een keten van toggles + AND voor carry.",
@@ -880,7 +880,7 @@ export default {
     }
   },
   "ram64": {
-    "title": "Build RAM64",
+    "title": "Bouw RAM64",
     "description": "Build RAM64: 64 woorden × 16 bit. LOAD=1 + CLK-tick schrijft IN naar geheugen[ADDR]; OUT leest combinationeel.",
     "hints": [
       "Stapel RAM8/RAM64-chips of registers met adresdecodering (Mux/DMux).",
@@ -901,7 +901,7 @@ export default {
     }
   },
   "ram512": {
-    "title": "Build RAM512",
+    "title": "Bouw RAM512",
     "description": "Build RAM512: 512 woorden × 16 bit. LOAD=1 + CLK-tick schrijft IN naar geheugen[ADDR]; OUT leest combinationeel.",
     "hints": [
       "Stapel RAM8/RAM64-chips of registers met adresdecodering (Mux/DMux).",
@@ -921,7 +921,7 @@ export default {
     }
   },
   "ram4k": {
-    "title": "Build RAM4K",
+    "title": "Bouw RAM4K",
     "description": "Build RAM4K: 4096 woorden × 16 bit. LOAD=1 + CLK-tick schrijft IN naar geheugen[ADDR]; OUT leest combinationeel.",
     "hints": [
       "Stapel RAM8/RAM64-chips of registers met adresdecodering (Mux/DMux).",
@@ -941,7 +941,7 @@ export default {
     }
   },
   "ram16k": {
-    "title": "Build RAM16K",
+    "title": "Bouw RAM16K",
     "description": "Build RAM16K: 16384 woorden × 16 bit. LOAD=1 + CLK-tick schrijft IN naar geheugen[ADDR]; OUT leest combinationeel.",
     "hints": [
       "Stapel RAM8/RAM64-chips of registers met adresdecodering (Mux/DMux).",
@@ -961,7 +961,7 @@ export default {
     }
   },
   "cpu": {
-    "title": "Build CPU",
+    "title": "Bouw CPU",
     "description": "HACK CPU: inM + instruction + reset → outM, writeM, addressM (15-bit), pc (16-bit). Reset zet pc op 0; daarna telt pc op per cyclus.",
     "hints": [
       "Combineer PC, A/D-registers, ALU en geheugenlogica zoals in het boek (datapath + control).",

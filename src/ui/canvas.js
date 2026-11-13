@@ -1,5 +1,28 @@
 import { t } from "../i18n/index.js";
 
+// Nodes keep their stored English default label ("Switch", "Input", ...); only its display is translated.
+const DEFAULT_PART_LABELS = {
+  switch: ["Switch"],
+  lamp: ["Lamp"],
+  "input-pin": ["Input"],
+  "output-pin": ["Output"],
+  clock: ["Clock"],
+  register: ["Register"],
+  screen: ["Screen"],
+  keyboard: ["Keyboard"],
+  splitter: ["Split", "Bus Split"],
+  joiner: ["Join", "Bus Join"],
+};
+
+export function displayNodeLabel(node, title) {
+  if (DEFAULT_PART_LABELS[node.type]?.includes(title)) {
+    const key = `partLabel.${node.type}`;
+    const translated = t(key);
+    return translated !== key ? translated : title;
+  }
+  return title;
+}
+
 export function createCanvasRenderers(deps) {
   const {
     dom,
@@ -63,7 +86,7 @@ export function createCanvasRenderers(deps) {
       }
       <div class="node-shell" data-drag-surface="true" data-node-id="${node.id}">
         <div class="node-caption">
-          <span class="node-label">${escapeHtml(spec.title)}</span>
+          <span class="node-label">${escapeHtml(displayNodeLabel(node, spec.title))}</span>
           ${shouldShowStatePill(node, spec) ? `<span class="node-state-pill">${escapeHtml(getNodeTag(node))}</span>` : ""}
         </div>
         <div class="node-core">

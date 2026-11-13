@@ -4119,9 +4119,8 @@ h2 {
 
 .parts-strip-label {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .parts-strip-sep {
@@ -4136,7 +4135,7 @@ h2 {
   /* Wide: vertical strip on the left edge of the canvas, beside it, so it never covers the circuit. */
   .app .workspace-frame {
     display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-columns: 104px minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
 
@@ -4164,6 +4163,7 @@ h2 {
   .parts-strip-button {
     min-width: 0;
     width: 100%;
+    padding: 0.3rem 0.2rem;
   }
 
   .parts-strip-sep {
