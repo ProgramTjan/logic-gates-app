@@ -4,7 +4,7 @@ export default {
     "title": "Light on",
     "description": "Case: the porch lamp may only turn on when the door is closed and the alarm is armed. Build the circuit that controls the lamp.",
     "hints": [
-      "Open Parts and place the AND gate.",
+      "Open the parts strip and place the AND gate.",
       "Connect DOOR and ALARM each to one input of the AND gate.",
       "Connect the AND gate's output to LAMP, then switch DOOR and ALARM on."
     ],
@@ -48,7 +48,7 @@ export default {
       "A bit is the smallest unit of information: 0 (low, false, off) or 1 (high, true, on). Everything in a computer is built from millions of these switches.",
       "A logic gate combines one or more bits into a new bit. The NAND gate (Not-AND) outputs 0 only when BOTH inputs are 1 — otherwise always 1.",
       "NAND is the universal building block: every other logic function can be built using only NAND gates. This project starts here on purpose — once you have NAND, you have everything.",
-      "Build strategy: use the built-in NAND gate from the Parts bar. Connect A and B directly to the gate, and the output to your OUT pin."
+      "Build strategy: use the built-in NAND gate from the parts strip. Connect A and B directly to the gate, and the output to your OUT pin."
     ],
     "learning": {
       "goal": "Understand why NAND is universal and build a working NAND chip.",

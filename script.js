@@ -25,7 +25,7 @@ import { BUILTIN_PARTS } from "./src/data/builtinParts.js";
 import { CHALLENGES } from "./src/data/challenges.js";
 import { createChallengeVerifier } from "./src/challenges/verification.js";
 import { createChipDefinitionsService } from "./src/chips/definitions.js";
-import { createCanvasRenderers } from "./src/ui/canvas.js";
+import { createCanvasRenderers, displayNodeLabel } from "./src/ui/canvas.js";
 import { createInteractionHandlers } from "./src/ui/events.js";
 import { createInspectorRenderers } from "./src/ui/inspector.js";
 import { createWorkspaceActionHandlers } from "./src/ui/workspace-actions.js";
@@ -783,7 +783,7 @@ import {
       }
       const nodeLabel = document.getElementById("inspector-toggle-node");
       if (nodeLabel) {
-        nodeLabel.textContent = selected ? selected.config?.label || selected.type : "";
+        nodeLabel.textContent = selected ? displayNodeLabel(selected, selected.config?.label || selected.type) : "";
       }
     }
     if (dom.checksCard) {

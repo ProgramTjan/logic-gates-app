@@ -1,6 +1,7 @@
 import { sameCircuit } from "../model/circuit-signature.js";
 import { markChallengeCompleted } from "../data/curriculum.js";
 import { t } from "../i18n/index.js";
+import { displayNodeLabel } from "../ui/canvas.js";
 import { localizeChallenge } from "../i18n/challenges.js";
 
 export function createWorkspaceMutations(deps) {
@@ -177,7 +178,7 @@ export function createWorkspaceMutations(deps) {
     state.selectedNodeId = node.id;
     setStatus(
       t("status.partAdded", {
-        label: node.config.label || node.type,
+        label: displayNodeLabel(node, node.config.label || node.type),
         workspace: workspace.name,
       })
     );

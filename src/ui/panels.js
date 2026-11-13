@@ -64,14 +64,20 @@ export function createPanelRenderers(deps) {
     return definition.description;
   }
 
+  /** Display name of a built-in part. Only the display is translated; part.label stays the data value. */
   function partLabel(type) {
+    const key = `partLabel.${type}`;
+    const translated = t(key);
+    if (translated !== key) {
+      return translated;
+    }
     const part = BUILTIN_PARTS.find((item) => item.type === type);
     return part ? part.label : type;
   }
 
   function renderPartButton(part) {
     return `<button class="palette-button" type="button" data-part-type="${part.type}">
-          ${escapeHtml(part.label)}
+          ${escapeHtml(partLabel(part.type))}
           <small>${escapeHtml(t(`partCopy.${part.type}`) === `partCopy.${part.type}` ? part.copy : t(`partCopy.${part.type}`))}</small>
         </button>`;
   }
@@ -135,7 +141,7 @@ export function createPanelRenderers(deps) {
         `<button type="button" class="parts-strip-button" data-strip-part="${part.type}" title="${escapeHtml(
           copyFor(part)
         )}"><span class="parts-strip-symbol" aria-hidden="true">${escapeHtml(symbolFor(part.type))}</span><span class="parts-strip-label">${escapeHtml(
-          part.label
+          partLabel(part.type)
         )}</span></button>`;
       const ioTypes = ["switch", "lamp", "input-pin", "output-pin"];
       const groups = [
@@ -669,7 +675,7 @@ export function createPanelRenderers(deps) {
     }
 
     const unlockedParts = getPartsUnlockedBy(challenge.id)
-      .map((type) => BUILTIN_PARTS.find((part) => part.type === type)?.label || type)
+      .map((type) => partLabel(type))
       .join(", ");
     const nextBody = lessonCompleted
       ? `<div class="lesson-next-actions">

@@ -1,5 +1,28 @@
 import { t } from "../i18n/index.js";
 
+// Nodes keep their stored English default label ("Switch", "Input", ...); only its display is translated.
+const DEFAULT_PART_LABELS = {
+  switch: ["Switch"],
+  lamp: ["Lamp"],
+  "input-pin": ["Input"],
+  "output-pin": ["Output"],
+  clock: ["Clock"],
+  register: ["Register"],
+  screen: ["Screen"],
+  keyboard: ["Keyboard"],
+  splitter: ["Split", "Bus Split"],
+  joiner: ["Join", "Bus Join"],
+};
+
+export function displayNodeLabel(node, title) {
+  if (DEFAULT_PART_LABELS[node.type]?.includes(title)) {
+    const key = `partLabel.${node.type}`;
+    const translated = t(key);
+    return translated !== key ? translated : title;
+  }
+  return title;
+}
+
 export function createCanvasRenderers(deps) {
   const {
     dom,
@@ -21,6 +44,10 @@ export function createCanvasRenderers(deps) {
       (state.selectedNodeIds && state.selectedNodeIds.includes(node.id));
     const quickDeleteVisible = node.id === state.quickDeleteNodeId;
     const typeClass = `node-${node.type}`;
+    const wideClass =
+      ["switch", "lamp", "input-pin", "output-pin"].includes(node.type) && Number(node.config.width) > 1
+        ? "node-wide"
+        : "";
     const gateClass =
       node.type === "gate" && node.config.gateType
         ? `gate-${String(node.config.gateType).toLowerCase()}`
@@ -51,7 +78,7 @@ export function createCanvasRenderers(deps) {
     const listening =
       node.type === "keyboard" && state.keyboardCaptureNodeId === node.id ? "keyboard-listening" : "";
 
-    return `<article class="node ${typeClass} ${gateClass} ${selected ? "selected" : ""} ${
+    return `<article class="node ${typeClass} ${wideClass} ${gateClass} ${selected ? "selected" : ""} ${
       invalid ? "invalid" : ""
     } ${listening}" data-node-id="${node.id}" style="left:${node.x}px; top:${node.y}px;">
       ${
@@ -63,7 +90,7 @@ export function createCanvasRenderers(deps) {
       }
       <div class="node-shell" data-drag-surface="true" data-node-id="${node.id}">
         <div class="node-caption">
-          <span class="node-label">${escapeHtml(spec.title)}</span>
+          <span class="node-label">${escapeHtml(displayNodeLabel(node, spec.title))}</span>
           ${shouldShowStatePill(node, spec) ? `<span class="node-state-pill">${escapeHtml(getNodeTag(node))}</span>` : ""}
         </div>
         <div class="node-core">
@@ -123,7 +150,7 @@ export function createCanvasRenderers(deps) {
       return `<div class="node-center"><div class="gate-face">
         <span class="lamp-indicator ${isOn ? "on" : ""}"></span>
       </div>
-      <div class="gate-meta"><span>${escapeHtml(lampValue)}</span></div></div>`;
+      <div class="gate-meta"><span class="node-bits">${escapeHtml(lampValue)}</span></div></div>`;
     }
     if (node.type === "register") {
       return `<div class="node-center"><div class="gate-face">
@@ -181,7 +208,7 @@ export function createCanvasRenderers(deps) {
       return `<div class="node-center"><div class="gate-face">
         <span class="lamp-indicator ${isOn ? "on" : ""}"></span>
       </div>
-      <div class="gate-meta"><span>${escapeHtml(lampValue)}</span></div></div>`;
+      <div class="gate-meta"><span class="node-bits">${escapeHtml(lampValue)}</span></div></div>`;
     }
     const inverting = node.type === "gate" && INVERTING_GATES.includes(node.config.gateType);
     return `<div class="node-center"><div class="gate-face${inverting ? " is-inverting" : ""}">
@@ -208,7 +235,7 @@ export function createCanvasRenderers(deps) {
     const bits = String(value);
     const label = escapeAttribute(t("toggle"));
     if (bits.length > 1) {
-      return `<span>${escapeHtml(bits)}</span>
+      return `<span class="node-bits">${escapeHtml(bits)}</span>
         <button class="ghost-button node-mini-button" type="button" data-node-action="${action}" data-node-id="${nodeId}" aria-label="${label}">${escapeHtml(
           t("toggleShort")
         )}</button>`;

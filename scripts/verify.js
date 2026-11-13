@@ -1336,7 +1336,7 @@ const memStore = {
 setLocale("en", { storage: memStore });
 assert("default locale en", getLocale() === "en");
 assert("t(course) EN", t("course") === "Course");
-assert("t interpolate", t("courseLessonsCount", { n: 5 }) === "5 lessons");
+assert("t interpolate", t("homeTotalProgress", { done: 5, total: 41 }) === "5 of 41 lessons");
 setLocale("nl", { storage: memStore });
 assert("locale nl", getLocale() === "nl");
 assert("t(course) NL", t("course") === "Cursus");
