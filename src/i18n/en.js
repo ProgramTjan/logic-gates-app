@@ -274,7 +274,7 @@ export default {
   tipWireDelete: "Delete a wire: hold it ~½ s → a red × appears.",
   tipNodeDelete: "Delete a node: hold it ~½ s → a red × in the corner.",
   tipVersions: "Keep multiple chips of the same type? Use <em>Edit as New Version</em>.",
-  tipWireColors: "Wires turn green (=1) or red (=0) — signal flow at a glance.",
+  tipWireColors: "A wire lights up at 1 and is grey at 0 — signal flow at a glance.",
   tipBus: "Use Splitter/Joiner for multi-bit buses (needed for Add4, Inc4).",
   tipMultiSelect:
     "Multiple nodes at once: <kbd>Shift+drag</kbd> (marquee) or <kbd>Ctrl+A</kbd>, then <kbd>Ctrl+C</kbd> and paste with <kbd>Ctrl+V</kbd> — also on another sheet.",

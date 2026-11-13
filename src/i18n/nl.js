@@ -272,7 +272,7 @@ export default {
   tipWireDelete: "Verwijder een draad: hou hem ~½ sec ingedrukt → rode × verschijnt.",
   tipNodeDelete: "Verwijder een onderdeel: hou hem ~½ sec ingedrukt → rode × in de hoek.",
   tipVersions: "Meerdere chips bewaren van hetzelfde type? Gebruik <em>Nieuwe versie</em>.",
-  tipWireColors: "Draden kleuren groen (=1) of rood (=0) — zo zie je signaalstromen in één oogopslag.",
+  tipWireColors: "Een draad licht op bij 1 en is grijs bij 0 — zo zie je in één oogopslag waar de stroom loopt.",
   tipBus: "Gebruik Bus splitsen en Bus samenvoegen voor multi-bit bussen (nodig voor Add4, Inc4).",
   tipMultiSelect:
     "Meerdere onderdelen tegelijk: <kbd>Shift+slepen</kbd> (kader) of <kbd>Ctrl+A</kbd>, dan <kbd>Ctrl+C</kbd> en plak met <kbd>Ctrl+V</kbd> — ook op een ander werkblad.",
