@@ -89,6 +89,8 @@ export default {
   homeWelcomeTitle: "Learn how a computer works — by building one",
   homeWelcomeLead: "Start with a short case: switch on a lamp. You'll be guided step by step.",
   homeWelcomeStart: "Start: {title}",
+  homeHeroEyebrow: "{module} · Lesson {n} of {total}",
+  homeTotalProgress: "{done} of {total} lessons",
   // Lesson flow (UX fase B)
   stepIntro: "Intro",
   quizSkip: "Skip",

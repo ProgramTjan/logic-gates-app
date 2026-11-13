@@ -435,7 +435,7 @@ Eén branch per fase (`ux/fase-f-canvas`, `ux/fase-g-les`, …), één commit pe
 
 ---
 
-## FASE I — Startscherm als pad
+## FASE I — Startscherm als pad ✅ gedaan 2026-11-11
 
 ### Stap I.1: Eén "Ga verder"-kaart
 

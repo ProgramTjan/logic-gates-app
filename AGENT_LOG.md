@@ -605,3 +605,30 @@ Groen: `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 24/24 (22 best
 **Gevolg voor fase J:** J.2 taak 1 (bruine tint weg) en taak 4 (één accent, groen alleen voor "klopt") zijn hiermee gedaan voor donker en licht. Rest van J.2 (geneste kaders, app-balk) en J.1/J.3 staan nog open.
 
 **Resultaat:** groen, `npm test` 169/169, `npm run check` OK, e2e 26/26. Schermafdrukken bekeken: donker en licht op 1440×900 en 820×1180 (start, intro, gebouwd, quiz, Vrij bouwen), neon op 1440×900 (ongewijzigd).
+
+---
+
+## 2026-11-11 — UX fase I: startscherm als pad
+
+**Uitgevoerd** (één commit per stap):
+- I.1 Hero is één kaart (`.course-hero`, 720px): eyebrow ("1. Poorten · Les 5 van 19", nieuwe sleutel `homeHeroEyebrow`), lestitel als `h2`, beschrijving van de les, totaalbalk met "5 van 41 lessen" (`homeTotalProgress`; aantal uit `getOrderedLessonIds(CURRICULUM)`, niet hardcoded) en precies één `.primary-button` (`data-course-continue`). Nieuwe gebruiker: zelfde kaart met welkomsttitel/-lead; de lestitel staat alleen in de knop ("Start: Licht aan"), geen tweede titel. Alles voltooid: titel `courseEmptyDone`, knop uitgeschakeld.
+- I.2 `.course-modules` is één kolom (max 720px, gecentreerd). Per module één `article.course-module-card[data-course-module]` met `details.course-lessons[data-course-module-lessons]` en `summary.course-module-row`: nummer, naam, ★ (bij badge, kleur `--ok`), "x/y" en een dunne balk (`renderProgressBar`, 4px, `--accent`; bij voltooide module `--ok`). De module met de volgende les staat open; de volgende les heeft `next` en een "→". Vergrendelde module: één gedimde rij met 🔒, zonder tekst "Vergrendeld" en zonder lessenlijst. `renderProgressRing`, alle ring-CSS, `.course-module-start`, de beschrijving/meta per module en `max-height` van de lessenlijst zijn weg. De modulebeschrijving staat als `title` op de rij. Kaarten gebruiken nu `--panel` (de oude `--panel-bg` bestond niet, waardoor de kaarten in licht donker waren).
+- I.3 Het vinkje staat in ⚙ onder "Begeleiding" (`index.html`, `data-toggle-free-mode`, `data-i18n="freeMode"`). Eén handler: `handleFreeModeChange` (hernoemd uit `handleCourseChange`, `src/ui/course.js`), gebonden aan `#settings-menu` in `script.js`. De dode tweede handler (`handleChallengeListChange` + binding in `boot.js` + de `label.challenge-free-mode`-uitzondering in `handleChallengeListClick`) is verwijderd, evenals de CSS van `.challenge-free-mode` en `.course-free-mode`. `updateViewChrome` zet het vinkje bij elke render (`state.project.learner.unlockedAll`). Kaart "Vrij bouwen": vergrendeld = één gedimde regel met 🔒 en uitlegtekst zonder knop; ontgrendeld = gewone kaart met "Open werkbank" (ononderbroken rand, geen stippellijn meer). `enableFreeMode` in `e2e/helpers.js` opent `#settings-menu`, zet het vinkje en sluit het menu weer. Nieuwe e2e-test: vinkje alleen in ⚙, menu blijft open na klikken, modules ontgrendelen en vergrendelen weer.
+- Extra, nodig voor de acceptatie: `.app[data-view="home"]` kreeg `grid-template-rows: auto 1fr` (was `auto auto`). Met `min-height: 100vh` kreeg de app-balk anders het overschot en werd 85px hoog zodra het startscherm korter dan het venster was.
+
+**Aannames/afwijkingen:**
+- e2e `smoke-check`: de test "vrije modus unlockt lessen" controleerde dat de les `computer` `disabled` is. Vergrendelde modules hebben nu geen lessenlijst, dus toetst hij dat de lesrij ontbreekt en dat `[data-course-module="computer"]` class `locked` heeft (zelfde bedoeling: de les is niet te starten).
+- Nieuwe gebruiker: de knop heet "Start: Licht aan"; een aparte lestitel is er niet.
+- Het nummer in de moduleregel komt uit de titel (`"1. Poorten"` wordt `1` + `Poorten`) via een regex in `course.js`; i18n-sleutels `curriculum.*.title` zijn ongewijzigd.
+- Ongebruikt maar niet verwijderd: i18n-sleutels `homeTitle`, `homeLead`, `homeShowLessons` en `courseLessonsCount`.
+- Het ⚙-menu sluit niet bij een klik binnenin (bestaande document-handler sluit alleen bij klik buiten of op een knop in `.settings-actions`), dus aan/uit zetten werkt met muis en tap (gecontroleerd op 1440 en 820 touch, ook via het label; de stand blijft na herladen).
+
+**Bevindingen (niet opgepakt):**
+- Open module met veel lessen (Poorten: 19) maakt het startscherm lang; scrollen is nodig vanaf "na les 0". Eventueel alleen de volgende ±5 lessen tonen of andere modules inklappen.
+- Hero-beschrijvingen komen uit `src/data/locales/` en zijn deels Engels ("Build XOR"-titels, fase J.3).
+- De vergrendelde-lesrij "🔒" gebruikt de emoji in amberkleur (emoji-render); niet gestileerd.
+- Verse gebruiker op 1180×820, 390×844 en 820×1180 scrolt nog (1180×820: 15px, 390×844: 49px, 820×1180: geen); alleen 1440×900 was de acceptatie.
+- Statuslijn (`#status-line`) is leeg bij wisselen, de melding van vrije modus is dus alleen kort als toast te zien.
+
+**Resultaat:** groen, `npm test` 169/169, `npm run check` OK (52 bestanden), e2e 27/27 (26 bestaande + 1 nieuwe). Schermafdrukken (`/home/claude/shots/i3-*`) op 1440×900, 1180×820, 820×1180 (touch), 390×844 (touch) in vier toestanden (nieuw, na les 0, halverwege module 1, vrije modus) in donker en licht; neon steekproef op 1440×900 en 390×844. Verse gebruiker op 1440×900: kaart, alle moduleregels en Vrij bouwen zonder scrollen (documentscroll 0).
+

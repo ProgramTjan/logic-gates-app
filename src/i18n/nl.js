@@ -89,6 +89,8 @@ export default {
   homeWelcomeTitle: "Leer hoe een computer werkt — door er zelf een te bouwen",
   homeWelcomeLead: "Begin met een korte casus: doe een lamp aan. Je wordt stap voor stap begeleid.",
   homeWelcomeStart: "Start: {title}",
+  homeHeroEyebrow: "{module} · Les {n} van {total}",
+  homeTotalProgress: "{done} van {total} lessen",
   // Lesson flow (UX fase B)
   stepIntro: "Intro",
   quizSkip: "Sla over",

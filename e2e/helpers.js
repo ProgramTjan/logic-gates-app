@@ -1,12 +1,18 @@
 import { expect } from "@playwright/test";
 
-/** Zet vrije modus aan op het overzicht (home). */
+/** Zet vrije modus aan via het ⚙-menu (en sluit het menu weer). */
 export async function enableFreeMode(page) {
-  const toggle = page.locator("#course-view [data-toggle-free-mode]");
+  const menu = page.locator("#settings-menu");
+  const toggle = page.locator("#settings-menu [data-toggle-free-mode]");
+  if (!(await menu.evaluate((el) => el.open))) {
+    await menu.locator("summary").click();
+  }
   if (!(await toggle.isChecked())) {
     await toggle.click();
   }
   await expect(toggle).toBeChecked();
+  await menu.locator("summary").click();
+  await expect(menu).not.toHaveAttribute("open", /.*/);
 }
 
 /** Opent Vrij bouwen (via vrije modus als het nog vergrendeld is). */

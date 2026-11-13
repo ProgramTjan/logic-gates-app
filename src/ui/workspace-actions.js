@@ -139,11 +139,6 @@ export function createWorkspaceActionHandlers(deps) {
   }
 
   function handleChallengeListClick(event) {
-    const freeModeLabel = event.target.closest("label.challenge-free-mode");
-    if (freeModeLabel) {
-      return;
-    }
-
     const quizOption = event.target.closest("[data-quiz-challenge]");
     if (quizOption) {
       const challengeId = quizOption.dataset.quizChallenge;
@@ -276,23 +271,11 @@ export function createWorkspaceActionHandlers(deps) {
     submitChallenge(challenge.id);
   }
 
-  function handleChallengeListChange(event) {
-    const freeModeToggle = event.target.closest("[data-toggle-free-mode]");
-    if (!freeModeToggle) {
-      return;
-    }
-    const learner = getLearner();
-    learner.unlockedAll = Boolean(freeModeToggle.checked);
-    setStatus(learner.unlockedAll ? t("status.freeModeOn") : t("status.freeModeOff"));
-    renderChallenges();
-  }
-
   return {
     handleBuiltinPaletteClick,
     handleWorkspaceListClick,
     handleChipLibraryClick,
     handleChallengeListClick,
-    handleChallengeListChange,
     updateChallengeStartButton,
     updateChallengeSubmitButton,
     startSelectedChallenge,

@@ -39,12 +39,13 @@ export function createCourseRenderers(deps) {
     return { done, total, ratio: total ? done / total : 0 };
   }
 
-  function renderProgressRing(ratio) {
-    const pct = Math.round(ratio * 100);
-    const deg = Math.round(ratio * 360);
-    return `<div class="course-ring" style="--progress:${deg}deg" aria-label="${pct}%">
-      <span class="course-ring-label">${pct}%</span>
-    </div>`;
+  function renderProgressBar(ratio) {
+    return `<div class="course-bar" style="--p:${Math.round(ratio * 100)}%"><span></span></div>`;
+  }
+
+  function splitModuleTitle(title) {
+    const match = /^(\d+)\.\s*(.+)$/.exec(title);
+    return match ? { num: match[1], name: match[2] } : { num: "", name: title };
   }
 
   function renderLessonList(module, learner, nextId) {
@@ -65,6 +66,7 @@ export function createCourseRenderers(deps) {
           }" data-course-lesson="${escapeHtml(id)}" ${unlocked ? "" : "disabled"}>
             <span class="course-lesson-marker">${marker}</span>
             <span class="course-lesson-title">${escapeHtml(title)}</span>
+            ${id === nextId ? '<span class="course-lesson-arrow" aria-hidden="true">→</span>' : ""}
           </button>
         </li>`;
       })
@@ -86,56 +88,82 @@ export function createCourseRenderers(deps) {
       const localizedModule = localizeCurriculumModule(module);
       const { done, total, ratio } = moduleProgress(module, learner);
       const hasBadge = badges.includes(module.id);
-      const firstOpenInModule = module.lessonIds.find(
-        (id) => isUnlocked(id, learner) && !(learner.completedChallengeIds || []).includes(id)
-      );
       const anyUnlocked = module.lessonIds.some((id) => isUnlocked(id, learner));
-      const startId = firstOpenInModule || (anyUnlocked ? module.lessonIds[0] : null);
+      const { num, name } = splitModuleTitle(localizedModule.title);
+      const numHtml = `<span class="course-module-num">${escapeHtml(num)}</span>`;
+      const cardOpen = `<article class="course-module-card ${hasBadge ? "has-badge" : ""} ${
+        anyUnlocked ? "" : "locked"
+      }" data-course-module="${escapeHtml(module.id)}">`;
+      if (!anyUnlocked) {
+        return `${cardOpen}
+          <div class="course-module-row">
+            ${numHtml}
+            <span class="course-module-title">${escapeHtml(name)}</span>
+            <span class="course-module-lock" aria-label="${escapeHtml(S.locked)}" title="${escapeHtml(
+              S.locked
+            )}">🔒</span>
+          </div>
+        </article>`;
+      }
       const isOpen = openModules.has(module.id)
         ? openModules.get(module.id)
         : module.lessonIds.includes(nextId);
-      return `<article class="course-module-card ${hasBadge ? "has-badge" : ""} ${anyUnlocked ? "" : "locked"}" data-course-module="${escapeHtml(
-        module.id
-      )}">
-        <div class="course-module-top">
-          ${renderProgressRing(ratio)}
-          <div class="course-module-body">
-            <div class="course-module-head">
-              <h3>${escapeHtml(localizedModule.title)}</h3>
-              ${hasBadge ? `<span class="course-badge" title="${escapeHtml(S.badgeEarned)}">★</span>` : ""}
-            </div>
-            <p class="course-module-copy">${escapeHtml(localizedModule.description)}</p>
-            <p class="course-module-meta">${escapeHtml(t("courseLessonsCount", { n: `${done}/${total}` }))}</p>
-          </div>
-        </div>
-        ${
-          startId
-            ? `<button type="button" class="ghost-button ${
-                module.lessonIds.includes(nextId) ? "is-next" : ""
-              } course-module-start" data-course-lesson="${escapeHtml(
-                startId
-              )}">${done === total ? t("courseView") : done > 0 ? S.continue : S.start}</button>`
-            : `<p class="course-module-lock">🔒 ${escapeHtml(S.locked)}</p>`
-        }
+      return `${cardOpen}
         <details class="course-lessons" data-course-module-lessons="${escapeHtml(module.id)}"${isOpen ? " open" : ""}>
-          <summary>${escapeHtml(t("homeShowLessons"))}</summary>
+          <summary class="course-module-row" title="${escapeHtml(localizedModule.description)}">
+            ${numHtml}
+            <span class="course-module-title">${escapeHtml(name)}</span>
+            ${hasBadge ? `<span class="course-badge" title="${escapeHtml(S.badgeEarned)}">★</span>` : ""}
+            <span class="course-module-count">${done}/${total}</span>
+            ${renderProgressBar(ratio)}
+          </summary>
           <ol class="course-lesson-list">${renderLessonList(module, learner, nextId)}</ol>
         </details>
       </article>`;
     }).join("");
 
     const isNewcomer = !(learner.completedChallengeIds || []).length;
-    const continueLabel = nextTitle
-      ? isNewcomer
-        ? t("homeWelcomeStart", { title: nextTitle })
-        : `${S.continue}: ${nextTitle}`
-      : S.courseEmptyDone;
+    const allLessonIds = getOrderedLessonIds(CURRICULUM);
+    const completedSet = new Set(learner.completedChallengeIds || []);
+    const totalLessons = allLessonIds.length;
+    const doneLessons = allLessonIds.filter((id) => completedSet.has(id)).length;
+    const totalDoneRatio = totalLessons ? doneLessons / totalLessons : 0;
+    const nextModule = nextId ? CURRICULUM.find((module) => module.lessonIds.includes(nextId)) : null;
+    const nextIndex = nextModule ? nextModule.lessonIds.indexOf(nextId) + 1 : 0;
+    const nextDescription = nextChallenge ? localizeChallenge(nextChallenge).description : "";
+    let heroEyebrow = t("homeEyebrow");
+    let heroTitle = S.courseEmptyDone;
+    let heroLead = "";
+    let continueLabel = S.courseEmptyDone;
+    if (isNewcomer) {
+      heroEyebrow = t("homeWelcomeEyebrow");
+      heroTitle = t("homeWelcomeTitle");
+      heroLead = t("homeWelcomeLead");
+      continueLabel = nextTitle ? t("homeWelcomeStart", { title: nextTitle }) : S.courseEmptyDone;
+    } else if (nextTitle && nextModule) {
+      heroEyebrow = t("homeHeroEyebrow", {
+        module: localizeCurriculumModule(nextModule).title,
+        n: nextIndex,
+        total: nextModule.lessonIds.length,
+      });
+      heroTitle = nextTitle;
+      heroLead = nextDescription || "";
+      continueLabel = S.continue;
+    }
 
     dom.courseView.innerHTML = `
       <div class="course-hero ${isNewcomer ? "is-welcome" : ""}">
-        <p class="eyebrow">${escapeHtml(isNewcomer ? t("homeWelcomeEyebrow") : t("homeEyebrow"))}</p>
-        <h2>${escapeHtml(isNewcomer ? t("homeWelcomeTitle") : t("homeTitle"))}</h2>
-        <p class="course-lead">${escapeHtml(isNewcomer ? t("homeWelcomeLead") : t("homeLead"))}</p>
+        <p class="eyebrow">${escapeHtml(heroEyebrow)}</p>
+        <h2>${escapeHtml(heroTitle)}</h2>
+        ${heroLead ? `<p class="course-lead">${escapeHtml(heroLead)}</p>` : ""}
+        <div class="course-total" role="group" aria-label="${escapeHtml(
+          t("homeTotalProgress", { done: doneLessons, total: totalLessons })
+        )}">
+          ${renderProgressBar(totalDoneRatio)}
+          <span class="course-total-label">${escapeHtml(
+            t("homeTotalProgress", { done: doneLessons, total: totalLessons })
+          )}</span>
+        </div>
         <div class="course-hero-actions">
           <button type="button" class="primary-button course-continue" data-course-continue ${nextId ? "" : "disabled"}>
             ${escapeHtml(continueLabel)}
@@ -143,21 +171,20 @@ export function createCourseRenderers(deps) {
         </div>
       </div>
       <div class="course-modules">${modulesHtml}</div>
-      <article class="course-sandbox-card ${sandboxUnlocked ? "" : "locked"}">
+      ${
+        sandboxUnlocked
+          ? `<article class="course-sandbox-card">
         <div>
-          <h3>${sandboxUnlocked ? "" : "🔒 "}${escapeHtml(t("homeSandboxTitle"))}</h3>
-          <p class="course-module-copy">${escapeHtml(
-            sandboxUnlocked ? t("homeSandboxCopy") : t("homeSandboxLocked")
-          )}</p>
+          <h3>${escapeHtml(t("homeSandboxTitle"))}</h3>
+          <p class="course-module-copy">${escapeHtml(t("homeSandboxCopy"))}</p>
         </div>
-        <button type="button" class="ghost-button" data-nav="sandbox" ${sandboxUnlocked ? "" : "disabled"}>${escapeHtml(
-          t("homeSandboxOpen")
-        )}</button>
-      </article>
-      <label class="challenge-free-mode course-free-mode">
-        <input type="checkbox" data-toggle-free-mode ${learner.unlockedAll ? "checked" : ""} />
-        <span>${escapeHtml(S.freeMode)}</span>
-      </label>
+        <button type="button" class="ghost-button" data-nav="sandbox">${escapeHtml(t("homeSandboxOpen"))}</button>
+      </article>`
+          : `<article class="course-sandbox-card locked">
+        <span class="course-sandbox-lock-title">🔒 ${escapeHtml(t("homeSandboxTitle"))}</span>
+        <span class="course-module-copy">${escapeHtml(t("homeSandboxLocked"))}</span>
+      </article>`
+      }
     `;
   }
 
@@ -189,7 +216,7 @@ export function createCourseRenderers(deps) {
     openModules.set(id, details.open);
   }
 
-  function handleCourseChange(event) {
+  function handleFreeModeChange(event) {
     const toggle = event.target.closest("[data-toggle-free-mode]");
     if (!toggle) {
       return;
@@ -200,5 +227,5 @@ export function createCourseRenderers(deps) {
     renderAll();
   }
 
-  return { renderCourse, handleCourseClick, handleCourseChange, handleCourseToggle, getNextOpenLessonId };
+  return { renderCourse, handleCourseClick, handleFreeModeChange, handleCourseToggle, getNextOpenLessonId };
 }

@@ -119,7 +119,9 @@ test.describe("Leerapp smoke", () => {
   });
 
   test("vrije modus unlockt lessen; computer-les opent met ROM en Screen", async ({ page }) => {
-    await expect(page.locator('.course-lesson[data-course-lesson="computer"]')).toBeDisabled();
+    // Vergrendelde module: één gedimde rij zonder lessenlijst, dus de les is niet te starten.
+    await expect(page.locator('.course-lesson[data-course-lesson="computer"]')).toHaveCount(0);
+    await expect(page.locator('[data-course-module="computer"]')).toHaveClass(/locked/);
     await enableFreeMode(page);
     await openLessonFromHome(page, "computer");
     await skipTutorial(page);
@@ -238,6 +240,21 @@ test.describe("Leerapp smoke", () => {
     await page.locator('.appbar-tab[data-nav="home"]').click();
     await page.locator("[data-course-continue]").click();
     await expect(page.locator("[data-tutorial-coach]")).toBeHidden();
+  });
+
+  test("vrije modus staat in het ⚙-menu; menu blijft open en de stand klopt", async ({ page }) => {
+    await expect(page.locator("#course-view [data-toggle-free-mode]")).toHaveCount(0);
+    const menu = page.locator("#settings-menu");
+    const toggle = page.locator("#settings-menu [data-toggle-free-mode]");
+    await menu.locator("summary").click();
+    await expect(toggle).not.toBeChecked();
+    await toggle.click();
+    await expect(toggle).toBeChecked();
+    await expect(menu).toHaveAttribute("open", "");
+    await expect(page.locator(".course-module-card.locked")).toHaveCount(0);
+    await toggle.click();
+    await expect(toggle).not.toBeChecked();
+    await expect(page.locator(".course-module-card.locked")).not.toHaveCount(0);
   });
 
   test("taalschakelaar in het instellingenmenu verandert chrome-tekst", async ({ page }) => {
